@@ -6,10 +6,6 @@ GOFILES := $(shell find . -name "*.go" -type f -not -path './vendor/*')
 .PHONY: all
 all: fmt lint vet test
 
-.PHONY: server
-server: build
-	./bin/workflows server
-
 .PHONY: build
 build:
 	$(GO) build -o bin/workflows .

@@ -1,0 +1,52 @@
+# API server listen address
+# Defauls to: ":8080" which will listen on all avalable interfaces.
+# Overwrite with environment variable: WORKFLOWS_LISTEN
+
+listen: :8080
+
+# Mongodb connection string
+# Defaults to: "mongodb://localhost"
+# Overwrite with environment variable: WORKFLOWS_MONGO_URL
+
+mongo-url: mongodb://localhost
+
+# Mongodb database name
+# Defaults to: "workflows"
+# Overwrite with environment variable: WORKFLOWS_MONGO_DBNAME
+
+mongo-dbname: workflows
+
+# Enable SSL for mongo connections
+# Defaults to: false
+# Overwrite with environment variable: WORKFLOWS_MONGO_SSL
+
+# mongo_ssl: false
+
+# SkipVerify controls whether a mongo client verifies the
+# server's certificate chain and host name.
+# If InsecureSkipVerify is true, accepts any certificate
+# presented by the server and any host name in that certificate.
+# Defaults to: false
+# Overwrite with environment variable: WORKFLOWS_MONGO_SSL_SKIPVERIFY
+
+# mongo_ssl_skipverify: false
+
+# Mongodb username
+# Overwrites username set in connection string.
+# Defaults to: none
+# Overwrite with environment variable: WORKFLOWS_MONGO_USERNAME
+
+# mongo_username: user
+
+# Mongodb password
+# Overwrites password set in connection string.
+# Defaults to: none
+# Overwrite with environment variable: WORKFLOWS_MONGO_PASSWORD
+
+# mongo_password: secret
+
+# Workflows path
+# The path containing the workflows definitions
+# Defaults to: "./etc"
+# Overwrite with environment variable: WORKFLOWS_ETC
+workflows_path: "./etc"

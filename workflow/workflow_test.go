@@ -1,3 +1,17 @@
+// Copyright 2019 Northern.tech AS
+//
+//    Licensed under the Apache License, Version 2.0 (the "License");
+//    you may not use this file except in compliance with the License.
+//    You may obtain a copy of the License at
+//
+//        http://www.apache.org/licenses/LICENSE-2.0
+//
+//    Unless required by applicable law or agreed to in writing, software
+//    distributed under the License is distributed on an "AS IS" BASIS,
+//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//    See the License for the specific language governing permissions and
+//    limitations under the License.
+
 package workflow
 
 import (
@@ -22,6 +36,7 @@ func TestParseWorkflowFromJSON(t *testing.T) {
 			"http": {
 				"uri": "http://mender-inventory:8080/api/0.1.0/devices/${workflow.input.device_id}",
 				"method": "DELETE",
+				"payload": "Payload",
 				"headers": {
 					"X-MEN-RequestID": "${workflow.input.request_id}",
 					"Authorization": "${workflow.input.authorization}"
@@ -59,6 +74,7 @@ func TestParseWorkflowFromJSON(t *testing.T) {
 	assert.NotNil(t, tasks[0].HTTP)
 	assert.Equal(t, tasks[0].HTTP.URI, "http://mender-inventory:8080/api/0.1.0/devices/${workflow.input.device_id}")
 	assert.Equal(t, tasks[0].HTTP.Method, "DELETE")
+	assert.Equal(t, tasks[0].HTTP.Payload, "Payload")
 	assert.Len(t, tasks[0].HTTP.Headers, 2)
 	assert.Equal(t, tasks[0].HTTP.Headers["X-MEN-RequestID"], "${workflow.input.request_id}")
 	assert.Equal(t, tasks[0].HTTP.Headers["Authorization"], "${workflow.input.authorization}")
@@ -87,6 +103,7 @@ func TestGetWorkflowsFromPath(t *testing.T) {
 				"http": {
 					"uri": "http://mender-inventory:8080/api/0.1.0/devices/${workflow.input.device_id}",
 					"method": "DELETE",
+					"payload": "Payload",
 					"headers": {
 						"X-MEN-RequestID": "${workflow.input.request_id}",
 						"Authorization": "${workflow.input.authorization}"

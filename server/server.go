@@ -1,3 +1,17 @@
+// Copyright 2019 Northern.tech AS
+//
+//    Licensed under the Apache License, Version 2.0 (the "License");
+//    you may not use this file except in compliance with the License.
+//    You may obtain a copy of the License at
+//
+//        http://www.apache.org/licenses/LICENSE-2.0
+//
+//    Unless required by applicable law or agreed to in writing, software
+//    distributed under the License is distributed on an "AS IS" BASIS,
+//    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//    See the License for the specific language governing permissions and
+//    limitations under the License.
+
 package server
 
 import (
@@ -9,19 +23,31 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/urfave/cli"
+
+	"github.com/mendersoftware/go-lib-micro/config"
+	dconfig "github.com/mendersoftware/workflows/config"
+	"github.com/mendersoftware/workflows/store"
 	"github.com/mendersoftware/workflows/workflow"
 )
 
-// Workflows maps active workflow names and Workflow structss
+// Workflows maps active workflow names and Workflow structs
 var Workflows map[string]*workflow.Workflow
 
 // InitAndRun initializes the server and runs it
-func InitAndRun(workflowsPath string) {
+func InitAndRun(conf config.Reader, dataStore store.DataStoreInterface) error {
+	var workflowsPath string = conf.GetString(dconfig.SettingWorkflowsPath)
+	if workflowsPath == "" {
+		return cli.NewExitError(
+			"Please specify the workflows path in the configuration file",
+			1)
+	}
 	Workflows = workflow.GetWorkflowsFromPath(workflowsPath)
 
-	var router = NewRouter()
+	var listen = conf.GetString(dconfig.SettingListen)
+	var router = NewRouter(dataStore)
 	srv := &http.Server{
-		Addr:    ":8080",
+		Addr:    listen,
 		Handler: router,
 	}
 
@@ -41,4 +67,6 @@ func InitAndRun(workflowsPath string) {
 	if err := srv.Shutdown(ctx); err != nil {
 		log.Fatal("Server Shutdown: ", err)
 	}
+
+	return nil
 }

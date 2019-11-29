@@ -13,5 +13,5 @@
 .*.swp
 
 coverage.txt
-config/*.json
+etc/*.json
 bin/*
