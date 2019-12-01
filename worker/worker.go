@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -27,6 +26,7 @@ import (
 	"time"
 
 	"github.com/mendersoftware/go-lib-micro/config"
+	"github.com/mendersoftware/go-lib-micro/log"
 	dconfig "github.com/mendersoftware/workflows/config"
 	"github.com/mendersoftware/workflows/model"
 	"github.com/mendersoftware/workflows/store"
@@ -50,12 +50,13 @@ func InitAndRun(conf config.Reader, dataStore store.DataStoreInterface) error {
 
 	ctx := context.Background()
 	channel := dataStore.GetJobs(ctx)
+	l := log.FromContext(ctx)
 
 	go func() {
 		quit := make(chan os.Signal, 1)
 		signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 		<-quit
-		log.Println("Shutdown Worker ...")
+		l.Info("Shutdown Worker ...")
 		dataStore.Shutdown()
 	}()
 
@@ -80,6 +81,9 @@ func processJob(ctx context.Context, job *model.Job, dataStore store.DataStoreIn
 	if err != nil {
 		return
 	}
+
+	l := log.FromContext(ctx)
+	l.Infof("%s: started, %s", jobStatus.ID, jobStatus)
 
 	for _, task := range workflow.Tasks {
 		if task.Type == "HTTP" {
@@ -106,7 +110,7 @@ func processJob(ctx context.Context, job *model.Job, dataStore store.DataStoreIn
 			defer res.Body.Close()
 			resBody, _ := ioutil.ReadAll(res.Body)
 
-			dataStore.UpdateJobAddResult(ctx, jobStatus, bson.M{
+			result := bson.M{
 				"request": bson.M{
 					"uri":     uri,
 					"method":  task.HTTP.Method,
@@ -117,10 +121,15 @@ func processJob(ctx context.Context, job *model.Job, dataStore store.DataStoreIn
 					"statuscode": res.Status,
 					"body":       string(resBody),
 				},
-			})
+			}
+
+			l.Infof("%s: %s", jobStatus.ID, result)
+			dataStore.UpdateJobAddResult(ctx, jobStatus, result)
 		}
 	}
+
 	dataStore.UpdateJobStatus(ctx, jobStatus, "done")
+	l.Infof("%s: done", jobStatus.ID)
 }
 
 func processJobString(data string, workflow *model.Workflow, job *model.Job) string {

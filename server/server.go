@@ -16,7 +16,6 @@ package server
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -26,6 +25,7 @@ import (
 	"github.com/urfave/cli"
 
 	"github.com/mendersoftware/go-lib-micro/config"
+	"github.com/mendersoftware/go-lib-micro/log"
 	dconfig "github.com/mendersoftware/workflows/config"
 	"github.com/mendersoftware/workflows/model"
 	"github.com/mendersoftware/workflows/store"
@@ -52,21 +52,25 @@ func InitAndRun(conf config.Reader, dataStore store.DataStoreInterface) error {
 		Handler: router,
 	}
 
+	ctx := context.Background()
+	l := log.FromContext(ctx)
+
 	go func() {
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("listen: %s\n", err)
+			l.Fatalf("listen: %s\n", err)
 		}
 	}()
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
-	log.Println("Shutdown Server ...")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	l.Info("Shutdown Server ...")
+
+	ctxWithTimeout, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	if err := srv.Shutdown(ctx); err != nil {
-		log.Fatal("Server Shutdown: ", err)
+	if err := srv.Shutdown(ctxWithTimeout); err != nil {
+		l.Fatal("Server Shutdown: ", err)
 	}
 
 	return nil
