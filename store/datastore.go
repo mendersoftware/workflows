@@ -101,6 +101,9 @@ func NewMongoClient(ctx context.Context, c config.Reader) (*MongoClient, error) 
 type DataStoreInterface interface {
 	InsertJob(ctx context.Context, job *model.Job) (*model.Job, error)
 	GetJobs(ctx context.Context) <-chan *model.Job
+	GetJobStatus(ctx context.Context, job *model.Job, fromStatus string, toStatus string) (*model.JobStatus, error)
+	UpdateJobAddResult(ctx context.Context, jobStatus *model.JobStatus, data bson.M) error
+	UpdateJobStatus(ctx context.Context, jobStatus *model.JobStatus, status string) error
 	Shutdown()
 }
 
@@ -134,16 +137,29 @@ func (db *DataStore) InsertJob(ctx context.Context, job *model.Job) (*model.Job,
 		})
 	}
 
-	collection := db.client.Database(db.dbName).Collection(JobsCollectionName)
+	// insert the JobStatus we'll use to keep track of the job process
+	collection := db.client.Database(db.dbName).Collection(JobsStatusCollectionName)
 	result, err := collection.InsertOne(ctx, bson.M{
 		"workflow_name":    job.WorkflowName,
 		"input_parameters": inputParameters,
+		"status":           "pending",
 	})
 	if err != nil {
 		return nil, err
 	}
 
 	job.ID = result.InsertedID.(primitive.ObjectID).Hex()
+
+	// insert the Job in the capped transaction we use as message queue
+	collection = db.client.Database(db.dbName).Collection(JobsCollectionName)
+	result, err = collection.InsertOne(ctx, bson.M{
+		"_id":              result.InsertedID,
+		"workflow_name":    job.WorkflowName,
+		"input_parameters": inputParameters,
+	})
+	if err != nil {
+		return nil, err
+	}
 
 	return job, nil
 }
@@ -187,6 +203,73 @@ func (db *DataStore) GetJobs(ctx context.Context) <-chan *model.Job {
 	}()
 
 	return channel
+}
+
+// GetJobStatus returns the status of a Job
+func (db *DataStore) GetJobStatus(ctx context.Context, job *model.Job, fromStatus string, toStatus string) (*model.JobStatus, error) {
+	collection := db.client.Database(db.dbName).Collection(JobsStatusCollectionName)
+	ID, err := primitive.ObjectIDFromHex(job.ID)
+	if err != nil {
+		return nil, err
+	}
+	cur := collection.FindOneAndUpdate(ctx, bson.M{
+		"_id":    ID,
+		"status": fromStatus,
+	}, bson.M{
+		"$set": bson.M{
+			"status": toStatus,
+		},
+	})
+
+	jobStatus := new(model.JobStatus)
+	err = cur.Decode(jobStatus)
+	if err != nil {
+		return nil, err
+	}
+
+	return jobStatus, nil
+}
+
+// UpdateJobAddResult add a task execution result to a job status
+func (db *DataStore) UpdateJobAddResult(ctx context.Context, jobStatus *model.JobStatus, data bson.M) error {
+	collection := db.client.Database(db.dbName).Collection(JobsStatusCollectionName)
+	ID, err := primitive.ObjectIDFromHex(jobStatus.ID)
+	if err != nil {
+		return nil
+	}
+	_, err = collection.UpdateOne(ctx, bson.M{
+		"_id": ID,
+	}, bson.M{
+		"$addToSet": bson.M{
+			"results": data,
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// UpdateJobStatus set the task execution status for a job status
+func (db *DataStore) UpdateJobStatus(ctx context.Context, jobStatus *model.JobStatus, status string) error {
+	collection := db.client.Database(db.dbName).Collection(JobsStatusCollectionName)
+	ID, err := primitive.ObjectIDFromHex(jobStatus.ID)
+	if err != nil {
+		return nil
+	}
+	_, err = collection.UpdateOne(ctx, bson.M{
+		"_id": ID,
+	}, bson.M{
+		"$set": bson.M{
+			"status": status,
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // Shutdown shuts down the datastore GetJobs process

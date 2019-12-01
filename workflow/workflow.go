@@ -19,11 +19,13 @@ import (
 	"errors"
 	"io/ioutil"
 	"path/filepath"
+
+	"github.com/mendersoftware/workflows/model"
 )
 
 // ParseWorkflowFromJSON parse a JSON string and returns a Workflow struct
-func ParseWorkflowFromJSON(jsonData []byte) (*Workflow, error) {
-	var workflow Workflow
+func ParseWorkflowFromJSON(jsonData []byte) (*model.Workflow, error) {
+	var workflow model.Workflow
 	if err := json.Unmarshal(jsonData, &workflow); err != nil {
 		return nil, errors.New("unable to parse the JSON")
 	}
@@ -31,8 +33,8 @@ func ParseWorkflowFromJSON(jsonData []byte) (*Workflow, error) {
 }
 
 // GetWorkflowsFromPath parse the workflows stored as JSON files in a directory and returns them
-func GetWorkflowsFromPath(path string) map[string]*Workflow {
-	var workflows = make(map[string]*Workflow)
+func GetWorkflowsFromPath(path string) map[string]*model.Workflow {
+	var workflows = make(map[string]*model.Workflow)
 	files, err := ioutil.ReadDir(path)
 	if err != nil {
 		return nil

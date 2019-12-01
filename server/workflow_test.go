@@ -22,8 +22,8 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/mendersoftware/workflows/model"
 	"github.com/mendersoftware/workflows/store"
-	"github.com/mendersoftware/workflows/workflow"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -48,7 +48,7 @@ func TestWorkflowFoundButMissingParameters(t *testing.T) {
 	router := NewRouter(dataStore)
 
 	w := httptest.NewRecorder()
-	Workflows = map[string]*workflow.Workflow{
+	Workflows = map[string]*model.Workflow{
 		"test": {
 			Name: "Test workflow",
 			InputParameters: []string{
@@ -86,7 +86,7 @@ func TestWorkflowFoundAndLaunchedWithParameters(t *testing.T) {
 	router := NewRouter(dataStore)
 
 	w := httptest.NewRecorder()
-	Workflows = map[string]*workflow.Workflow{
+	Workflows = map[string]*model.Workflow{
 		"test": {
 			Name: "Test workflow",
 			InputParameters: []string{

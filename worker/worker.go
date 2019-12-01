@@ -32,10 +32,11 @@ import (
 	"github.com/mendersoftware/workflows/store"
 	"github.com/mendersoftware/workflows/workflow"
 	"github.com/urfave/cli"
+	"go.mongodb.org/mongo-driver/bson"
 )
 
 // Workflows maps active workflow names and Workflow structs
-var Workflows map[string]*workflow.Workflow
+var Workflows map[string]*model.Workflow
 
 // InitAndRun initializes the worker and runs it
 func InitAndRun(conf config.Reader, dataStore store.DataStoreInterface) error {
@@ -63,15 +64,20 @@ func InitAndRun(conf config.Reader, dataStore store.DataStoreInterface) error {
 		if job == nil {
 			break
 		}
-		processJob(job, dataStore)
+		go processJob(ctx, job, dataStore)
 	}
 
 	return nil
 }
 
-func processJob(job *model.Job, dataStore store.DataStoreInterface) {
+func processJob(ctx context.Context, job *model.Job, dataStore store.DataStoreInterface) {
 	workflow := Workflows[job.WorkflowName]
 	if workflow == nil {
+		return
+	}
+
+	jobStatus, err := dataStore.GetJobStatus(ctx, job, "pending", "processing")
+	if err != nil {
 		return
 	}
 
@@ -83,8 +89,11 @@ func processJob(job *model.Job, dataStore store.DataStoreInterface) {
 
 			req, _ := http.NewRequest(task.HTTP.Method, uri, payload)
 
+			var headersToBeSent []string
 			for name, value := range task.HTTP.Headers {
-				req.Header.Add(name, value)
+				headerValue := processJobString(value, workflow, job)
+				req.Header.Add(name, headerValue)
+				headersToBeSent = append(headersToBeSent, fmt.Sprintf("%s: %s", name, headerValue))
 			}
 			var netClient = &http.Client{
 				Timeout: time.Duration(task.HTTP.ReadTimeOut) * time.Second,
@@ -97,13 +106,24 @@ func processJob(job *model.Job, dataStore store.DataStoreInterface) {
 			defer res.Body.Close()
 			resBody, _ := ioutil.ReadAll(res.Body)
 
-			fmt.Println(res)
-			fmt.Println(string(resBody))
+			dataStore.UpdateJobAddResult(ctx, jobStatus, bson.M{
+				"request": bson.M{
+					"uri":     uri,
+					"method":  task.HTTP.Method,
+					"payload": payloadString,
+					"headers": headersToBeSent,
+				},
+				"response": bson.M{
+					"statuscode": res.Status,
+					"body":       string(resBody),
+				},
+			})
 		}
 	}
+	dataStore.UpdateJobStatus(ctx, jobStatus, "done")
 }
 
-func processJobString(data string, workflow *workflow.Workflow, job *model.Job) string {
+func processJobString(data string, workflow *model.Workflow, job *model.Job) string {
 	for _, param := range job.InputParameters {
 		data = strings.ReplaceAll(data, fmt.Sprintf("${workflow.input.%s}", param.Name), param.Value)
 	}

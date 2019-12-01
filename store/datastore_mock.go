@@ -17,6 +17,7 @@ package store
 import (
 	"context"
 
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"github.com/mendersoftware/workflows/model"
@@ -48,6 +49,21 @@ func (db *DataStoreMock) InsertJob(ctx context.Context, job *model.Job) (*model.
 // GetJobs returns a channel of Jobs
 func (db *DataStoreMock) GetJobs(ctx context.Context) <-chan *model.Job {
 	return db.channel
+}
+
+// GetJobStatus returns the status of a Job
+func (db *DataStoreMock) GetJobStatus(ctx context.Context, job *model.Job, fromStatus string, toStatus string) (*model.JobStatus, error) {
+	return nil, nil
+}
+
+// UpdateJobAddResult add a task execution result to a job status
+func (db *DataStoreMock) UpdateJobAddResult(ctx context.Context, jobStatus *model.JobStatus, data bson.M) error {
+	return nil
+}
+
+// UpdateJobStatus set the task execution status for a job status
+func (db *DataStoreMock) UpdateJobStatus(ctx context.Context, jobStatus *model.JobStatus, status string) error {
+	return nil
 }
 
 // Shutdown shuts down the datastore GetJobs process

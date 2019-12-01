@@ -12,7 +12,7 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
-package workflow
+package model
 
 // Workflow stores the definition of a workflow
 type Workflow struct {

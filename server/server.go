@@ -27,12 +27,13 @@ import (
 
 	"github.com/mendersoftware/go-lib-micro/config"
 	dconfig "github.com/mendersoftware/workflows/config"
+	"github.com/mendersoftware/workflows/model"
 	"github.com/mendersoftware/workflows/store"
 	"github.com/mendersoftware/workflows/workflow"
 )
 
 // Workflows maps active workflow names and Workflow structs
-var Workflows map[string]*workflow.Workflow
+var Workflows map[string]*model.Workflow
 
 // InitAndRun initializes the server and runs it
 func InitAndRun(conf config.Reader, dataStore store.DataStoreInterface) error {

@@ -12,12 +12,19 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
-package store
+package model
 
-const (
-	// JobsCollectionName is the name of the collection to store the jobs
-	JobsCollectionName = "jobs"
+// JobStatus defines the status of the execution of a job
+type JobStatus struct {
+	// Id is the ID of the job
+	ID string `json:"id" bson:"_id"`
 
-	// JobsStatusCollectionName is the name of the collection to store the status of the jobs
-	JobsStatusCollectionName = "jobs_status"
-)
+	// WorkflowName contains the name of the workflow
+	WorkflowName string `json:"workflow_name" bson:"workflow_name"`
+
+	// InputParameters contains the name of the workflow
+	InputParameters []InputParameter `json:"input_parameters" bson:"input_parameters"`
+
+	// WorkflowName contains the name of the workflow
+	Status string `json:"status" bson:"status"`
+}
