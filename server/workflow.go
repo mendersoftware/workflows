@@ -98,3 +98,20 @@ func (h WorkflowController) StartWorkflow(c *gin.Context) {
 		"success": true,
 	})
 }
+
+// GetWorkflowByNameAndID responds to GET /api/workflow/:name/:id
+func (h WorkflowController) GetWorkflowByNameAndID(c *gin.Context) {
+	var name string = c.Param("name")
+	var id string = c.Param("id")
+
+	ctx := context.Background()
+	jobStatus, err := h.dataStore.GetJobStatusByNameAndID(ctx, name, id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "not found",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, jobStatus)
+}

@@ -30,6 +30,7 @@ func NewRouter(dataStore store.DataStoreInterface) *gin.Engine {
 
 	workflow := NewWorkflowController(dataStore)
 	router.POST("/api/workflow/:name", workflow.StartWorkflow)
+	router.GET("/api/workflow/:name/:id", workflow.GetWorkflowByNameAndID)
 
 	return router
 }

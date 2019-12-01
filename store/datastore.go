@@ -104,6 +104,7 @@ type DataStoreInterface interface {
 	GetJobStatus(ctx context.Context, job *model.Job, fromStatus string, toStatus string) (*model.JobStatus, error)
 	UpdateJobAddResult(ctx context.Context, jobStatus *model.JobStatus, data bson.M) error
 	UpdateJobStatus(ctx context.Context, jobStatus *model.JobStatus, status string) error
+	GetJobStatusByNameAndID(ctx context.Context, name string, ID string) (*model.JobStatus, error)
 	Shutdown()
 }
 
@@ -270,6 +271,26 @@ func (db *DataStore) UpdateJobStatus(ctx context.Context, jobStatus *model.JobSt
 	}
 
 	return nil
+}
+
+// GetJobStatusByNameAndID get the task execution status for a job status bu Name and ID
+func (db *DataStore) GetJobStatusByNameAndID(ctx context.Context, name string, ID string) (*model.JobStatus, error) {
+	collection := db.client.Database(db.dbName).Collection(JobsStatusCollectionName)
+	ObjectID, err := primitive.ObjectIDFromHex(ID)
+	if err != nil {
+		return nil, err
+	}
+	cur := collection.FindOne(ctx, bson.M{
+		"_id":           ObjectID,
+		"workflow_name": name,
+	})
+	var jobStatus model.JobStatus
+	err = cur.Decode(&jobStatus)
+	if err != nil {
+		return nil, err
+	}
+
+	return &jobStatus, nil
 }
 
 // Shutdown shuts down the datastore GetJobs process

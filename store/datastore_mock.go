@@ -66,6 +66,11 @@ func (db *DataStoreMock) UpdateJobStatus(ctx context.Context, jobStatus *model.J
 	return nil
 }
 
+// GetJobStatusByNameAndID get the task execution status for a job status bu Name and ID
+func (db *DataStoreMock) GetJobStatusByNameAndID(ctx context.Context, name string, ID string) (*model.JobStatus, error) {
+	return nil, nil
+}
+
 // Shutdown shuts down the datastore GetJobs process
 func (db *DataStoreMock) Shutdown() {
 

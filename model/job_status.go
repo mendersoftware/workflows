@@ -27,4 +27,26 @@ type JobStatus struct {
 
 	// WorkflowName contains the name of the workflow
 	Status string `json:"status" bson:"status"`
+
+	Results []TaskResult `json:"results" bson:"results"`
+}
+
+// TaskResult contains the result of the execution of a task
+type TaskResult struct {
+	Request  TaskResultRequest  `json:"request" bson:"request"`
+	Response TaskResultResponse `json:"response" bson:"response"`
+}
+
+// TaskResultRequest contains the request
+type TaskResultRequest struct {
+	URI     string   `json:"uri" bson:"uri"`
+	Method  string   `json:"method" bson:"method"`
+	Payload string   `json:"payload" bson:"payload"`
+	Headers []string `json:"headers" bson:"headers"`
+}
+
+// TaskResultResponse contains the response
+type TaskResultResponse struct {
+	StatusCode string `json:"statuscode" bson:"statuscode"`
+	Body       string `json:"body" bson:"body"`
 }
