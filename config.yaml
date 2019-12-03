@@ -48,5 +48,12 @@ mongo-dbname: workflows
 # Workflows path
 # The path containing the workflows definitions
 # Defaults to: "./etc"
-# Overwrite with environment variable: WORKFLOWS_ETC
+# Overwrite with environment variable: WORKFLOWS_WORKFLOWS_PATH
 workflows_path: "./etc"
+
+
+# Concurrency limit
+# The maximum number of jobs to be processed in parallel
+# Defaults to: 10
+# Overwrite with environment variable: WORKFLOWS_CONCURRENCY
+concurrency: 20

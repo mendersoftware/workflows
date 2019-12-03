@@ -60,12 +60,18 @@ func InitAndRun(conf config.Reader, dataStore store.DataStoreInterface) error {
 		dataStore.Shutdown()
 	}()
 
+	concurrency := conf.GetInt(dconfig.SettingConcurrency)
+	sem := make(chan bool, concurrency)
 	for {
 		job := <-channel
 		if job == nil {
 			break
 		}
-		go processJob(ctx, job, dataStore)
+		sem <- true
+		go func(ctx context.Context, job *model.Job, dataStore store.DataStoreInterface) {
+			defer func() { <-sem }()
+			processJob(ctx, job, dataStore)
+		}(ctx, job, dataStore)
 	}
 
 	return nil

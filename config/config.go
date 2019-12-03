@@ -52,6 +52,11 @@ const (
 
 	// SettingWorkflowsPath is the config key for the workflows path
 	SettingWorkflowsPath = "workflows_path"
+
+	// SettingConcurrency is the config key for the concurrency limit
+	SettingConcurrency = "concurrency"
+	// SettingConcurrencyDefault is the default value for the concurrency limit
+	SettingConcurrencyDefault = 10
 )
 
 var (
@@ -62,5 +67,6 @@ var (
 		{Key: SettingDbName, Value: SettingDbNameDefault},
 		{Key: SettingDbSSL, Value: SettingDbSSLDefault},
 		{Key: SettingDbSSLSkipVerify, Value: SettingDbSSLSkipVerifyDefault},
+		{Key: SettingConcurrency, Value: SettingConcurrencyDefault},
 	}
 )
