@@ -12,7 +12,7 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
-package store
+package mock
 
 import (
 	"context"
@@ -21,26 +21,58 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"github.com/mendersoftware/workflows/model"
+	"github.com/mendersoftware/workflows/store"
 )
 
 // DataStoreMock is a mocked data storage service
 type DataStoreMock struct {
 	// Jobs contains the list of queued jobs
-	Jobs    []model.Job
-	channel chan *model.Job
+	Jobs      []model.Job
+	Workflows map[string]*model.Workflow
+	channel   chan *model.Job
 }
 
 // NewDataStoreMock initializes a DataStore mock object
 func NewDataStoreMock() *DataStoreMock {
 
 	return &DataStoreMock{
-		channel: make(chan *model.Job),
+		channel:   make(chan *model.Job),
+		Workflows: make(map[string]*model.Workflow),
 	}
+}
+
+func (db *DataStoreMock) InsertWorkflows(workflows ...model.Workflow) (int, error) {
+	for _, workflow := range workflows {
+		db.Workflows[workflow.Name] = &workflow
+	}
+	return len(workflows), nil
+}
+
+func (db *DataStoreMock) GetWorkflowByName(
+	workflowName string) (*model.Workflow, error) {
+	return db.Workflows[workflowName], nil
+}
+
+func (db *DataStoreMock) GetWorkflows() []model.Workflow {
+	workflows := make([]model.Workflow, len(db.Workflows))
+	i := 0
+	for _, workflow := range db.Workflows {
+		workflows[i] = *workflow
+		i++
+	}
+	return workflows
 }
 
 // InsertJob inserts the job in the queue
 func (db *DataStoreMock) InsertJob(ctx context.Context, job *model.Job) (*model.Job, error) {
 	job.ID = primitive.NewObjectID().Hex()
+	if wf, ok := db.Workflows[job.WorkflowName]; ok {
+		if err := job.Validate(wf); err != nil {
+			return nil, err
+		}
+	} else {
+		return nil, store.ErrWorkflowNotFound
+	}
 	db.Jobs = append(db.Jobs, *job)
 
 	return job, nil
@@ -51,23 +83,26 @@ func (db *DataStoreMock) GetJobs(ctx context.Context) <-chan *model.Job {
 	return db.channel
 }
 
-// GetJobStatus returns the status of a Job
-func (db *DataStoreMock) GetJobStatus(ctx context.Context, job *model.Job, fromStatus string, toStatus string) (*model.JobStatus, error) {
+// AquireJob gets given job and updates it's status to StatusProcessing.
+func (db *DataStoreMock) AquireJob(ctx context.Context,
+	job *model.Job) (*model.Job, error) {
 	return nil, nil
 }
 
 // UpdateJobAddResult add a task execution result to a job status
-func (db *DataStoreMock) UpdateJobAddResult(ctx context.Context, jobStatus *model.JobStatus, data bson.M) error {
+func (db *DataStoreMock) UpdateJobAddResult(ctx context.Context, job *model.Job, data bson.M) error {
 	return nil
 }
 
 // UpdateJobStatus set the task execution status for a job status
-func (db *DataStoreMock) UpdateJobStatus(ctx context.Context, jobStatus *model.JobStatus, status string) error {
+func (db *DataStoreMock) UpdateJobStatus(ctx context.Context, job *model.Job,
+	status int) error {
 	return nil
 }
 
 // GetJobStatusByNameAndID get the task execution status for a job status bu Name and ID
-func (db *DataStoreMock) GetJobStatusByNameAndID(ctx context.Context, name string, ID string) (*model.JobStatus, error) {
+func (db *DataStoreMock) GetJobByNameAndID(ctx context.Context,
+	name string, ID string) (*model.Job, error) {
 	return nil, nil
 }
 

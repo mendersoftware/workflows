@@ -12,25 +12,38 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
-package server
+package http
 
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/mendersoftware/workflows/store"
 )
 
+const (
+	ApiUrlStatus = "/status"
+
+	ApiUrlWorkflow   = "/api/workflow/:name"
+	ApiUrlWorkflowId = "/api/workflow/:name/:id"
+
+	ApiUrlWorkflows = "/api/metadata/workflows"
+)
+
 // NewRouter returns the gin router
-func NewRouter(dataStore store.DataStoreInterface) *gin.Engine {
+func NewRouter(dataStore store.DataStore) *gin.Engine {
+	gin.SetMode(gin.ReleaseMode)
 	router := gin.New()
 	router.Use(gin.Logger())
 	router.Use(gin.Recovery())
 
 	status := NewStatusController()
-	router.GET("/status", status.Status)
+	router.GET(ApiUrlStatus, status.Status)
 
 	workflow := NewWorkflowController(dataStore)
-	router.POST("/api/workflow/:name", workflow.StartWorkflow)
-	router.GET("/api/workflow/:name/:id", workflow.GetWorkflowByNameAndID)
+	router.POST(ApiUrlWorkflow, workflow.StartWorkflow)
+	router.GET(ApiUrlWorkflowId, workflow.GetWorkflowByNameAndID)
+
+	router.POST(ApiUrlWorkflows, workflow.RegisterWorkflow)
+	router.GET(ApiUrlWorkflows, workflow.GetWorkflows)
 
 	return router
 }

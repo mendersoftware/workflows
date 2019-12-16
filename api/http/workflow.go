@@ -12,13 +12,13 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
-package server
+package http
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/mendersoftware/workflows/model"
@@ -27,50 +27,68 @@ import (
 
 // WorkflowController container for end-points
 type WorkflowController struct {
-	dataStore store.DataStoreInterface
+	// dataStore provides an interface to the database
+	dataStore store.DataStore
 }
 
 // NewWorkflowController returns a new StatusController
-func NewWorkflowController(dataStore store.DataStoreInterface) *WorkflowController {
+func NewWorkflowController(dataStore store.DataStore) *WorkflowController {
+
 	return &WorkflowController{
 		dataStore: dataStore,
 	}
 }
 
+func (h WorkflowController) RegisterWorkflow(c *gin.Context) {
+	var workflow model.Workflow
+	rawData, err := c.GetRawData()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Bad request",
+		})
+		return
+	}
+	if err = json.Unmarshal(rawData, &workflow); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": fmt.Sprintf("Error parsing JSON form: %s",
+				err.Error()),
+		})
+		return
+	}
+	if workflow.Name == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Workflow missing name",
+		})
+		return
+	}
+	_, err = h.dataStore.InsertWorkflows(workflow)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+	c.Status(http.StatusCreated)
+}
+
+func (h WorkflowController) GetWorkflows(c *gin.Context) {
+	c.JSON(http.StatusOK, h.dataStore.GetWorkflows())
+}
+
 // StartWorkflow responds to POST /api/workflow/:name
 func (h WorkflowController) StartWorkflow(c *gin.Context) {
 	var name string = c.Param("name")
-	if Workflows[name] == nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"error": fmt.Sprintf("Workflow not found: %s", name),
-		})
-		return
-	}
-
 	var inputParameters map[string]string
+	var jobInputParameters []model.InputParameter
+
 	if err := c.BindJSON(&inputParameters); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Unable to parse the input parameters",
+			"error": fmt.Sprintf("Unable to parse the input parameters: %s",
+				err.Error()),
 		})
 		return
 	}
 
-	var workflow = Workflows[name]
-	var missing []string
-	for _, key := range workflow.InputParameters {
-		if inputParameters[key] == "" {
-			missing = append(missing, key)
-		}
-	}
-
-	if len(missing) > 0 {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": fmt.Sprintf("Missing input parameters: %s", strings.Join(missing, ", ")),
-		})
-		return
-	}
-
-	var jobInputParameters []model.InputParameter
 	for key, value := range inputParameters {
 		jobInputParameters = append(jobInputParameters, model.InputParameter{
 			Name:  key,
@@ -80,21 +98,28 @@ func (h WorkflowController) StartWorkflow(c *gin.Context) {
 
 	ctx := context.Background()
 	job := &model.Job{
-		WorkflowName:    workflow.Name,
+		WorkflowName:    name,
 		InputParameters: jobInputParameters,
 	}
 
 	job, err := h.dataStore.InsertJob(ctx, job)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Unable to launch the workflow, please try again",
-		})
+		switch err {
+		case store.ErrWorkflowNotFound:
+			c.JSON(http.StatusNotFound, gin.H{
+				"error": err.Error(),
+			})
+		default:
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": err.Error(),
+			})
+		}
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"id":      job.ID,
-		"name":    workflow.Name,
+		"name":    name,
 		"success": true,
 	})
 }
@@ -105,13 +130,17 @@ func (h WorkflowController) GetWorkflowByNameAndID(c *gin.Context) {
 	var id string = c.Param("id")
 
 	ctx := context.Background()
-	jobStatus, err := h.dataStore.GetJobStatusByNameAndID(ctx, name, id)
+	job, err := h.dataStore.GetJobByNameAndID(ctx, name, id)
 	if err != nil {
+		c.JSON(http.StatusInternalServerError, err.Error())
+		return
+	} else if job == nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"error": "not found",
 		})
 		return
 	}
 
-	c.JSON(http.StatusOK, jobStatus)
+	job.StatusString = model.StatusToString(job.Status)
+	c.JSON(http.StatusOK, job)
 }

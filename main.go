@@ -24,10 +24,10 @@ import (
 	"github.com/mendersoftware/go-lib-micro/config"
 	"github.com/urfave/cli"
 
+	"github.com/mendersoftware/workflows/app/server"
+	"github.com/mendersoftware/workflows/app/worker"
 	dconfig "github.com/mendersoftware/workflows/config"
-	"github.com/mendersoftware/workflows/server"
-	"github.com/mendersoftware/workflows/store"
-	"github.com/mendersoftware/workflows/worker"
+	"github.com/mendersoftware/workflows/store/mongo"
 )
 
 func main() {
@@ -38,6 +38,7 @@ func main() {
 			&cli.StringFlag{
 				Name:        "config",
 				Usage:       "Configuration `FILE`. Supports JSON, TOML, YAML and HCL formatted configs.",
+				Value:       "config.yaml",
 				Destination: &configPath,
 			},
 		},
@@ -105,7 +106,7 @@ func cmdServer(args *cli.Context) error {
 	}
 
 	defer dbClient.Disconnect(ctx)
-	dataStore := store.NewDataStoreWithClient(dbClient, config.Config)
+	dataStore := mongo.NewDataStoreWithClient(dbClient, config.Config)
 
 	return server.InitAndRun(config.Config, dataStore)
 }
@@ -118,7 +119,7 @@ func cmdWorker(args *cli.Context) error {
 	}
 
 	defer dbClient.Disconnect(ctx)
-	dataStore := store.NewDataStoreWithClient(dbClient, config.Config)
+	dataStore := mongo.NewDataStoreWithClient(dbClient, config.Config)
 
 	return worker.InitAndRun(config.Config, dataStore)
 }
@@ -135,8 +136,8 @@ func cmdMigrate(args *cli.Context) error {
 	return nil
 }
 
-func getDbClientAndMigrate(ctx context.Context, automigrate bool) (*store.MongoClient, error) {
-	dbClient, err := store.NewMongoClient(ctx, config.Config)
+func getDbClientAndMigrate(ctx context.Context, automigrate bool) (*mongo.MongoClient, error) {
+	dbClient, err := mongo.NewMongoClient(ctx, config.Config)
 	if err != nil {
 		return nil, cli.NewExitError(
 			fmt.Sprintf("failed to connect to db: %v", err),
@@ -144,7 +145,7 @@ func getDbClientAndMigrate(ctx context.Context, automigrate bool) (*store.MongoC
 	}
 
 	db := config.Config.GetString(dconfig.SettingDbName)
-	err = store.Migrate(ctx, db, store.DbVersion, dbClient, automigrate)
+	err = mongo.Migrate(ctx, db, mongo.DbVersion, dbClient, automigrate)
 	if err != nil {
 		return nil, cli.NewExitError(
 			fmt.Sprintf("failed to run migrations: %v", err),

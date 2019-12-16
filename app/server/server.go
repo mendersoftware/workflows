@@ -22,38 +22,32 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/urfave/cli"
-
 	"github.com/mendersoftware/go-lib-micro/config"
 	"github.com/mendersoftware/go-lib-micro/log"
+	api "github.com/mendersoftware/workflows/api/http"
 	dconfig "github.com/mendersoftware/workflows/config"
 	"github.com/mendersoftware/workflows/model"
 	"github.com/mendersoftware/workflows/store"
-	"github.com/mendersoftware/workflows/workflow"
 )
 
-// Workflows maps active workflow names and Workflow structs
-var Workflows map[string]*model.Workflow
-
 // InitAndRun initializes the server and runs it
-func InitAndRun(conf config.Reader, dataStore store.DataStoreInterface) error {
-	var workflowsPath string = conf.GetString(dconfig.SettingWorkflowsPath)
-	if workflowsPath == "" {
-		return cli.NewExitError(
-			"Please specify the workflows path in the configuration file",
-			1)
+func InitAndRun(conf config.Reader, dataStore store.DataStore) error {
+	ctx := context.Background()
+	l := log.FromContext(ctx)
+	// Initialize workflows
+	workflowsPath := conf.GetString(dconfig.SettingWorkflowsPath)
+	if workflowsPath != "" {
+		workflows := model.GetWorkflowsFromPath(workflowsPath)
+		for _, workflow := range workflows {
+			dataStore.InsertWorkflows(*workflow)
+		}
 	}
-	Workflows = workflow.GetWorkflowsFromPath(workflowsPath)
-
 	var listen = conf.GetString(dconfig.SettingListen)
-	var router = NewRouter(dataStore)
+	var router = api.NewRouter(dataStore)
 	srv := &http.Server{
 		Addr:    listen,
 		Handler: router,
 	}
-
-	ctx := context.Background()
-	l := log.FromContext(ctx)
 
 	go func() {
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {

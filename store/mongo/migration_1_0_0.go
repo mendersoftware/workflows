@@ -12,7 +12,7 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
-package store
+package mongo
 
 import (
 	"context"
@@ -20,6 +20,7 @@ import (
 	"github.com/mendersoftware/go-lib-micro/mongo/migrate"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	mopts "go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type migration1_0_0 struct {
@@ -30,12 +31,38 @@ type migration1_0_0 struct {
 // Up creates the jobs capped collection
 func (m *migration1_0_0) Up(from migrate.Version) error {
 	ctx := context.Background()
-	m.client.Database(m.db).RunCommand(ctx, bson.M{
-		"create": JobsCollectionName,
+	database := m.client.Database(m.db)
+	database.RunCommand(ctx, bson.M{
+		"create": JobQueueCollectionName,
 		"capped": true,
 		"size":   1024 * 1024 * 1024 * 64,
 	})
-	return nil
+	collQueue := database.Collection(JobQueueCollectionName)
+	collJobs := database.Collection(JobsCollectionName)
+	idxQueue := collQueue.Indexes()
+	idxJobs := collJobs.Indexes()
+	indexOptions := mopts.Index()
+	indexOptions.SetBackground(false)
+	indexOptions.SetName("status")
+	statusIndex := mongo.IndexModel{
+		Keys:    bson.D{{Key: "status", Value: 1}},
+		Options: indexOptions,
+	}
+	if _, err := idxQueue.CreateOne(ctx, statusIndex); err != nil {
+		return err
+	}
+	if _, err := idxJobs.CreateOne(ctx, statusIndex); err != nil {
+		return err
+	}
+
+	indexOptions.SetName("workflow_name")
+	nameIndex := mongo.IndexModel{
+		Keys:    bson.D{{Key: "workflow_name", Value: 1}},
+		Options: indexOptions,
+	}
+	_, err := idxJobs.CreateOne(ctx, nameIndex)
+
+	return err
 }
 
 func (m *migration1_0_0) Version() migrate.Version {

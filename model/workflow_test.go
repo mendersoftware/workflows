@@ -12,7 +12,7 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
-package workflow
+package model
 
 import (
 	"io/ioutil"
@@ -36,7 +36,7 @@ func TestParseWorkflowFromJSON(t *testing.T) {
 			"http": {
 				"uri": "http://mender-inventory:8080/api/0.1.0/devices/${workflow.input.device_id}",
 				"method": "DELETE",
-				"payload": "Payload",
+				"body": "Payload",
 				"headers": {
 					"X-MEN-RequestID": "${workflow.input.request_id}",
 					"Authorization": "${workflow.input.authorization}"
@@ -103,7 +103,7 @@ func TestGetWorkflowsFromPath(t *testing.T) {
 				"http": {
 					"uri": "http://mender-inventory:8080/api/0.1.0/devices/${workflow.input.device_id}",
 					"method": "DELETE",
-					"payload": "Payload",
+					"body": "Payload",
 					"headers": {
 						"X-MEN-RequestID": "${workflow.input.request_id}",
 						"Authorization": "${workflow.input.authorization}"

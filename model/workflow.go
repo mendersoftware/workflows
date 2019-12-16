@@ -14,29 +14,73 @@
 
 package model
 
+import (
+	"encoding/json"
+	"io/ioutil"
+	"path/filepath"
+
+	"github.com/mendersoftware/go-lib-micro/log"
+	"github.com/pkg/errors"
+)
+
 // Workflow stores the definition of a workflow
 type Workflow struct {
-	Name            string
-	Description     string
-	Version         int
-	SchemaVersion   int
-	Tasks           []Task
-	InputParameters []string
+	Name            string   `json:"name" bson:"_id"`
+	Description     string   `json:"description" bson:"description"`
+	Version         int      `json:"version" bson:"version"`
+	SchemaVersion   int      `json:"schemaVersion" bson:"schema_version"`
+	Tasks           []Task   `json:"tasks" bson:"tasks"`
+	InputParameters []string `json:"inputParameters" bson"input_parameters"`
 }
 
 // Task stores the definition of a task within a workflow
 type Task struct {
-	Name string
-	Type string
-	HTTP HTTPParams
+	Name string     `json:"name"`
+	Type string     `json:"type"`
+	HTTP HTTPParams `json:"http"`
 }
 
 // HTTPParams stores the parameters of the HTTP calls for a WorkflowTask
 type HTTPParams struct {
-	URI               string
-	Method            string
-	Payload           string
-	Headers           map[string]string
-	ConnectionTimeOut int
-	ReadTimeOut       int
+	URI               string            `json:"uri"`
+	Method            string            `json:"method"`
+	ContentType       string            `json:"contentType",omitempty`
+	Payload           string            `json:"body",omitempty`
+	Headers           map[string]string `json:"headers"`
+	ConnectionTimeOut int               `json:"connectionTimeOut"`
+	ReadTimeOut       int               `json:"readTimeOut"`
+}
+
+// ParseWorkflowFromJSON parse a JSON string and returns a Workflow struct
+func ParseWorkflowFromJSON(jsonData []byte) (*Workflow, error) {
+	var workflow Workflow
+	if err := json.Unmarshal(jsonData, &workflow); err != nil {
+		return nil, errors.Wrap(err, "unable to parse the JSON")
+	}
+	return &workflow, nil
+}
+
+// GetWorkflowsFromPath parse the workflows stored as JSON files in a directory and returns them
+func GetWorkflowsFromPath(path string) map[string]*Workflow {
+	var workflows = make(map[string]*Workflow)
+	l := log.NewEmpty()
+	files, err := ioutil.ReadDir(path)
+	if err != nil {
+		return nil
+	}
+
+	for _, f := range files {
+		fn := filepath.Join(path, f.Name())
+		if data, err := ioutil.ReadFile(fn); err == nil {
+			workflow, err := ParseWorkflowFromJSON([]byte(data))
+			if err != nil {
+				l.Warn(err.Error())
+				continue
+			}
+			if workflows[workflow.Name] == nil || workflows[workflow.Name].Version <= workflow.Version {
+				workflows[workflow.Name] = workflow
+			}
+		}
+	}
+	return workflows
 }

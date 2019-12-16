@@ -25,50 +25,40 @@ import (
 	"syscall"
 	"time"
 
+	"go.mongodb.org/mongo-driver/bson"
+
 	"github.com/mendersoftware/go-lib-micro/config"
 	"github.com/mendersoftware/go-lib-micro/log"
 	dconfig "github.com/mendersoftware/workflows/config"
 	"github.com/mendersoftware/workflows/model"
 	"github.com/mendersoftware/workflows/store"
-	"github.com/mendersoftware/workflows/workflow"
-	"github.com/urfave/cli"
-	"go.mongodb.org/mongo-driver/bson"
 )
 
-// Workflows maps active workflow names and Workflow structs
-var Workflows map[string]*model.Workflow
-
 // InitAndRun initializes the worker and runs it
-func InitAndRun(conf config.Reader, dataStore store.DataStoreInterface) error {
-	var workflowsPath string = conf.GetString(dconfig.SettingWorkflowsPath)
-	if workflowsPath == "" {
-		return cli.NewExitError(
-			"Please specify the workflows path in the configuration file",
-			1)
-	}
-	Workflows = workflow.GetWorkflowsFromPath(workflowsPath)
-
+func InitAndRun(conf config.Reader, dataStore store.DataStore) error {
 	ctx := context.Background()
 	channel := dataStore.GetJobs(ctx)
 	l := log.FromContext(ctx)
 
-	go func() {
-		quit := make(chan os.Signal, 1)
-		signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-		<-quit
-		l.Info("Shutdown Worker ...")
-		dataStore.Shutdown()
-	}()
-
+	var job *model.Job
 	concurrency := conf.GetInt(dconfig.SettingConcurrency)
 	sem := make(chan bool, concurrency)
+	quit := make(chan os.Signal)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	for {
-		job := <-channel
+		select {
+		case job = <-channel:
+
+		case <-quit:
+			l.Info("Shutdown Worker ...")
+			dataStore.Shutdown()
+			return nil
+		}
 		if job == nil {
 			break
 		}
 		sem <- true
-		go func(ctx context.Context, job *model.Job, dataStore store.DataStoreInterface) {
+		go func(ctx context.Context, job *model.Job, dataStore store.DataStore) {
 			defer func() { <-sem }()
 			processJob(ctx, job, dataStore)
 		}(ctx, job, dataStore)
@@ -77,19 +67,35 @@ func InitAndRun(conf config.Reader, dataStore store.DataStoreInterface) error {
 	return nil
 }
 
-func processJob(ctx context.Context, job *model.Job, dataStore store.DataStoreInterface) {
-	workflow := Workflows[job.WorkflowName]
-	if workflow == nil {
-		return
-	}
-
-	jobStatus, err := dataStore.GetJobStatus(ctx, job, "pending", "processing")
-	if err != nil {
-		return
-	}
+func processJob(ctx context.Context, job *model.Job,
+	dataStore store.DataStore) error {
 
 	l := log.FromContext(ctx)
-	l.Infof("%s: started, %s", jobStatus.ID, jobStatus)
+	workflow, err := dataStore.GetWorkflowByName(job.WorkflowName)
+	if err != nil {
+		l.Warnf("The workflow %q of job %s does not exist",
+			job.WorkflowName, job.ID)
+		err := dataStore.UpdateJobStatus(ctx, job, model.StatusFailure)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+
+	job, err = dataStore.AquireJob(ctx, job)
+	if err != nil {
+		l.Error(err.Error())
+		return err
+	} else if job == nil {
+		l.Warnf("The job with given ID (%s) does not exist", job.ID)
+		err := dataStore.UpdateJobStatus(ctx, job, model.StatusFailure)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+
+	l.Infof("%s: started, %s", job.ID, job.WorkflowName)
 
 	for _, task := range workflow.Tasks {
 		if task.Type == "HTTP" {
@@ -129,18 +135,30 @@ func processJob(ctx context.Context, job *model.Job, dataStore store.DataStoreIn
 				},
 			}
 
-			l.Infof("%s: %s", jobStatus.ID, result)
-			dataStore.UpdateJobAddResult(ctx, jobStatus, result)
+			l.Infof("%s: %s", job.ID, result)
+			err = dataStore.UpdateJobAddResult(ctx, job, result)
+			if err != nil {
+				l := log.NewEmpty()
+				l.Error(err.Error())
+				dataStore.UpdateJobStatus(ctx, job, model.StatusFailure)
+			}
 		}
 	}
 
-	dataStore.UpdateJobStatus(ctx, jobStatus, "done")
-	l.Infof("%s: done", jobStatus.ID)
+	err = dataStore.UpdateJobStatus(ctx, job, model.StatusDone)
+	if err != nil {
+		l.Warn("Unable to set job status to done")
+	}
+
+	l.Infof("%s: done", job.ID)
+	return nil
 }
 
 func processJobString(data string, workflow *model.Workflow, job *model.Job) string {
 	for _, param := range job.InputParameters {
-		data = strings.ReplaceAll(data, fmt.Sprintf("${workflow.input.%s}", param.Name), param.Value)
+		data = strings.ReplaceAll(data,
+			fmt.Sprintf("${workflow.input.%s}", param.Name),
+			param.Value)
 	}
 
 	return data

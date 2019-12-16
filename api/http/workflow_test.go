@@ -12,7 +12,7 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
-package server
+package http
 
 import (
 	"encoding/json"
@@ -23,7 +23,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/mendersoftware/workflows/model"
-	"github.com/mendersoftware/workflows/store"
+	store "github.com/mendersoftware/workflows/store/mock"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -48,35 +48,38 @@ func TestWorkflowFoundButMissingParameters(t *testing.T) {
 	router := NewRouter(dataStore)
 
 	w := httptest.NewRecorder()
-	Workflows = map[string]*model.Workflow{
-		"test": {
-			Name: "Test workflow",
-			InputParameters: []string{
-				"param1",
-				"param2",
-				"param3",
-			},
+	workflow := model.Workflow{
+		Name: "test",
+		InputParameters: []string{
+			"param1",
+			"param2",
+			"param3",
 		},
 	}
+	_, err := dataStore.InsertWorkflows(workflow)
+	assert.NoError(t, err)
 
+	w = httptest.NewRecorder()
 	payload := `{
       "key": "value"
 	}`
 
-	req, _ := http.NewRequest("POST", "/api/workflow/test", strings.NewReader(payload))
+	req, err := http.NewRequest("POST", "/api/workflow/test", strings.NewReader(payload))
+	assert.NoError(t, err)
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, 400, w.Code)
 
 	var response map[string]string
-	err := json.Unmarshal([]byte(w.Body.String()), &response)
+	body := w.Body.Bytes()
+	err = json.Unmarshal(body, &response)
 	value, ok := response["error"]
 
 	assert.Nil(t, err)
 	assert.True(t, ok)
 
 	expectedBody := gin.H{
-		"error": "Missing input parameters: param1, param2, param3",
+		"error": "Missing input parameters: [param1 param2 param3]",
 	}
 	assert.Equal(t, expectedBody["error"], value)
 }
@@ -86,14 +89,14 @@ func TestWorkflowFoundAndLaunchedWithParameters(t *testing.T) {
 	router := NewRouter(dataStore)
 
 	w := httptest.NewRecorder()
-	Workflows = map[string]*model.Workflow{
-		"test": {
-			Name: "Test workflow",
-			InputParameters: []string{
-				"key",
-			},
+	workflow := model.Workflow{
+		Name: "test",
+		InputParameters: []string{
+			"key",
 		},
 	}
+	_, err := dataStore.InsertWorkflows(workflow)
+	assert.NoError(t, err)
 
 	payload := `{
       "key": "value"
