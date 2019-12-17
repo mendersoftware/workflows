@@ -156,9 +156,9 @@ func processJob(ctx context.Context, job *model.Job,
 
 func processJobString(data string, workflow *model.Workflow, job *model.Job) string {
 	for _, param := range job.InputParameters {
-		data = strings.ReplaceAll(data,
+		data = strings.Replace(data,
 			fmt.Sprintf("${workflow.input.%s}", param.Name),
-			param.Value)
+			param.Value, 1)
 	}
 
 	return data

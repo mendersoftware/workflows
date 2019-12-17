@@ -30,7 +30,7 @@ type Workflow struct {
 	Version         int      `json:"version" bson:"version"`
 	SchemaVersion   int      `json:"schemaVersion" bson:"schema_version"`
 	Tasks           []Task   `json:"tasks" bson:"tasks"`
-	InputParameters []string `json:"inputParameters" bson"input_parameters"`
+	InputParameters []string `json:"inputParameters" bson:"input_parameters"`
 }
 
 // Task stores the definition of a task within a workflow
@@ -44,8 +44,8 @@ type Task struct {
 type HTTPParams struct {
 	URI               string            `json:"uri"`
 	Method            string            `json:"method"`
-	ContentType       string            `json:"contentType",omitempty`
-	Payload           string            `json:"body",omitempty`
+	ContentType       string            `json:"contentType,omitempty"`
+	Payload           string            `json:"body,omitempty"`
 	Headers           map[string]string `json:"headers"`
 	ConnectionTimeOut int               `json:"connectionTimeOut"`
 	ReadTimeOut       int               `json:"readTimeOut"`
