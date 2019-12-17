@@ -20,6 +20,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/mendersoftware/go-lib-micro/config"
 	"github.com/urfave/cli"
@@ -27,7 +28,7 @@ import (
 	"github.com/mendersoftware/workflows/app/server"
 	"github.com/mendersoftware/workflows/app/worker"
 	dconfig "github.com/mendersoftware/workflows/config"
-	"github.com/mendersoftware/workflows/store/mongo"
+	store "github.com/mendersoftware/workflows/store/mongo"
 )
 
 func main() {
@@ -100,57 +101,73 @@ func main() {
 
 func cmdServer(args *cli.Context) error {
 	ctx := context.Background()
-	dbClient, err := getDbClientAndMigrate(ctx, args.Bool("automigrate"))
+	dbClient, err := store.NewMongoClient(ctx, config.Config)
+	if err != nil {
+		return cli.NewExitError(
+			fmt.Sprintf("failed to connect to db: %v", err),
+			3)
+	}
+	defer disconnectClient(ctx, dbClient)
+	err = doMigrations(ctx, dbClient, args.Bool("automigrate"))
 	if err != nil {
 		return err
 	}
-
-	defer dbClient.Disconnect(ctx)
-	dataStore := mongo.NewDataStoreWithClient(dbClient, config.Config)
+	dataStore := store.NewDataStoreWithClient(dbClient, config.Config)
 
 	return server.InitAndRun(config.Config, dataStore)
 }
 
 func cmdWorker(args *cli.Context) error {
 	ctx := context.Background()
-	dbClient, err := getDbClientAndMigrate(ctx, args.Bool("automigrate"))
+	dbClient, err := store.NewMongoClient(ctx, config.Config)
+	if err != nil {
+		return cli.NewExitError(
+			fmt.Sprintf("failed to connect to db: %v", err),
+			3)
+	}
+	defer disconnectClient(ctx, dbClient)
+	err = doMigrations(ctx, dbClient, args.Bool("automigrate"))
 	if err != nil {
 		return err
 	}
-
-	defer dbClient.Disconnect(ctx)
-	dataStore := mongo.NewDataStoreWithClient(dbClient, config.Config)
+	dataStore := store.NewDataStoreWithClient(dbClient, config.Config)
 
 	return worker.InitAndRun(config.Config, dataStore)
 }
 
 func cmdMigrate(args *cli.Context) error {
 	ctx := context.Background()
-	dbClient, err := getDbClientAndMigrate(ctx, true)
+	dbClient, err := store.NewMongoClient(ctx, config.Config)
+	if err != nil {
+		return cli.NewExitError(
+			fmt.Sprintf("failed to connect to db: %v", err),
+			3)
+	}
+	defer disconnectClient(ctx, dbClient)
+	err = doMigrations(ctx, dbClient, args.Bool("automigrate"))
 	if err != nil {
 		return err
 	}
 
-	dbClient.Disconnect(ctx)
-
 	return nil
 }
 
-func getDbClientAndMigrate(ctx context.Context, automigrate bool) (*mongo.MongoClient, error) {
-	dbClient, err := mongo.NewMongoClient(ctx, config.Config)
-	if err != nil {
-		return nil, cli.NewExitError(
-			fmt.Sprintf("failed to connect to db: %v", err),
-			3)
-	}
-
+func doMigrations(ctx context.Context, client *store.MongoClient,
+	automigrate bool) error {
 	db := config.Config.GetString(dconfig.SettingDbName)
-	err = mongo.Migrate(ctx, db, mongo.DbVersion, dbClient, automigrate)
+	err := store.Migrate(ctx, db, store.DbVersion, client, automigrate)
 	if err != nil {
-		return nil, cli.NewExitError(
+		return cli.NewExitError(
 			fmt.Sprintf("failed to run migrations: %v", err),
 			3)
 	}
 
-	return dbClient, nil
+	return nil
+}
+
+func disconnectClient(parentCtx context.Context, client *store.MongoClient) {
+	ctx, cancel := context.WithTimeout(parentCtx, 10*time.Second)
+	client.Disconnect(ctx)
+	<-ctx.Done()
+	cancel()
 }
