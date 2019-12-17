@@ -15,6 +15,7 @@
 package model
 
 import (
+	"encoding/json"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -32,8 +33,8 @@ func TestParseWorkflowFromJSON(t *testing.T) {
 	"tasks": [
 		{
 			"name": "delete_device_inventory",
-			"type": "HTTP",
-			"http": {
+			"type": "http",
+			"taskdef": {
 				"uri": "http://mender-inventory:8080/api/0.1.0/devices/${workflow.input.device_id}",
 				"method": "DELETE",
 				"body": "Payload",
@@ -70,16 +71,19 @@ func TestParseWorkflowFromJSON(t *testing.T) {
 	var tasks = workflow.Tasks
 	assert.Len(t, tasks, 1)
 	assert.Equal(t, tasks[0].Name, "delete_device_inventory")
-	assert.Equal(t, tasks[0].Type, "HTTP")
-	assert.NotNil(t, tasks[0].HTTP)
-	assert.Equal(t, tasks[0].HTTP.URI, "http://mender-inventory:8080/api/0.1.0/devices/${workflow.input.device_id}")
-	assert.Equal(t, tasks[0].HTTP.Method, "DELETE")
-	assert.Equal(t, tasks[0].HTTP.Payload, "Payload")
-	assert.Len(t, tasks[0].HTTP.Headers, 2)
-	assert.Equal(t, tasks[0].HTTP.Headers["X-MEN-RequestID"], "${workflow.input.request_id}")
-	assert.Equal(t, tasks[0].HTTP.Headers["Authorization"], "${workflow.input.authorization}")
-	assert.Equal(t, tasks[0].HTTP.ConnectionTimeOut, 1000)
-	assert.Equal(t, tasks[0].HTTP.ReadTimeOut, 1000)
+	assert.Equal(t, tasks[0].Type, "http")
+	assert.NotNil(t, tasks[0].Taskdef)
+	var httpTask HTTPTask
+	err := json.Unmarshal(tasks[0].Taskdef, &httpTask)
+	assert.NoError(t, err)
+	assert.Equal(t, httpTask.URI, "http://mender-inventory:8080/api/0.1.0/devices/${workflow.input.device_id}")
+	assert.Equal(t, httpTask.Method, "DELETE")
+	assert.Equal(t, httpTask.Body, "Payload")
+	assert.Len(t, httpTask.Headers, 2)
+	assert.Equal(t, httpTask.Headers["X-MEN-RequestID"], "${workflow.input.request_id}")
+	assert.Equal(t, httpTask.Headers["Authorization"], "${workflow.input.authorization}")
+	assert.Equal(t, httpTask.ConnectionTimeOut, 1000)
+	assert.Equal(t, httpTask.ReadTimeOut, 1000)
 }
 
 func TestParseWorkflowFromInvalidJSON(t *testing.T) {

@@ -16,6 +16,7 @@ package worker
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -24,8 +25,6 @@ import (
 	"strings"
 	"syscall"
 	"time"
-
-	"go.mongodb.org/mongo-driver/bson"
 
 	"github.com/mendersoftware/go-lib-micro/config"
 	"github.com/mendersoftware/go-lib-micro/log"
@@ -98,49 +97,24 @@ func processJob(ctx context.Context, job *model.Job,
 	l.Infof("%s: started, %s", job.ID, job.WorkflowName)
 
 	for _, task := range workflow.Tasks {
-		if task.Type == "HTTP" {
-			uri := processJobString(task.HTTP.URI, workflow, job)
-			payloadString := processJobString(task.HTTP.Payload, workflow, job)
-			payload := strings.NewReader(payloadString)
-
-			req, _ := http.NewRequest(task.HTTP.Method, uri, payload)
-
-			var headersToBeSent []string
-			for name, value := range task.HTTP.Headers {
-				headerValue := processJobString(value, workflow, job)
-				req.Header.Add(name, headerValue)
-				headersToBeSent = append(headersToBeSent, fmt.Sprintf("%s: %s", name, headerValue))
-			}
-			var netClient = &http.Client{
-				Timeout: time.Duration(task.HTTP.ReadTimeOut) * time.Second,
-			}
-			res, err := netClient.Do(req)
+		switch task.Type {
+		case "http":
+			var httpTask model.HTTPTask
+			err := json.Unmarshal(task.Taskdef, &httpTask)
 			if err != nil {
-				break
+				return fmt.Errorf(
+					"Error: Task definition incompatible " +
+						"with specified type (http)")
 			}
-
-			defer res.Body.Close()
-			resBody, _ := ioutil.ReadAll(res.Body)
-
-			result := bson.M{
-				"request": bson.M{
-					"uri":     uri,
-					"method":  task.HTTP.Method,
-					"payload": payloadString,
-					"headers": headersToBeSent,
-				},
-				"response": bson.M{
-					"statuscode": res.Status,
-					"body":       string(resBody),
-				},
-			}
-
-			l.Infof("%s: %s", job.ID, result)
-			err = dataStore.UpdateJobAddResult(ctx, job, result)
+			results, err := processHTTPTask(&httpTask, job, workflow)
 			if err != nil {
-				l := log.NewEmpty()
-				l.Error(err.Error())
-				dataStore.UpdateJobStatus(ctx, job, model.StatusFailure)
+				dataStore.UpdateJobStatus(ctx, job,
+					model.StatusFailure)
+				return err
+			}
+			err = dataStore.UpdateJobAddResult(ctx, job, results)
+			if err != nil {
+				l.Errorf("Error uploading results: %s", err.Error())
 			}
 		}
 	}
@@ -162,4 +136,49 @@ func processJobString(data string, workflow *model.Workflow, job *model.Job) str
 	}
 
 	return data
+}
+
+func processHTTPTask(httpTask *model.HTTPTask, job *model.Job,
+	workflow *model.Workflow) (*model.TaskResult, error) {
+	uri := processJobString(httpTask.URI, workflow, job)
+	payloadString := processJobString(httpTask.Body, workflow, job)
+	payload := strings.NewReader(payloadString)
+
+	req, err := http.NewRequest(httpTask.Method, uri, payload)
+	if err != nil {
+		return nil, err
+	}
+
+	var headersToBeSent []string
+	for name, value := range httpTask.Headers {
+		headerValue := processJobString(value, workflow, job)
+		req.Header.Add(name, headerValue)
+		headersToBeSent = append(headersToBeSent,
+			fmt.Sprintf("%s: %s", name, headerValue))
+	}
+	var netClient = &http.Client{
+		Timeout: time.Duration(httpTask.ReadTimeOut) * time.Second,
+	}
+	res, err := netClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	defer res.Body.Close()
+	resBody, _ := ioutil.ReadAll(res.Body)
+
+	result := &model.TaskResult{
+		Request: model.TaskResultRequest{
+			URI:     uri,
+			Method:  httpTask.Method,
+			Body:    payloadString,
+			Headers: headersToBeSent,
+		},
+		Response: model.TaskResultResponse{
+			StatusCode: res.StatusCode,
+			Body:       string(resBody),
+		},
+	}
+
+	return result, nil
 }

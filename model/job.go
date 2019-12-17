@@ -39,10 +39,10 @@ type Job struct {
 	ID string `json:"id" bson:"_id"`
 
 	// WorkflowName contains the name of the workflow
-	WorkflowName string `json:"workflow_name" bson:"workflow_name"`
+	WorkflowName string `json:"workflowName" bson:"workflow_name"`
 
 	// InputParameters contains the name of the workflow
-	InputParameters []InputParameter `json:"input_parameters" bson:"input_parameters"`
+	InputParameters []InputParameter `json:"inputParameters" bson:"input_parameters"`
 
 	// Enumerated status of the Job and string field used for unmarshalling
 	Status       int    `json:"-" bson:"status"`
@@ -72,13 +72,13 @@ type TaskResult struct {
 type TaskResultRequest struct {
 	URI     string   `json:"uri" bson:"uri"`
 	Method  string   `json:"method" bson:"method"`
-	Payload string   `json:"payload" bson:"payload"`
+	Body    string   `json:"body" bson:"body"`
 	Headers []string `json:"headers" bson:"headers"`
 }
 
 // TaskResultResponse contains the response
 type TaskResultResponse struct {
-	StatusCode string `json:"statuscode" bson:"statuscode"`
+	StatusCode int    `json:"statusCode" bson:"status_code"`
 	Body       string `json:"body" bson:"body"`
 }
 

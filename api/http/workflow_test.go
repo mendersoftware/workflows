@@ -37,7 +37,7 @@ func TestWorkflowNotFound(t *testing.T) {
       "key": "value"
 	}`
 
-	req, _ := http.NewRequest("POST", "/api/workflow/test", strings.NewReader(payload))
+	req, _ := http.NewRequest("POST", "/api/v1/workflow/test", strings.NewReader(payload))
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, 404, w.Code)
@@ -64,7 +64,7 @@ func TestWorkflowFoundButMissingParameters(t *testing.T) {
       "key": "value"
 	}`
 
-	req, err := http.NewRequest("POST", "/api/workflow/test", strings.NewReader(payload))
+	req, err := http.NewRequest("POST", "/api/v1/workflow/test", strings.NewReader(payload))
 	assert.NoError(t, err)
 	router.ServeHTTP(w, req)
 
@@ -102,9 +102,9 @@ func TestWorkflowFoundAndLaunchedWithParameters(t *testing.T) {
       "key": "value"
 	}`
 
-	req, _ := http.NewRequest("POST", "/api/workflow/test", strings.NewReader(payload))
+	req, _ := http.NewRequest("POST", "/api/v1/workflow/test", strings.NewReader(payload))
 	router.ServeHTTP(w, req)
 
-	assert.Equal(t, 200, w.Code)
+	assert.Equal(t, 201, w.Code)
 	assert.Equal(t, 1, len(dataStore.Jobs))
 }

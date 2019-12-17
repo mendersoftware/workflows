@@ -340,15 +340,15 @@ func (db *DataStoreMongo) AquireJob(ctx context.Context,
 }
 
 // UpdateJobAddResult add a task execution result to a job status
-func (db *DataStoreMongo) UpdateJobAddResult(
-	ctx context.Context, job *model.Job, data bson.M) error {
+func (db *DataStoreMongo) UpdateJobAddResult(ctx context.Context,
+	job *model.Job, result *model.TaskResult) error {
 	collection := db.client.Database(db.dbName).
 		Collection(JobsCollectionName)
 	var update bson.M
 	if job.Results == nil {
-		update = bson.M{"$set": bson.M{"results": bson.A{data}}}
+		update = bson.M{"$set": bson.M{"results": bson.A{result}}}
 	} else {
-		update = bson.M{"$addToSet": bson.M{"results": data}}
+		update = bson.M{"$addToSet": bson.M{"results": result}}
 	}
 	_, err := collection.UpdateOne(ctx, bson.M{"_id": job.ID}, update)
 	if err != nil {

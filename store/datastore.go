@@ -5,8 +5,6 @@ import (
 	"errors"
 
 	"github.com/mendersoftware/workflows/model"
-
-	"go.mongodb.org/mongo-driver/bson"
 )
 
 var (
@@ -23,7 +21,7 @@ type DataStore interface {
 	InsertJob(ctx context.Context, job *model.Job) (*model.Job, error)
 	GetJobs(ctx context.Context) <-chan *model.Job
 	AquireJob(ctx context.Context, job *model.Job) (*model.Job, error)
-	UpdateJobAddResult(ctx context.Context, job *model.Job, data bson.M) error
+	UpdateJobAddResult(ctx context.Context, job *model.Job, result *model.TaskResult) error
 	UpdateJobStatus(ctx context.Context, job *model.Job, status int) error
 	GetJobByNameAndID(ctx context.Context, name string, ID string) (*model.Job, error)
 	Shutdown()

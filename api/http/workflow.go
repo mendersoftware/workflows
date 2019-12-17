@@ -117,10 +117,9 @@ func (h WorkflowController) StartWorkflow(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"id":      job.ID,
-		"name":    name,
-		"success": true,
+	c.JSON(http.StatusCreated, gin.H{
+		"id":   job.ID,
+		"name": name,
 	})
 }
 

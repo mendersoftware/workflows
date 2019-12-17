@@ -35,17 +35,20 @@ type Workflow struct {
 
 // Task stores the definition of a task within a workflow
 type Task struct {
-	Name string     `json:"name"`
-	Type string     `json:"type"`
-	HTTP HTTPParams `json:"http"`
+	// Name of the task
+	Name string `json:"name"`
+	// Type of task (determines task def structure)
+	Type string `json:"type"`
+	// Definition of the task
+	Taskdef json.RawMessage `json:"taskdef" bson:"taskdef"`
 }
 
-// HTTPParams stores the parameters of the HTTP calls for a WorkflowTask
-type HTTPParams struct {
+// HTTPTask stores the parameters of the HTTP calls for a WorkflowTask
+type HTTPTask struct {
 	URI               string            `json:"uri"`
 	Method            string            `json:"method"`
 	ContentType       string            `json:"contentType,omitempty"`
-	Payload           string            `json:"body,omitempty"`
+	Body              string            `json:"body,omitempty"`
 	Headers           map[string]string `json:"headers"`
 	ConnectionTimeOut int               `json:"connectionTimeOut"`
 	ReadTimeOut       int               `json:"readTimeOut"`

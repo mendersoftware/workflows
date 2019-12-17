@@ -17,7 +17,6 @@ package mock
 import (
 	"context"
 
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"github.com/mendersoftware/workflows/model"
@@ -90,7 +89,8 @@ func (db *DataStoreMock) AquireJob(ctx context.Context,
 }
 
 // UpdateJobAddResult add a task execution result to a job status
-func (db *DataStoreMock) UpdateJobAddResult(ctx context.Context, job *model.Job, data bson.M) error {
+func (db *DataStoreMock) UpdateJobAddResult(ctx context.Context,
+	job *model.Job, result *model.TaskResult) error {
 	return nil
 }
 
