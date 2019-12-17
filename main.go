@@ -41,7 +41,7 @@ func main() {
 				Destination: &configPath,
 			},
 		},
-		Commands: []*cli.Command{
+		Commands: []cli.Command{
 			{
 				Name:   "server",
 				Usage:  "Run the HTTP API server",
