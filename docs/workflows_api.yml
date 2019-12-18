@@ -1,0 +1,285 @@
+swagger: '2.0'
+info:
+  title: Deployments
+  version: '1'
+  description: |
+    An API for workflow management.
+    Intended for use by other services.
+
+host: 'docker.mender.io'
+schemes:
+  - https
+
+responses:
+  NotFoundError: # 404
+    description: Not Found.
+    schema:
+      $ref: "#/definitions/Error"
+  InternalServerError: # 500
+    description: Internal Server Error.
+    schema:
+      $ref: "#/definitions/Error"
+  InvalidRequestError: # 400
+    description: Invalid Request.
+    schema:
+      $ref: "#/definitions/Error"
+#  UnprocessableEntityError: # 422
+#    description: Unprocessable Entity.
+#    schema:
+#      $ref: "#/definitions/Error"
+
+paths:
+  /status:
+    get:
+      summary: Get health status of service
+      description: |
+        Returns status of the running service.
+      produces:
+        - application/json
+      responses:
+        200:
+          description: Successful response.
+          examples:
+            application/json:
+              - status: ok
+          schema:
+            type: object
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+        400:
+          $ref: "#/responses/InvalidRequestError"
+        500:
+          $ref: "#/responses/InternalServerError"
+
+  /api/v1/workflow/{name}:
+    post:
+      summary: Start a new workflow
+      description: |
+        Starts a new workflow given by the name path-parameter.
+      parameters:
+        - name: name
+          in: path
+          description: Workflow identifier.
+          required: true
+          type: string
+        - name: JobParameters
+          in: body
+          required: true
+          description: Contains the definition of the job to be started.
+          schema:
+            type: array
+            items:
+              $ref: "#/definitions/InputParameter"
+      produces:
+        - application/json
+      responses:
+        201:
+          description: Workflow created successfully
+          schema:
+            type: object
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+        400:
+            $ref: "#/responses/InvalidRequestError"
+        404:
+            $ref: "#/responses/NotFoundError"
+
+  /api/v1/workflow/{name}/{id}:
+    get:
+      summary: Gets the workflow status for the given id.
+      description: |
+        Gets the workflow status for the given workflow name and id provided
+        by the path parameters.
+      parameters:
+        - name: name
+          in: path
+          description: Workflow identifier.
+          required: true
+          type: string
+        - name: id
+          in: path
+          description: Job identifier
+          required: true
+          type: string
+      produces:
+        - application/json
+      responses:
+        200:
+          description: Successful query
+          schema:
+            $ref: "#/definitions/JobStatus"
+        404:
+          $ref: "#/responses/NotFoundError"
+
+  /api/v1/metadata/workflows:
+    get:
+      summary: Get all workflow definitions
+      produces:
+        - application/json
+      responses:
+        200:
+          description: Successful response
+          schema:
+            type: array
+            items:
+              $ref: "#/definitions/Workflow"
+
+    post:
+      summary: Register a new workflow
+      parameters:
+        - name: workflowDefinition
+          in: body
+          description: Workflow definition.
+          required: true
+          schema:
+            $ref: "#/definitions/Workflow"
+      produces:
+        - application/json
+      responses:
+        201:
+          description: Successful response.
+        400:
+          $ref: "#/responses/InvalidRequestError"
+
+
+definitions:
+  Error:
+    description: Error descriptor.
+    type: object
+    properties:
+      error:
+        description: Description of the error.
+        type: string
+    example:
+      application/json:
+          error: "failed to decode device group data: JSON payload is empty"
+
+  HTTPParams:
+    description: HTTP parameters
+    type: object
+    properties:
+      uri:
+        type: string
+      method:
+        type: string
+      contentType:
+        type: string
+      body:
+        type: string
+      headers:
+        type: object
+      connectionTimeOut:
+        type: integer
+      readTimeOut:
+        type: integer
+
+  Task:
+    description: Task definition
+    type: object
+    properties:
+      name:
+        type: string
+      type:
+        type: string
+      taskdef:
+        type: object
+        enum:
+          - $ref: "#/definitions/HTTPParams"
+        # TODO: Add task definitions for other types as implemented
+    required:
+      - name
+      - type
+      - taskdef
+
+  Workflow:
+    type: object
+    properties:
+      name:
+        type: string
+      description:
+        type: string
+      version:
+        type: integer
+      schemaversion:
+        type: integer
+      tasks:
+        type: array
+        items:
+          $ref: "#/definitions/Task"
+      inputParameters:
+        type: array
+        items:
+          type: string
+    required:
+      - name
+      - version
+      - tasks
+
+  InputParameter:
+    type: object
+    properties:
+      name:
+        type: string
+      value:
+        type: string
+    required:
+      - name
+      - value
+    example:
+      application/json:
+        name: key
+        value: parameter
+
+  TaskResultRequest:
+    type: object
+    properties:
+      statusCode:
+        type: integer
+      body:
+        type: string
+
+  TaskResultResponse:
+    type: object
+    properties:
+      uri:
+        type: string
+      method:
+        type: string
+      headers:
+        type: array
+        items:
+          type: string
+      body:
+        type: string
+
+  TaskResult:
+    type: object
+    properties:
+      request:
+        $ref: "#/definitions/TaskResultRequest"
+      response:
+        $ref: "#/definitions/TaskResultResponse"
+
+  JobStatus:
+    type: object
+    properties:
+      id:
+        type: string
+      workflowName:
+        type: string
+      inputParameters:
+        type: array
+        items:
+          $ref: "#/definitions/InputParameter"
+      status:
+        type: string
+      results:
+        type: array
+        items:
+          $ref: "#/definitions/TaskResult"
