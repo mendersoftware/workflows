@@ -1,3 +1,7 @@
+[![Build Status](https://gitlab.com/Northern.tech/Mender/workflows/badges/master/pipeline.svg)](https://gitlab.com/Northern.tech/Mender/workflows/pipelines)
+[![codecov](https://codecov.io/gh/mendersoftware/workflows/branch/master/graph/badge.svg)](https://codecov.io/gh/mendersoftware/workflows)
+[![Docker pulls](https://img.shields.io/docker/pulls/mendersoftware/workflows.svg?maxAge=3600)](https://hub.docker.com/r/mendersoftware/workflows/)
+
 # Introduction
 
 In order to explore possible paths for MEN-2934, we created a PoC based on:
