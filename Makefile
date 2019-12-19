@@ -2,6 +2,7 @@ GO ?= go
 GOFMT ?= gofmt "-s"
 PACKAGES ?= $(shell $(GO) list ./...)
 GOFILES := $(shell find . -name "*.go" -type f -not -path './vendor/*')
+COMPOSECMD := docker-compose -f "docker-compose.yaml" "up" -d
 
 .PHONY: all
 all: fmt lint vet test
@@ -17,6 +18,10 @@ test:
 .PHONY: fmt
 fmt:
 	$(GOFMT) -w $(GOFILES)
+
+.PHONY: docker
+docker:
+	$(COMPOSECMD)
 
 .PHONY: lint
 lint:

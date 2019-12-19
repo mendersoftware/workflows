@@ -1,4 +1,4 @@
-version: '2'
+version: '2.1'
 services:
   mongodb:
     image: 'bitnami/mongodb:4.0'
@@ -6,3 +6,25 @@ services:
     - "27017:27017"
     volumes:
     - ./data/mongodb:/opt/mongodb
+    networks:
+      mender:
+        aliases:
+          - mongo-workflows
+
+  workflows-worker:
+    image: 'registry.mender.io/workflows:master'
+    command: /usr/bin/workflows --config /etc/workflows/config.yml worker --automigrate
+    networks:
+      mender:
+        aliases:
+          - workflows-worker
+    
+  workflows-server:
+    image: 'registry.mender.io/workflows:master'
+    command: /usr/bin/workflows --config /etc/workflows/config.yml server --automigrate
+    networks:
+      mender:
+        aliases:
+          - workflows-server
+networks:
+    mender:
