@@ -144,7 +144,7 @@ func cmdMigrate(args *cli.Context) error {
 			3)
 	}
 	defer disconnectClient(ctx, dbClient)
-	err = doMigrations(ctx, dbClient, args.Bool("automigrate"))
+	err = doMigrations(ctx, dbClient, true)
 	if err != nil {
 		return err
 	}

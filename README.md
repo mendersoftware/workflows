@@ -62,32 +62,32 @@ The workflows are defined as JSON files. A sample workflow follows:
 
 ```json
 {
-	"name": "decommission_device",
-	"description": "Removes device info from all services.",
-	"version": 4,
-	"tasks": [
-		{
-			"name": "delete_device_inventory",
-			"type": "HTTP",
-			"http": {
-				"uri": "http://www.mocky.io/v2/5de377e13000006800e9c9c2?mocky-delay=2000ms",
-        "method": "PUT",
-        "payload": "{\"device_id\": \"${workflow.input.device_id}\"}",
-				"headers": {
-					"X-MEN-RequestID": "${workflow.input.request_id}",
-					"Authorization": "${workflow.input.authorization}"
-				},
-				"connectionTimeOut": 1000,
-				"readTimeOut": 1000
-			}
-		}
-	],
-	"inputParameters": [
-		"device_id",
-		"request_id",
-		"authorization"
-	],
-	"schemaVersion": 1
+    "name": "decommission_device",
+    "description": "Removes device info from all services.",
+    "version": 4,
+    "tasks": [
+        {
+            "name": "delete_device_inventory",
+            "type": "http",
+            "taskdef": {
+            "uri": "http://www.mocky.io/v2/5de377e13000006800e9c9c2?mocky-delay=2000ms",
+            "method": "PUT",
+            "payload": "{\"device_id\": \"${workflow.input.device_id}\"}",
+                "headers": {
+                    "X-MEN-RequestID": "${workflow.input.request_id}",
+                    "Authorization": "${workflow.input.authorization}"
+                },
+                "connectionTimeOut": 1000,
+                "readTimeOut": 1000
+            }
+        }
+    ],
+    "inputParameters": [
+        "device_id",
+        "request_id",
+        "authorization"
+    ],
+    "schemaVersion": 1
 }
 ```
 

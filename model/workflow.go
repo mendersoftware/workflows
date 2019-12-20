@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"path/filepath"
+	"strings"
 
 	"github.com/mendersoftware/go-lib-micro/log"
 	"github.com/pkg/errors"
@@ -73,6 +74,9 @@ func GetWorkflowsFromPath(path string) map[string]*Workflow {
 	}
 
 	for _, f := range files {
+		if !strings.HasSuffix(f.Name(), ".json") {
+			continue
+		}
 		fn := filepath.Join(path, f.Name())
 		if data, err := ioutil.ReadFile(fn); err == nil {
 			workflow, err := ParseWorkflowFromJSON([]byte(data))
