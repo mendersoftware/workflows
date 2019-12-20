@@ -213,6 +213,12 @@
 			"revisionTime": "2019-11-14T14:54:31Z"
 		},
 		{
+			"checksumSHA1": "G2mvRrzTASSGMK9kQzDUy7a5IoY=",
+			"path": "github.com/mendersoftware/mendertesting",
+			"revision": "eb624fb30cf4045a3d6e43fc6f4ad626a6319bfc",
+			"revisionTime": "2019-11-11T09:32:56Z"
+		},
+		{
 			"checksumSHA1": "J+g0oZePWp2zSIISD2dZZKTxmgg=",
 			"path": "github.com/mitchellh/mapstructure",
 			"revision": "3536a929edddb9a5b34bd6861dc4a9647cb459fe",
