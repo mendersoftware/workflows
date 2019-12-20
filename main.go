@@ -168,6 +168,5 @@ func doMigrations(ctx context.Context, client *store.MongoClient,
 func disconnectClient(parentCtx context.Context, client *store.MongoClient) {
 	ctx, cancel := context.WithTimeout(parentCtx, 10*time.Second)
 	client.Disconnect(ctx)
-	<-ctx.Done()
 	cancel()
 }

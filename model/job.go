@@ -41,6 +41,8 @@ type Job struct {
 	// WorkflowName contains the name of the workflow
 	WorkflowName string `json:"workflowName" bson:"workflow_name"`
 
+	TaskId string `json:"-" bson:"-"`
+
 	// InputParameters contains the name of the workflow
 	InputParameters []InputParameter `json:"inputParameters" bson:"input_parameters"`
 
@@ -60,26 +62,6 @@ type InputParameter struct {
 
 	// Value of the input parameter
 	Value string `json:"value" bson:"value"`
-}
-
-// TaskResult contains the result of the execution of a task
-type TaskResult struct {
-	Request  TaskResultRequest  `json:"request" bson:"request"`
-	Response TaskResultResponse `json:"response" bson:"response"`
-}
-
-// TaskResultRequest contains the request
-type TaskResultRequest struct {
-	URI     string   `json:"uri" bson:"uri"`
-	Method  string   `json:"method" bson:"method"`
-	Body    string   `json:"body" bson:"body"`
-	Headers []string `json:"headers" bson:"headers"`
-}
-
-// TaskResultResponse contains the response
-type TaskResultResponse struct {
-	StatusCode int    `json:"statusCode" bson:"status_code"`
-	Body       string `json:"body" bson:"body"`
 }
 
 // Validate job against workflow. Check that all required parameters are present.

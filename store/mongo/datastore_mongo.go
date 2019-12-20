@@ -372,15 +372,16 @@ func (db *DataStoreMongo) UpdateJobStatus(
 	if model.StatusToString(status) == "unknown" {
 		return model.ErrInvalidStatus
 	}
+	query := bson.M{
+		"_id":    job.ID,
+		"status": bson.M{"$ne": model.StatusFailure},
+	}
+	update := bson.D{
+		{Key: "$set", Value: bson.M{"status": status}},
+	}
 	collection := db.client.Database(db.dbName).
 		Collection(JobsCollectionName)
-	_, err := collection.UpdateOne(ctx, bson.M{
-		"_id": job.ID,
-	}, bson.M{
-		"$set": bson.M{
-			"status": status,
-		},
-	})
+	_, err := collection.UpdateOne(ctx, query, update)
 	if err != nil {
 		return err
 	}

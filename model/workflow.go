@@ -34,27 +34,6 @@ type Workflow struct {
 	InputParameters []string `json:"inputParameters" bson:"input_parameters"`
 }
 
-// Task stores the definition of a task within a workflow
-type Task struct {
-	// Name of the task
-	Name string `json:"name"`
-	// Type of task (determines task def structure)
-	Type string `json:"type"`
-	// Definition of the task
-	Taskdef json.RawMessage `json:"taskdef" bson:"taskdef"`
-}
-
-// HTTPTask stores the parameters of the HTTP calls for a WorkflowTask
-type HTTPTask struct {
-	URI               string            `json:"uri"`
-	Method            string            `json:"method"`
-	ContentType       string            `json:"contentType,omitempty"`
-	Body              string            `json:"body,omitempty"`
-	Headers           map[string]string `json:"headers"`
-	ConnectionTimeOut int               `json:"connectionTimeOut"`
-	ReadTimeOut       int               `json:"readTimeOut"`
-}
-
 // ParseWorkflowFromJSON parse a JSON string and returns a Workflow struct
 func ParseWorkflowFromJSON(jsonData []byte) (*Workflow, error) {
 	var workflow Workflow

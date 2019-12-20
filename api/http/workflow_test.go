@@ -15,6 +15,7 @@
 package http
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -23,15 +24,22 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/mendersoftware/workflows/model"
-	store "github.com/mendersoftware/workflows/store/mock"
+	"github.com/mendersoftware/workflows/store"
+	"github.com/mendersoftware/workflows/store/mock"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestWorkflowNotFound(t *testing.T) {
-	dataStore := store.NewDataStoreMock()
+	dataStore := mock.NewDataStore()
 	router := NewRouter(dataStore)
 
 	w := httptest.NewRecorder()
+
+	dataStore.On("InsertJob", context.Background(), &model.Job{
+		WorkflowName:    "test",
+		InputParameters: []model.InputParameter{{Name: "key", Value: "value"}},
+	}).Return(nil, store.ErrWorkflowNotFound)
 
 	payload := `{
       "key": "value"
@@ -44,7 +52,7 @@ func TestWorkflowNotFound(t *testing.T) {
 }
 
 func TestWorkflowFoundButMissingParameters(t *testing.T) {
-	dataStore := store.NewDataStoreMock()
+	dataStore := mock.NewDataStore()
 	router := NewRouter(dataStore)
 
 	w := httptest.NewRecorder()
@@ -56,7 +64,11 @@ func TestWorkflowFoundButMissingParameters(t *testing.T) {
 			"param3",
 		},
 	}
-	_, err := dataStore.InsertWorkflows(workflow)
+	ctx := context.Background()
+	call := dataStore.On("InsertWorkflows", ctx, []model.Workflow{workflow})
+	assert.NotNil(t, call)
+	call.Return(1, nil)
+	_, err := dataStore.InsertWorkflows(ctx, workflow)
 	assert.NoError(t, err)
 
 	w = httptest.NewRecorder()
@@ -66,8 +78,16 @@ func TestWorkflowFoundButMissingParameters(t *testing.T) {
 
 	req, err := http.NewRequest("POST", "/api/v1/workflow/test", strings.NewReader(payload))
 	assert.NoError(t, err)
-	router.ServeHTTP(w, req)
 
+	dataStore.On("InsertJob", ctx, &model.Job{
+		WorkflowName: "test",
+		InputParameters: []model.InputParameter{{
+			Name:  "key",
+			Value: "value"}},
+	}).Return(nil, errors.New("Missing input parameters: "+
+		"[param1 param2 param3]"))
+
+	router.ServeHTTP(w, req)
 	assert.Equal(t, 400, w.Code)
 
 	var response map[string]string
@@ -85,26 +105,25 @@ func TestWorkflowFoundButMissingParameters(t *testing.T) {
 }
 
 func TestWorkflowFoundAndLaunchedWithParameters(t *testing.T) {
-	dataStore := store.NewDataStoreMock()
+	dataStore := mock.NewDataStore()
 	router := NewRouter(dataStore)
 
 	w := httptest.NewRecorder()
-	workflow := model.Workflow{
-		Name: "test",
-		InputParameters: []string{
-			"key",
-		},
-	}
-	_, err := dataStore.InsertWorkflows(workflow)
-	assert.NoError(t, err)
-
 	payload := `{
       "key": "value"
 	}`
-
+	job := model.Job{
+		WorkflowName: "test",
+		InputParameters: []model.InputParameter{{
+			Name: "key", Value: "value",
+		}},
+	}
+	ret := job
+	ret.ID = "TWELVECHRSTR"
+	ret.Status = model.StatusPending
+	dataStore.On("InsertJob", context.Background(), &job).Return(&ret, nil)
 	req, _ := http.NewRequest("POST", "/api/v1/workflow/test", strings.NewReader(payload))
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, 201, w.Code)
-	assert.Equal(t, 1, len(dataStore.Jobs))
 }
