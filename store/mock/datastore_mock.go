@@ -17,96 +17,211 @@ package mock
 import (
 	"context"
 
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"github.com/stretchr/testify/mock"
 
 	"github.com/mendersoftware/workflows/model"
-	"github.com/mendersoftware/workflows/store"
 )
 
-// DataStoreMock is a mocked data storage service
-type DataStoreMock struct {
-	// Jobs contains the list of queued jobs
-	Jobs      []model.Job
-	Workflows map[string]*model.Workflow
-	channel   chan *model.Job
+type DataStore struct {
+	mock.Mock
 }
 
-// NewDataStoreMock initializes a DataStore mock object
-func NewDataStoreMock() *DataStoreMock {
+// NewDataStore initializes a DataStore mock object
+func NewDataStore() *DataStore {
 
-	return &DataStoreMock{
-		channel:   make(chan *model.Job),
-		Workflows: make(map[string]*model.Workflow),
+	return &DataStore{}
+}
+
+func (db *DataStore) InsertWorkflows(ctx context.Context,
+	workflows ...model.Workflow) (int, error) {
+	ret := db.Called(ctx, workflows)
+
+	var r0 int
+	if rf, ok := ret.Get(0).(func(context.Context, []model.Workflow) int); ok {
+		r0 = rf(ctx, workflows)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(int)
+		}
 	}
-}
 
-func (db *DataStoreMock) InsertWorkflows(workflows ...model.Workflow) (int, error) {
-	for _, workflow := range workflows {
-		db.Workflows[workflow.Name] = &workflow
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, []model.Workflow) error); ok {
+		r1 = rf(ctx, workflows)
+	} else {
+		r1 = ret.Error(1)
 	}
-	return len(workflows), nil
+	return r0, r1
 }
 
-func (db *DataStoreMock) GetWorkflowByName(
+func (db *DataStore) GetWorkflowByName(ctx context.Context,
 	workflowName string) (*model.Workflow, error) {
-	return db.Workflows[workflowName], nil
+	ret := db.Called(workflowName)
+
+	var r0 *model.Workflow
+	if rf, ok := ret.
+		Get(0).(func(context.Context, string) *model.Workflow); ok {
+		r0 = rf(ctx, workflowName)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*model.Workflow)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, workflowName)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
 }
 
-func (db *DataStoreMock) GetWorkflows() []model.Workflow {
-	workflows := make([]model.Workflow, len(db.Workflows))
-	i := 0
-	for _, workflow := range db.Workflows {
-		workflows[i] = *workflow
-		i++
+func (db *DataStore) GetWorkflows() []model.Workflow {
+	ret := db.Called()
+
+	var r0 []model.Workflow
+	if rf, ok := ret.Get(0).(func() []model.Workflow); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]model.Workflow)
+		}
 	}
-	return workflows
+
+	return r0
 }
 
 // InsertJob inserts the job in the queue
-func (db *DataStoreMock) InsertJob(ctx context.Context, job *model.Job) (*model.Job, error) {
-	job.ID = primitive.NewObjectID().Hex()
-	if wf, ok := db.Workflows[job.WorkflowName]; ok {
-		if err := job.Validate(wf); err != nil {
-			return nil, err
-		}
-	} else {
-		return nil, store.ErrWorkflowNotFound
-	}
-	db.Jobs = append(db.Jobs, *job)
+func (db *DataStore) InsertJob(ctx context.Context, job *model.Job) (*model.Job, error) {
+	ret := db.Called(ctx, job)
 
-	return job, nil
+	var r0 *model.Job
+	if rf, ok := ret.
+		Get(0).(func(context.Context, *model.Job) *model.Job); ok {
+		r0 = rf(ctx, job)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*model.Job)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(context.Context, *model.Job) error); ok {
+		r1 = rf(ctx, job)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // GetJobs returns a channel of Jobs
-func (db *DataStoreMock) GetJobs(ctx context.Context) <-chan *model.Job {
-	return db.channel
+func (db *DataStore) GetJobs(ctx context.Context) (<-chan interface{}, error) {
+	ret := db.Called(ctx)
+	var r0 <-chan interface{}
+	if rf, ok := ret.Get(0).(func(context.Context) <-chan interface{}); ok {
+		r0 = rf(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(<-chan interface{})
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context) error); ok {
+		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // AquireJob gets given job and updates it's status to StatusProcessing.
-func (db *DataStoreMock) AquireJob(ctx context.Context,
+func (db *DataStore) AquireJob(ctx context.Context,
 	job *model.Job) (*model.Job, error) {
-	return nil, nil
+	ret := db.Called(ctx, job)
+
+	var r0 *model.Job
+	if rf, ok := ret.Get(0).(func(
+		context.Context, *model.Job) *model.Job); ok {
+		r0 = rf(ctx, job)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*model.Job)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, *model.Job) error); ok {
+		r1 = rf(ctx, job)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // UpdateJobAddResult add a task execution result to a job status
-func (db *DataStoreMock) UpdateJobAddResult(ctx context.Context,
+func (db *DataStore) UpdateJobAddResult(ctx context.Context,
 	job *model.Job, result *model.TaskResult) error {
-	return nil
+	ret := db.Called(ctx, job, result)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(
+		context.Context, *model.Job, *model.TaskResult) error); ok {
+		r0 = rf(ctx, job, result)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
 }
 
 // UpdateJobStatus set the task execution status for a job status
-func (db *DataStoreMock) UpdateJobStatus(ctx context.Context, job *model.Job,
+func (db *DataStore) UpdateJobStatus(ctx context.Context, job *model.Job,
 	status int) error {
-	return nil
+	ret := db.Called(ctx, job, status)
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(
+		context.Context, *model.Job, int) error); ok {
+		r0 = rf(ctx, job, status)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
 }
 
 // GetJobStatusByNameAndID get the task execution status for a job status bu Name and ID
-func (db *DataStoreMock) GetJobByNameAndID(ctx context.Context,
-	name string, ID string) (*model.Job, error) {
-	return nil, nil
+func (db *DataStore) GetJobByNameAndID(ctx context.Context,
+	name, ID string) (*model.Job, error) {
+	ret := db.Called(ctx, name, ID)
+
+	var r0 *model.Job
+	if rf, ok := ret.Get(0).(func(
+		context.Context, string, string) *model.Job); ok {
+		r0 = rf(ctx, name, ID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*model.Job)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(
+		context.Context, string, string) error); ok {
+		r1 = rf(ctx, name, ID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // Shutdown shuts down the datastore GetJobs process
-func (db *DataStoreMock) Shutdown() {
-
+func (db *DataStore) Shutdown() {
+	db.Called()
 }

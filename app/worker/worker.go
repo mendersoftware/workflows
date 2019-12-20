@@ -26,6 +26,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/pkg/errors"
+
 	"github.com/mendersoftware/go-lib-micro/config"
 	"github.com/mendersoftware/go-lib-micro/log"
 	dconfig "github.com/mendersoftware/workflows/config"
@@ -35,26 +37,37 @@ import (
 
 // InitAndRun initializes the worker and runs it
 func InitAndRun(conf config.Reader, dataStore store.DataStore) error {
-	ctx := context.Background()
-	channel := dataStore.GetJobs(ctx)
+	ctx, cancel := context.WithCancel(context.Background())
+	channel, err := dataStore.GetJobs(ctx)
+	if err != nil {
+		return errors.Wrap(err, "Failed to start job scheduler")
+	}
 	l := log.FromContext(ctx)
 
 	var job *model.Job
+	var msg interface{}
 	concurrency := conf.GetInt(dconfig.SettingConcurrency)
 	sem := make(chan bool, concurrency)
 	quit := make(chan os.Signal)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	for {
 		select {
-		case job = <-channel:
+		case msg = <-channel:
 
 		case <-quit:
 			l.Info("Shutdown Worker ...")
-			dataStore.Shutdown()
+			cancel()
 			return nil
 		}
-		if job == nil {
+		if msg == nil {
 			break
+		}
+		switch msg.(type) {
+		case *model.Job:
+			job = msg.(*model.Job)
+
+		case error:
+			return msg.(error)
 		}
 		sem <- true
 		go func(ctx context.Context, job *model.Job, dataStore store.DataStore) {
@@ -70,7 +83,7 @@ func processJob(ctx context.Context, job *model.Job,
 	dataStore store.DataStore) error {
 
 	l := log.FromContext(ctx)
-	workflow, err := dataStore.GetWorkflowByName(job.WorkflowName)
+	workflow, err := dataStore.GetWorkflowByName(ctx, job.WorkflowName)
 	if err != nil {
 		l.Warnf("The workflow %q of job %s does not exist",
 			job.WorkflowName, job.ID)

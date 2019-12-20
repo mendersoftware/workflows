@@ -39,7 +39,7 @@ func InitAndRun(conf config.Reader, dataStore store.DataStore) error {
 	if workflowsPath != "" {
 		workflows := model.GetWorkflowsFromPath(workflowsPath)
 		for _, workflow := range workflows {
-			dataStore.InsertWorkflows(*workflow)
+			dataStore.InsertWorkflows(ctx, *workflow)
 		}
 	}
 	var listen = conf.GetString(dconfig.SettingListen)

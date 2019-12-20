@@ -41,6 +41,7 @@ func NewWorkflowController(dataStore store.DataStore) *WorkflowController {
 
 func (h WorkflowController) RegisterWorkflow(c *gin.Context) {
 	var workflow model.Workflow
+	ctx := context.Background()
 	rawData, err := c.GetRawData()
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -61,7 +62,7 @@ func (h WorkflowController) RegisterWorkflow(c *gin.Context) {
 		})
 		return
 	}
-	_, err = h.dataStore.InsertWorkflows(workflow)
+	_, err = h.dataStore.InsertWorkflows(ctx, workflow)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": err.Error(),

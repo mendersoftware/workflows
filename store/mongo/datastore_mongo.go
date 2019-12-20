@@ -156,9 +156,9 @@ func NewDataStoreWithClient(client *MongoClient, c config.Reader) *DataStoreMong
 
 // Inserts a workflow to the database and cache and returns the number of
 // inserted elements or an error for the first error generated.
-func (db *DataStoreMongo) InsertWorkflows(workflows ...model.Workflow) (int, error) {
+func (db *DataStoreMongo) InsertWorkflows(ctx context.Context,
+	workflows ...model.Workflow) (int, error) {
 	var tmp model.Workflow
-	ctx := context.Background()
 	database := db.client.Database(db.dbName)
 	collWflows := database.Collection(WorkflowCollectionName)
 	for i, workflow := range workflows {
@@ -181,10 +181,10 @@ func (db *DataStoreMongo) InsertWorkflows(workflows ...model.Workflow) (int, err
 
 // GetWorkflowByName gets the workflow with the given name - either from the
 // cache, or searches the database if the workflow is not cached.
-func (db *DataStoreMongo) GetWorkflowByName(workflowName string) (*model.Workflow, error) {
+func (db *DataStoreMongo) GetWorkflowByName(ctx context.Context,
+	workflowName string) (*model.Workflow, error) {
 	workflow, ok := db.workflows[workflowName]
 	if !ok {
-		ctx := context.Background()
 		var result model.Workflow
 		database := db.client.Database(db.dbName)
 		collWflows := database.Collection(WorkflowCollectionName)
@@ -213,10 +213,11 @@ func (db *DataStoreMongo) GetWorkflows() []model.Workflow {
 }
 
 // InsertJob inserts the job in the queue
-func (db *DataStoreMongo) InsertJob(
-	ctx context.Context, job *model.Job) (*model.Job, error) {
+func (db *DataStoreMongo) InsertJob(ctx context.Context,
+	job *model.Job) (*model.Job, error) {
 
-	if workflow, err := db.GetWorkflowByName(job.WorkflowName); err == nil {
+	if workflow, err := db.GetWorkflowByName(
+		ctx, job.WorkflowName); err == nil {
 		if err := job.Validate(workflow); err != nil {
 			return nil, err
 		}
@@ -247,12 +248,16 @@ func (db *DataStoreMongo) InsertJob(
 }
 
 // GetJobs initializes the job scheduler and returns a receive channel from
-// the scheduler routine.
-func (db *DataStoreMongo) GetJobs(ctx context.Context) <-chan *model.Job {
-	var channel = make(chan *model.Job)
+// the scheduler routine. To shutdown the scheduler send signal USR1 to the
+// process.
+func (db *DataStoreMongo) GetJobs(
+	ctx context.Context) (<-chan interface{}, error) {
+
+	var channel = make(chan interface{})
 
 	go func() {
 		l := log.FromContext(ctx)
+
 		findOptions := &mopts.FindOptions{}
 		findOptions.SetCursorType(mopts.TailableAwait)
 		findOptions.SetMaxTime(10 * time.Second)
@@ -264,14 +269,15 @@ func (db *DataStoreMongo) GetJobs(ctx context.Context) <-chan *model.Job {
 		collQueue := database.Collection(JobQueueCollectionName)
 		cur, err := collQueue.Find(ctx, query, findOptions)
 		if err != nil {
-			channel <- nil
-			l.Error(err.Error())
+			channel <- err
 			return
 		}
 
 		defer cur.Close(ctx)
-		l.Info("Job scheduler listening to message bus")
 
+		channel <- nil
+
+		l.Info("Job scheduler listening to message bus")
 		for {
 			for cur.TryNext(ctx) {
 				job := new(model.Job)
@@ -287,19 +293,20 @@ func (db *DataStoreMongo) GetJobs(ctx context.Context) <-chan *model.Job {
 				}
 			}
 			if cur.ID() == 0 {
-				l.Error("Cursor died!")
-				break
-			}
-			if db.shutdown {
-				l.Info("Job scheduler shutting down...")
+				channel <- errors.New("Message bus cursor died!")
 				break
 			}
 		}
-
 		channel <- nil
 	}()
 
-	return channel
+	ret := <-channel
+	switch ret.(type) {
+	case error:
+		return nil, ret.(error)
+	default:
+		return channel, nil
+	}
 }
 
 // AquireJob gets given job and updates it's status to StatusProcessing.
@@ -400,9 +407,4 @@ func (db *DataStoreMongo) GetJobByNameAndID(
 	}
 
 	return &job, nil
-}
-
-// Shutdown shuts down the datastore GetJobs process
-func (db *DataStoreMongo) Shutdown() {
-	db.shutdown = true
 }
