@@ -44,6 +44,12 @@ type Task struct {
 	Taskdef json.RawMessage `json:"taskdef" bson:"taskdef"`
 }
 
+// CLITask stores the parameters of the CLI commands for a WorkflowTask
+type CLITask struct {
+	Command          []string `json:"command"`
+	ExecutionTimeOut int      `json:"executionTimeOut"`
+}
+
 // HTTPTask stores the parameters of the HTTP calls for a WorkflowTask
 type HTTPTask struct {
 	URI               string            `json:"uri"`

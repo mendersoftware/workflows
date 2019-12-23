@@ -64,9 +64,18 @@ type InputParameter struct {
 
 // TaskResult contains the result of the execution of a task
 type TaskResult struct {
-	Success  bool                   `json:"success" bson:"success"`
-	Request  TaskResultHTTPRequest  `json:"request" bson:"request"`
-	Response TaskResultHTTPResponse `json:"response" bson:"response"`
+	Success      bool                   `json:"success" bson:"success"`
+	CLI          TaskResultCLI          `json:"cli" bson:"cli"`
+	HTTPRequest  TaskResultHTTPRequest  `json:"httpRequest" bson:"httpRequet"`
+	HTTPResponse TaskResultHTTPResponse `json:"httpResponse" bson:"httpResponse"`
+}
+
+// TaskResultCLI contains the CLI command, the output and the exit status
+type TaskResultCLI struct {
+	Command  []string `json:"command" bson:"command"`
+	Output   string   `json:"output" bson:"output"`
+	Error    string   `json:"error" bson:"error"`
+	ExitCode int      `json:"exitCode" bson:"exitCode"`
 }
 
 // TaskResultHTTPRequest contains the request

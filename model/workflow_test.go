@@ -93,6 +93,48 @@ func TestParseWorkflowFromJSON(t *testing.T) {
 	assert.Equal(t, httpTask.ReadTimeOut, 1000)
 }
 
+func TestParseWorkflowWithCLIFromJSON(t *testing.T) {
+	data := []byte(`
+{
+	"name": "test_cli",
+	"description": "Test CLI",
+	"version": 1,
+	"tasks": [
+		{
+			"name": "run_echo",
+			"type": "cli",
+			"taskdef": {
+				"command": [
+					"echo",
+					"1"
+				],
+				"executionTimeOut": 1000
+			}
+		}
+	],
+	"schemaVersion": 1
+}`)
+
+	var workflow, _ = ParseWorkflowFromJSON(data)
+	assert.NotNil(t, workflow)
+	assert.Equal(t, "test_cli", workflow.Name)
+	assert.Equal(t, "Test CLI", workflow.Description)
+	assert.Equal(t, 1, workflow.Version)
+	assert.Equal(t, 1, workflow.SchemaVersion)
+
+	var tasks = workflow.Tasks
+	assert.Len(t, tasks, 1)
+	assert.Equal(t, tasks[0].Name, "run_echo")
+	assert.Equal(t, tasks[0].Type, "cli")
+	assert.NotNil(t, tasks[0].Taskdef)
+
+	var cliTask CLITask
+	err := json.Unmarshal(tasks[0].Taskdef, &cliTask)
+	assert.NoError(t, err)
+	assert.Equal(t, cliTask.Command, []string{"echo", "1"})
+	assert.Equal(t, cliTask.ExecutionTimeOut, 1000)
+}
+
 func TestParseWorkflowFromInvalidJSON(t *testing.T) {
 	data := []byte(`INVALID JSON`)
 

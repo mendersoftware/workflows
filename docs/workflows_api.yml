@@ -160,6 +160,17 @@ definitions:
       application/json:
           error: "failed to decode device group data: JSON payload is empty"
 
+  CLIParams:
+    description: CLI parameters
+    type: object
+    properties:
+      command:
+        type: array
+        items:
+          type: string
+      executionTimeOut:
+        type: integer
+
   HTTPParams:
     description: HTTP parameters
     type: object
@@ -194,6 +205,7 @@ definitions:
       taskdef:
         type: object
         enum:
+          - $ref: "#/definitions/CLIParams"
           - $ref: "#/definitions/HTTPParams"
         # TODO: Add task definitions for other types as implemented
     required:
@@ -240,6 +252,20 @@ definitions:
         name: key
         value: parameter
 
+  TaskResultCLI:
+    type: object
+    properties:
+      command:
+        type: array
+        items:
+          type: string
+      output:
+        type: string
+      error:
+        type: string
+      exitCode:
+        type: integer
+
   TaskResultHTTPRequest:
     type: object
     properties:
@@ -267,6 +293,8 @@ definitions:
     properties:
       success:
         type: boolean
+      cli:
+        $ref: "#/definitions/TaskResultCLI"
       request:
         $ref: "#/definitions/TaskResultHTTPRequest"
       response:

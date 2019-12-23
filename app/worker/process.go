@@ -57,6 +57,7 @@ func processJob(ctx context.Context, job *model.Job,
 
 	success := true
 	for _, task := range workflow.Tasks {
+		var result *model.TaskResult
 		switch task.Type {
 		case "http":
 			var httpTask model.HTTPTask
@@ -70,21 +71,35 @@ func processJob(ctx context.Context, job *model.Job,
 					"Error: Task definition incompatible " +
 						"with specified type (http)")
 			}
-			result, err := processHTTPTask(&httpTask, job, workflow)
+			result, err = processHTTPTask(&httpTask, job, workflow)
 			if err != nil {
-				dataStore.UpdateJobStatus(ctx, job,
-					model.StatusFailure)
+				dataStore.UpdateJobStatus(ctx, job, model.StatusFailure)
 				return err
 			}
-			err = dataStore.UpdateJobAddResult(ctx, job, result)
+		case "cli":
+			var cliTask model.CLITask
+			err := json.Unmarshal(task.Taskdef, &cliTask)
 			if err != nil {
-				l.Errorf("Error uploading results: %s", err.Error())
+				err := dataStore.UpdateJobStatus(ctx, job, model.StatusFailure)
+				if err != nil {
+					return err
+				}
+				return fmt.Errorf(
+					"Error: Task definition incompatible " +
+						"with specified type (cli)")
 			}
-			if !result.Success {
-				success = false
+			result, err = processCLITask(&cliTask, job, workflow)
+			if err != nil {
+				dataStore.UpdateJobStatus(ctx, job, model.StatusFailure)
+				return err
 			}
 		}
-		if !success {
+		err = dataStore.UpdateJobAddResult(ctx, job, result)
+		if err != nil {
+			l.Errorf("Error uploading results: %s", err.Error())
+		}
+		if !result.Success {
+			success = false
 			break
 		}
 	}

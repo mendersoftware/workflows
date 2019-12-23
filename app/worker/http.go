@@ -76,13 +76,13 @@ func processHTTPTask(httpTask *model.HTTPTask, job *model.Job,
 
 	result := &model.TaskResult{
 		Success: success,
-		Request: model.TaskResultHTTPRequest{
+		HTTPRequest: model.TaskResultHTTPRequest{
 			URI:     uri,
 			Method:  httpTask.Method,
 			Body:    payloadString,
 			Headers: headersToBeSent,
 		},
-		Response: model.TaskResultHTTPResponse{
+		HTTPResponse: model.TaskResultHTTPResponse{
 			StatusCode: res.StatusCode,
 			Body:       string(resBody),
 		},
