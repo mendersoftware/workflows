@@ -61,14 +61,28 @@ func processHTTPTask(httpTask *model.HTTPTask, job *model.Job,
 	defer res.Body.Close()
 	resBody, _ := ioutil.ReadAll(res.Body)
 
+	var success bool
+	if len(httpTask.StatusCodes) == 0 {
+		success = true
+	} else {
+		success = false
+		for _, statusCode := range httpTask.StatusCodes {
+			if statusCode == res.StatusCode {
+				success = true
+				break
+			}
+		}
+	}
+
 	result := &model.TaskResult{
-		Request: model.TaskResultRequest{
+		Success: success,
+		Request: model.TaskResultHTTPRequest{
 			URI:     uri,
 			Method:  httpTask.Method,
 			Body:    payloadString,
 			Headers: headersToBeSent,
 		},
-		Response: model.TaskResultResponse{
+		Response: model.TaskResultHTTPResponse{
 			StatusCode: res.StatusCode,
 			Body:       string(resBody),
 		},

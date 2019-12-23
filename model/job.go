@@ -64,20 +64,21 @@ type InputParameter struct {
 
 // TaskResult contains the result of the execution of a task
 type TaskResult struct {
-	Request  TaskResultRequest  `json:"request" bson:"request"`
-	Response TaskResultResponse `json:"response" bson:"response"`
+	Success  bool                   `json:"success" bson:"success"`
+	Request  TaskResultHTTPRequest  `json:"request" bson:"request"`
+	Response TaskResultHTTPResponse `json:"response" bson:"response"`
 }
 
-// TaskResultRequest contains the request
-type TaskResultRequest struct {
+// TaskResultHTTPRequest contains the request
+type TaskResultHTTPRequest struct {
 	URI     string   `json:"uri" bson:"uri"`
 	Method  string   `json:"method" bson:"method"`
 	Body    string   `json:"body" bson:"body"`
 	Headers []string `json:"headers" bson:"headers"`
 }
 
-// TaskResultResponse contains the response
-type TaskResultResponse struct {
+// TaskResultHTTPResponse contains the response
+type TaskResultHTTPResponse struct {
 	StatusCode int    `json:"statusCode" bson:"status_code"`
 	Body       string `json:"body" bson:"body"`
 }

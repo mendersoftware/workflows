@@ -76,12 +76,154 @@ func TestProcessJob(t *testing.T) {
 	job, _ = dataStore.GetJobByNameAndID(context, job.WorkflowName, job.ID)
 	assert.Equal(t, model.StatusDone, job.Status)
 	assert.Len(t, job.Results, 1)
+	assert.True(t, job.Results[0].Success)
 	assert.Equal(t, job.Results[0].Request.URI, taskdef.URI)
 	assert.Equal(t, job.Results[0].Request.Method, taskdef.Method)
 	assert.Equal(t, job.Results[0].Request.Headers, []string{
 		"X-Header: Value",
 	})
 	assert.Equal(t, job.Results[0].Response.StatusCode, 200)
+	assert.Equal(t, job.Results[0].Response.Body, requestBody)
+}
+
+func TestProcessJobValidStatusCode(t *testing.T) {
+	context := context.Background()
+	dataStore := store.NewDataStoreMock()
+
+	taskdef := model.HTTPTask{
+		URI:    "http://localhost",
+		Method: "GET",
+		Headers: map[string]string{
+			"X-Header": "Value",
+		},
+		StatusCodes: []int{
+			200,
+		},
+	}
+	taskdefJSON, _ := json.Marshal(taskdef)
+
+	workflow := &model.Workflow{
+		Name: "test",
+		Tasks: []model.Task{
+			model.Task{
+				Name:    "task_1",
+				Type:    "http",
+				Taskdef: taskdefJSON,
+			},
+		},
+	}
+	dataStore.InsertWorkflows(*workflow)
+
+	job := &model.Job{
+		WorkflowName: workflow.Name,
+		Status:       model.StatusPending,
+	}
+	job, _ = dataStore.InsertJob(context, job)
+
+	makeHTTPRequestOriginal := makeHTTPRequest
+	requestBody := "BODY"
+	makeHTTPRequest = func(req *http.Request, timeout time.Duration) (*http.Response, error) {
+		resp := &http.Response{
+			StatusCode: 200,
+			Body:       ioutil.NopCloser(strings.NewReader(requestBody)),
+		}
+		return resp, nil
+	}
+	err := processJob(context, job, dataStore)
+	makeHTTPRequest = makeHTTPRequestOriginal
+
+	assert.Nil(t, err)
+
+	job, _ = dataStore.GetJobByNameAndID(context, job.WorkflowName, job.ID)
+	assert.Equal(t, model.StatusDone, job.Status)
+	assert.Len(t, job.Results, 1)
+	assert.True(t, job.Results[0].Success)
+	assert.Equal(t, job.Results[0].Request.URI, taskdef.URI)
+	assert.Equal(t, job.Results[0].Request.Method, taskdef.Method)
+	assert.Equal(t, job.Results[0].Request.Headers, []string{
+		"X-Header: Value",
+	})
+	assert.Equal(t, job.Results[0].Response.StatusCode, 200)
+	assert.Equal(t, job.Results[0].Response.Body, requestBody)
+}
+
+func TestProcessJobWrongStatusCode(t *testing.T) {
+	context := context.Background()
+	dataStore := store.NewDataStoreMock()
+
+	taskdef := model.HTTPTask{
+		URI:    "http://localhost",
+		Method: "GET",
+		Headers: map[string]string{
+			"X-Header": "Value",
+		},
+		StatusCodes: []int{
+			200,
+			201,
+		},
+	}
+	taskdefJSON, _ := json.Marshal(taskdef)
+
+	taskdef2 := model.HTTPTask{
+		URI:    "http://localhost",
+		Method: "GET",
+		Headers: map[string]string{
+			"X-Header": "Value",
+		},
+		StatusCodes: []int{
+			200,
+			201,
+		},
+	}
+	taskdef2JSON, _ := json.Marshal(taskdef2)
+
+	workflow := &model.Workflow{
+		Name: "test",
+		Tasks: []model.Task{
+			model.Task{
+				Name:    "task_1",
+				Type:    "http",
+				Taskdef: taskdefJSON,
+			},
+			model.Task{
+				Name:    "task_2",
+				Type:    "http",
+				Taskdef: taskdef2JSON,
+			},
+		},
+	}
+	dataStore.InsertWorkflows(*workflow)
+
+	job := &model.Job{
+		WorkflowName: workflow.Name,
+		Status:       model.StatusPending,
+	}
+	job, _ = dataStore.InsertJob(context, job)
+
+	makeHTTPRequestOriginal := makeHTTPRequest
+	requestBody := "BODY"
+	makeHTTPRequest = func(req *http.Request, timeout time.Duration) (*http.Response, error) {
+		resp := &http.Response{
+			StatusCode: 400,
+			Body:       ioutil.NopCloser(strings.NewReader(requestBody)),
+		}
+		return resp, nil
+	}
+	err := processJob(context, job, dataStore)
+	makeHTTPRequest = makeHTTPRequestOriginal
+
+	assert.Nil(t, err)
+
+	job, _ = dataStore.GetJobByNameAndID(context, job.WorkflowName, job.ID)
+	assert.Equal(t, model.StatusFailure, job.Status)
+	assert.Len(t, job.Results, 1)
+	assert.False(t, job.Results[0].Success)
+	assert.Equal(t, job.Results[0].Request.URI, taskdef.URI)
+	assert.Equal(t, job.Results[0].Request.Method, taskdef.Method)
+	assert.Equal(t, job.Results[0].Request.Headers, []string{
+		"X-Header: Value",
+	})
+	assert.Equal(t, job.Results[0].Response.StatusCode, 400)
 	assert.Equal(t, job.Results[0].Response.Body, requestBody)
 }
 

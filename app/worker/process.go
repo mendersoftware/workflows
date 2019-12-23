@@ -55,6 +55,7 @@ func processJob(ctx context.Context, job *model.Job,
 
 	l.Infof("%s: started, %s", job.ID, job.WorkflowName)
 
+	success := true
 	for _, task := range workflow.Tasks {
 		switch task.Type {
 		case "http":
@@ -69,22 +70,35 @@ func processJob(ctx context.Context, job *model.Job,
 					"Error: Task definition incompatible " +
 						"with specified type (http)")
 			}
-			results, err := processHTTPTask(&httpTask, job, workflow)
+			result, err := processHTTPTask(&httpTask, job, workflow)
 			if err != nil {
 				dataStore.UpdateJobStatus(ctx, job,
 					model.StatusFailure)
 				return err
 			}
-			err = dataStore.UpdateJobAddResult(ctx, job, results)
+			err = dataStore.UpdateJobAddResult(ctx, job, result)
 			if err != nil {
 				l.Errorf("Error uploading results: %s", err.Error())
 			}
+			if !result.Success {
+				success = false
+			}
+		}
+		if !success {
+			break
 		}
 	}
 
-	err = dataStore.UpdateJobStatus(ctx, job, model.StatusDone)
+	var newStatus string
+	if success {
+		err = dataStore.UpdateJobStatus(ctx, job, model.StatusDone)
+		newStatus = "done"
+	} else {
+		err = dataStore.UpdateJobStatus(ctx, job, model.StatusFailure)
+		newStatus = "failed"
+	}
 	if err != nil {
-		l.Warn("Unable to set job status to done")
+		l.Warn(fmt.Sprintf("Unable to set job status to %s", newStatus))
 	}
 
 	l.Infof("%s: done", job.ID)

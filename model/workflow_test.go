@@ -42,6 +42,10 @@ func TestParseWorkflowFromJSON(t *testing.T) {
 					"X-MEN-RequestID": "${workflow.input.request_id}",
 					"Authorization": "${workflow.input.authorization}"
 				},
+				"statusCodes": [
+					200,
+					201
+				],
 				"connectionTimeOut": 1000,
 				"readTimeOut": 1000
 			}
@@ -80,6 +84,9 @@ func TestParseWorkflowFromJSON(t *testing.T) {
 	assert.Equal(t, httpTask.Method, "DELETE")
 	assert.Equal(t, httpTask.Body, "Payload")
 	assert.Len(t, httpTask.Headers, 2)
+	assert.Len(t, httpTask.StatusCodes, 2)
+	assert.Equal(t, httpTask.StatusCodes[0], 200)
+	assert.Equal(t, httpTask.StatusCodes[1], 201)
 	assert.Equal(t, httpTask.Headers["X-MEN-RequestID"], "${workflow.input.request_id}")
 	assert.Equal(t, httpTask.Headers["Authorization"], "${workflow.input.authorization}")
 	assert.Equal(t, httpTask.ConnectionTimeOut, 1000)
