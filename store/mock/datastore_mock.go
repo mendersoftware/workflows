@@ -103,6 +103,11 @@ func (db *DataStoreMock) UpdateJobStatus(ctx context.Context, job *model.Job,
 // GetJobStatusByNameAndID get the task execution status for a job status bu Name and ID
 func (db *DataStoreMock) GetJobByNameAndID(ctx context.Context,
 	name string, ID string) (*model.Job, error) {
+	for _, job := range db.Jobs {
+		if job.WorkflowName == name && job.ID == ID {
+			return &job, nil
+		}
+	}
 	return nil, nil
 }
 

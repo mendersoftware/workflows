@@ -31,7 +31,7 @@ func TestStatus(t *testing.T) {
 	req, _ := http.NewRequest("GET", "/status", nil)
 	router.ServeHTTP(w, req)
 
-	assert.Equal(t, 200, w.Code)
+	assert.Equal(t, http.StatusOK, w.Code)
 
 	var response map[string]string
 	err := json.Unmarshal([]byte(w.Body.String()), &response)

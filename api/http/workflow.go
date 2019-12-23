@@ -39,6 +39,7 @@ func NewWorkflowController(dataStore store.DataStore) *WorkflowController {
 	}
 }
 
+// RegisterWorkflow responds to POST /api/v1/metadata/workflows
 func (h WorkflowController) RegisterWorkflow(c *gin.Context) {
 	var workflow model.Workflow
 	rawData, err := c.GetRawData()
@@ -71,6 +72,7 @@ func (h WorkflowController) RegisterWorkflow(c *gin.Context) {
 	c.Status(http.StatusCreated)
 }
 
+// GetWorkflows responds to GET /api/v1/metadata/workflows
 func (h WorkflowController) GetWorkflows(c *gin.Context) {
 	c.JSON(http.StatusOK, h.dataStore.GetWorkflows())
 }
