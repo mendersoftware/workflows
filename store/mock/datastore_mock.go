@@ -16,6 +16,7 @@ package mock
 
 import (
 	"context"
+	"errors"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
@@ -49,7 +50,11 @@ func (db *DataStoreMock) InsertWorkflows(workflows ...model.Workflow) (int, erro
 
 func (db *DataStoreMock) GetWorkflowByName(
 	workflowName string) (*model.Workflow, error) {
-	return db.Workflows[workflowName], nil
+	workflow, ok := db.Workflows[workflowName]
+	if !ok {
+		return nil, errors.New("Workflow not found")
+	}
+	return workflow, nil
 }
 
 func (db *DataStoreMock) GetWorkflows() []model.Workflow {
@@ -64,7 +69,6 @@ func (db *DataStoreMock) GetWorkflows() []model.Workflow {
 
 // InsertJob inserts the job in the queue
 func (db *DataStoreMock) InsertJob(ctx context.Context, job *model.Job) (*model.Job, error) {
-	job.ID = primitive.NewObjectID().Hex()
 	if wf, ok := db.Workflows[job.WorkflowName]; ok {
 		if err := job.Validate(wf); err != nil {
 			return nil, err
@@ -72,9 +76,16 @@ func (db *DataStoreMock) InsertJob(ctx context.Context, job *model.Job) (*model.
 	} else {
 		return nil, store.ErrWorkflowNotFound
 	}
-	db.Jobs = append(db.Jobs, *job)
+	job = db.AppendJob(job)
 
 	return job, nil
+}
+
+// AppendJob append the job in the queue
+func (db *DataStoreMock) AppendJob(job *model.Job) *model.Job {
+	job.ID = primitive.NewObjectID().Hex()
+	db.Jobs = append(db.Jobs, *job)
+	return job
 }
 
 // GetJobs returns a channel of Jobs
@@ -85,22 +96,40 @@ func (db *DataStoreMock) GetJobs(ctx context.Context) <-chan *model.Job {
 // AquireJob gets given job and updates it's status to StatusProcessing.
 func (db *DataStoreMock) AquireJob(ctx context.Context,
 	job *model.Job) (*model.Job, error) {
+	for _, job := range db.Jobs {
+		if job.Status == model.StatusPending {
+			job.Status = model.StatusProcessing
+			return &job, nil
+		}
+	}
 	return nil, nil
 }
 
 // UpdateJobAddResult add a task execution result to a job status
 func (db *DataStoreMock) UpdateJobAddResult(ctx context.Context,
 	job *model.Job, result *model.TaskResult) error {
+	for i, jobDb := range db.Jobs {
+		if jobDb.WorkflowName == job.WorkflowName && job.ID == jobDb.ID {
+			jobDb.Results = append(jobDb.Results, *result)
+			db.Jobs[i] = jobDb
+		}
+	}
 	return nil
 }
 
 // UpdateJobStatus set the task execution status for a job status
 func (db *DataStoreMock) UpdateJobStatus(ctx context.Context, job *model.Job,
 	status int) error {
+	for i, jobDb := range db.Jobs {
+		if jobDb.WorkflowName == job.WorkflowName && job.ID == jobDb.ID {
+			jobDb.Status = status
+			db.Jobs[i] = jobDb
+		}
+	}
 	return nil
 }
 
-// GetJobStatusByNameAndID get the task execution status for a job status bu Name and ID
+// GetJobByNameAndID get the task execution status for a job status bu Name and ID
 func (db *DataStoreMock) GetJobByNameAndID(ctx context.Context,
 	name string, ID string) (*model.Job, error) {
 	for _, job := range db.Jobs {
