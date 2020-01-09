@@ -15,4 +15,5 @@ RUN mkdir -p /etc/workflows
 EXPOSE 8080
 COPY ./config.yaml /etc/workflows
 COPY --from=builder /go/src/github.com/mendersoftware/workflows/workflows /usr/bin
-CMD ["/usr/bin/workflows", "--config", "/etc/workflows/config.yaml", "server"]
+ENTRYPOINT ["/usr/bin/workflows", "--config", "/etc/workflows/config.yaml"]
+
