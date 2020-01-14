@@ -1,4 +1,4 @@
-// Copyright 2019 Northern.tech AS
+// Copyright 2020 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -19,8 +19,9 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"syscall"
 	"time"
+
+	"golang.org/x/sys/unix"
 
 	"github.com/mendersoftware/go-lib-micro/config"
 	"github.com/mendersoftware/go-lib-micro/log"
@@ -39,7 +40,7 @@ func InitAndRun(conf config.Reader, dataStore store.DataStore) error {
 	if workflowsPath != "" {
 		workflows := model.GetWorkflowsFromPath(workflowsPath)
 		for _, workflow := range workflows {
-			dataStore.InsertWorkflows(*workflow)
+			dataStore.InsertWorkflows(ctx, *workflow)
 		}
 	}
 	var listen = conf.GetString(dconfig.SettingListen)
@@ -56,7 +57,7 @@ func InitAndRun(conf config.Reader, dataStore store.DataStore) error {
 	}()
 
 	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	signal.Notify(quit, unix.SIGINT, unix.SIGTERM)
 	<-quit
 
 	l.Info("Shutdown Server ...")

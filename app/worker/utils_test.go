@@ -12,36 +12,31 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
-package http
+package worker
 
 import (
-	"encoding/json"
-	"net/http"
-	"net/http/httptest"
 	"testing"
 
-	"github.com/gin-gonic/gin"
+	"github.com/mendersoftware/workflows/model"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestStatus(t *testing.T) {
-	router := NewRouter(nil)
-
-	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/status", nil)
-	router.ServeHTTP(w, req)
-
-	assert.Equal(t, http.StatusOK, w.Code)
-
-	var response map[string]string
-	err := json.Unmarshal([]byte(w.Body.String()), &response)
-	value, ok := response["status"]
-
-	assert.Nil(t, err)
-	assert.True(t, ok)
-
-	expectedBody := gin.H{
-		"status": "ok",
+func TestProcessJobString(t *testing.T) {
+	workflow := &model.Workflow{
+		Name: "test",
+		InputParameters: []string{
+			"key",
+		},
 	}
-	assert.Equal(t, expectedBody["status"], value)
+	job := &model.Job{
+		InputParameters: []model.InputParameter{
+			{
+				Name:  "key",
+				Value: "test",
+			},
+		},
+	}
+
+	res := processJobString("_${workflow.input.key}_", workflow, job)
+	assert.Equal(t, "_test_", res)
 }

@@ -1,4 +1,4 @@
-// Copyright 2019 Northern.tech AS
+// Copyright 2020 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -15,12 +15,10 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/mendersoftware/go-lib-micro/config"
 	"github.com/urfave/cli"
@@ -64,6 +62,14 @@ func main() {
 						Name:  "automigrate",
 						Usage: "Run database migrations before starting.",
 					},
+					&cli.StringFlag{
+						Name:  "workflows",
+						Usage: "Comma-separated list of workflows executed by this worker",
+					},
+					&cli.StringFlag{
+						Name:  "excluded-workflows",
+						Usage: "Comma-separated list of workflows NOT executed by this worker",
+					},
 				},
 			},
 			{
@@ -100,74 +106,33 @@ func main() {
 }
 
 func cmdServer(args *cli.Context) error {
-	ctx := context.Background()
-	dbClient, err := store.NewMongoClient(ctx, config.Config)
-	if err != nil {
-		return cli.NewExitError(
-			fmt.Sprintf("failed to connect to db: %v", err),
-			3)
-	}
-	defer disconnectClient(ctx, dbClient)
-	err = doMigrations(ctx, dbClient, args.Bool("automigrate"))
+	dataStore, err := store.SetupDataStore(args.Bool("automigrate"))
 	if err != nil {
 		return err
 	}
-	dataStore := store.NewDataStoreWithClient(dbClient, config.Config)
-
+	defer dataStore.Close()
 	return server.InitAndRun(config.Config, dataStore)
 }
 
 func cmdWorker(args *cli.Context) error {
-	ctx := context.Background()
-	dbClient, err := store.NewMongoClient(ctx, config.Config)
-	if err != nil {
-		return cli.NewExitError(
-			fmt.Sprintf("failed to connect to db: %v", err),
-			3)
-	}
-	defer disconnectClient(ctx, dbClient)
-	err = doMigrations(ctx, dbClient, args.Bool("automigrate"))
+	dataStore, err := store.SetupDataStore(args.Bool("automigrate"))
 	if err != nil {
 		return err
 	}
-	dataStore := store.NewDataStoreWithClient(dbClient, config.Config)
-
-	return worker.InitAndRun(config.Config, dataStore)
+	defer dataStore.Close()
+	includedWorkflows := args.String("workflows")
+	excludedWorkflows := args.String("excluded-workflows")
+	workflows := worker.Workflows{
+		Included: strings.Split(includedWorkflows, ","),
+		Excluded: strings.Split(excludedWorkflows, ","),
+	}
+	return worker.InitAndRun(config.Config, workflows, dataStore)
 }
 
 func cmdMigrate(args *cli.Context) error {
-	ctx := context.Background()
-	dbClient, err := store.NewMongoClient(ctx, config.Config)
-	if err != nil {
-		return cli.NewExitError(
-			fmt.Sprintf("failed to connect to db: %v", err),
-			3)
-	}
-	defer disconnectClient(ctx, dbClient)
-	err = doMigrations(ctx, dbClient, true)
+	_, err := store.SetupDataStore(true)
 	if err != nil {
 		return err
 	}
-
 	return nil
-}
-
-func doMigrations(ctx context.Context, client *store.MongoClient,
-	automigrate bool) error {
-	db := config.Config.GetString(dconfig.SettingDbName)
-	err := store.Migrate(ctx, db, store.DbVersion, client, automigrate)
-	if err != nil {
-		return cli.NewExitError(
-			fmt.Sprintf("failed to run migrations: %v", err),
-			3)
-	}
-
-	return nil
-}
-
-func disconnectClient(parentCtx context.Context, client *store.MongoClient) {
-	ctx, cancel := context.WithTimeout(parentCtx, 10*time.Second)
-	client.Disconnect(ctx)
-	<-ctx.Done()
-	cancel()
 }

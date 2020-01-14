@@ -298,10 +298,22 @@
 			"revisionTime": "2019-11-08T00:09:09Z"
 		},
 		{
+			"checksumSHA1": "tLHFmMOC2eMcXYaPXfifUVj3wX4=",
+			"path": "github.com/stretchr/objx",
+			"revision": "35313a95ee26395aa17d366c71a2ccf788fa69b6",
+			"revisionTime": "2019-04-15T11:18:23Z"
+		},
+		{
 			"checksumSHA1": "9O575nDCni6OBuppl7Wo4qxI4Xs=",
 			"path": "github.com/stretchr/testify/assert",
 			"revision": "f1bd0923b8320ddfb0a8a9d919b5aeb8b7a4cc40",
 			"revisionTime": "2019-08-29T23:36:06Z"
+		},
+		{
+			"checksumSHA1": "bg70xAHEu6HRf2iFu8h5iJBjUfg=",
+			"path": "github.com/stretchr/testify/mock",
+			"revision": "858f37ff9bc48070cde7f2c2895dbe0db1ad9326",
+			"revisionTime": "2019-12-19T14:10:44Z"
 		},
 		{
 			"checksumSHA1": "MZ4JU44HUXZ4JB+oxYrw9wpaOZU=",

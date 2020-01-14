@@ -1,4 +1,4 @@
-// Copyright 2019 Northern.tech AS
+// Copyright 2020 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ package mongo
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"strings"
 	"time"
 
@@ -39,7 +40,7 @@ const (
 	// JobQueueCollectionName refers to the collection of pending jobs
 	JobQueueCollectionName = "job_queue"
 
-	// JobCollectionName refers to the collection of finished or
+	// JobsCollectionName refers to the collection of finished or
 	// jobs in progress.
 	JobsCollectionName = "jobs"
 
@@ -47,13 +48,46 @@ const (
 	WorkflowCollectionName = "workflows"
 )
 
-// MongoClient is a package specific mongo client
-type MongoClient struct {
+// SetupDataStore returns the mongo data store and optionally runs migrations
+func SetupDataStore(automigrate bool) (*DataStoreMongo, error) {
+	ctx := context.Background()
+	dbClient, err := NewClient(ctx, config.Config)
+	if err != nil {
+		return nil, errors.New(fmt.Sprintf("failed to connect to db: %v", err))
+	}
+	err = doMigrations(ctx, dbClient, automigrate)
+	if err != nil {
+		return nil, err
+	}
+	dataStore := NewDataStoreWithClient(dbClient, config.Config)
+	return dataStore, nil
+}
+
+func doMigrations(ctx context.Context, client *Client,
+	automigrate bool) error {
+	db := config.Config.GetString(dconfig.SettingDbName)
+	err := Migrate(ctx, db, DbVersion, client, automigrate)
+	if err != nil {
+		return errors.New(fmt.Sprintf("failed to run migrations: %v", err))
+	}
+
+	return nil
+}
+
+func disconnectClient(parentCtx context.Context, client *Client) {
+	ctx, cancel := context.WithTimeout(parentCtx, 10*time.Second)
+	client.Disconnect(ctx)
+	<-ctx.Done()
+	cancel()
+}
+
+// Client is a package specific mongo client
+type Client struct {
 	mongo.Client
 }
 
-// NewMongoClient returns a mongo client
-func NewMongoClient(ctx context.Context, c config.Reader) (*MongoClient, error) {
+// NewClient returns a mongo client
+func NewClient(ctx context.Context, c config.Reader) (*Client, error) {
 
 	clientOptions := mopts.Client()
 	mongoURL := c.GetString(dconfig.SettingMongo)
@@ -105,7 +139,7 @@ func NewMongoClient(ctx context.Context, c config.Reader) (*MongoClient, error) 
 		return nil, errors.Wrap(err, "Error reaching mongo server")
 	}
 
-	mongoClient := MongoClient{Client: *client}
+	mongoClient := Client{Client: *client}
 	return &mongoClient, nil
 }
 
@@ -113,19 +147,17 @@ func NewMongoClient(ctx context.Context, c config.Reader) (*MongoClient, error) 
 type DataStoreMongo struct {
 	// client holds the reference to the client used to communicate with the
 	// mongodb server.
-	client *MongoClient
+	client *Client
 	// dbName contains the name of the workflow database.
 	dbName string
 	// workflows holds a local cache of workflows - a worker should NEVER
 	// access this cache directly, but through
 	// DataStoreMongo.GetWorkflowByName.
 	workflows map[string]*model.Workflow
-	// shutdown is used to shut down the job scheduler routine.
-	shutdown bool
 }
 
-// NewDataStoreMongoWithClient initializes a DataStore object
-func NewDataStoreWithClient(client *MongoClient, c config.Reader) *DataStoreMongo {
+// NewDataStoreWithClient initializes a DataStore object
+func NewDataStoreWithClient(client *Client, c config.Reader) *DataStoreMongo {
 	dbName := c.GetString(dconfig.SettingDbName)
 	ctx := context.Background()
 
@@ -150,41 +182,43 @@ func NewDataStoreWithClient(client *MongoClient, c config.Reader) *DataStoreMong
 		client:    client,
 		dbName:    dbName,
 		workflows: workflows,
-		shutdown:  false,
 	}
 }
 
-// Inserts a workflow to the database and cache and returns the number of
+// InsertWorkflows inserts a workflow to the database and cache and returns the number of
 // inserted elements or an error for the first error generated.
-func (db *DataStoreMongo) InsertWorkflows(workflows ...model.Workflow) (int, error) {
-	var tmp model.Workflow
-	ctx := context.Background()
+func (db *DataStoreMongo) InsertWorkflows(ctx context.Context, workflows ...model.Workflow) (int, error) {
 	database := db.client.Database(db.dbName)
 	collWflows := database.Collection(WorkflowCollectionName)
 	for i, workflow := range workflows {
 		if workflow.Name == "" {
 			return i, store.ErrWorkflowMissingName
-		} else if _, ok := db.workflows[workflow.Name]; ok {
+		}
+		workflowDb, _ := db.GetWorkflowByName(ctx, workflow.Name)
+		if workflowDb != nil && workflowDb.Version >= workflow.Version {
 			return i, store.ErrWorkflowAlreadyExists
 		}
-		tmp = workflow
-		if _, err := collWflows.InsertOne(ctx, tmp); err != nil {
-			if strings.Contains(err.Error(), "Duplicate key error") {
-				return i, store.ErrWorkflowAlreadyExists
+		if workflowDb == nil || workflowDb.Version < workflow.Version {
+			upsert := true
+			opt := &mopts.UpdateOptions{
+				Upsert: &upsert,
 			}
-			return i, err
+			query := bson.M{"_id": workflow.Name}
+			update := bson.M{"$set": workflow}
+			if _, err := collWflows.UpdateOne(ctx, query, update, opt); err != nil {
+				return i, err
+			}
 		}
-		db.workflows[workflow.Name] = &tmp
+		db.workflows[workflow.Name] = &workflow
 	}
 	return len(workflows), nil
 }
 
 // GetWorkflowByName gets the workflow with the given name - either from the
 // cache, or searches the database if the workflow is not cached.
-func (db *DataStoreMongo) GetWorkflowByName(workflowName string) (*model.Workflow, error) {
+func (db *DataStoreMongo) GetWorkflowByName(ctx context.Context, workflowName string) (*model.Workflow, error) {
 	workflow, ok := db.workflows[workflowName]
 	if !ok {
-		ctx := context.Background()
 		var result model.Workflow
 		database := db.client.Database(db.dbName)
 		collWflows := database.Collection(WorkflowCollectionName)
@@ -201,7 +235,7 @@ func (db *DataStoreMongo) GetWorkflowByName(workflowName string) (*model.Workflo
 
 // GetWorkflows gets all workflows from the cache as a list
 // (should only be used by the server process)
-func (db *DataStoreMongo) GetWorkflows() []model.Workflow {
+func (db *DataStoreMongo) GetWorkflows(ctx context.Context) []model.Workflow {
 	workflows := make([]model.Workflow, len(db.workflows))
 	var i int
 	for _, workflow := range db.workflows {
@@ -216,7 +250,7 @@ func (db *DataStoreMongo) GetWorkflows() []model.Workflow {
 func (db *DataStoreMongo) InsertJob(
 	ctx context.Context, job *model.Job) (*model.Job, error) {
 
-	if workflow, err := db.GetWorkflowByName(job.WorkflowName); err == nil {
+	if workflow, err := db.GetWorkflowByName(ctx, job.WorkflowName); err == nil {
 		if err := job.Validate(workflow); err != nil {
 			return nil, err
 		}
@@ -248,11 +282,12 @@ func (db *DataStoreMongo) InsertJob(
 
 // GetJobs initializes the job scheduler and returns a receive channel from
 // the scheduler routine.
-func (db *DataStoreMongo) GetJobs(ctx context.Context) <-chan *model.Job {
-	var channel = make(chan *model.Job)
+func (db *DataStoreMongo) GetJobs(ctx context.Context, included []string, excluded []string) (<-chan interface{}, error) {
+	var channel = make(chan interface{})
 
 	go func() {
 		l := log.FromContext(ctx)
+
 		findOptions := &mopts.FindOptions{}
 		findOptions.SetCursorType(mopts.TailableAwait)
 		findOptions.SetMaxTime(10 * time.Second)
@@ -264,14 +299,15 @@ func (db *DataStoreMongo) GetJobs(ctx context.Context) <-chan *model.Job {
 		collQueue := database.Collection(JobQueueCollectionName)
 		cur, err := collQueue.Find(ctx, query, findOptions)
 		if err != nil {
-			channel <- nil
-			l.Error(err.Error())
+			channel <- err
 			return
 		}
 
 		defer cur.Close(ctx)
-		l.Info("Job scheduler listening to message bus")
 
+		channel <- nil
+
+		l.Info("Job scheduler listening to message bus")
 		for {
 			for cur.TryNext(ctx) {
 				job := new(model.Job)
@@ -287,19 +323,20 @@ func (db *DataStoreMongo) GetJobs(ctx context.Context) <-chan *model.Job {
 				}
 			}
 			if cur.ID() == 0 {
-				l.Error("Cursor died!")
-				break
-			}
-			if db.shutdown {
-				l.Info("Job scheduler shutting down...")
+				channel <- errors.New("message bus cursor died")
 				break
 			}
 		}
-
 		channel <- nil
 	}()
 
-	return channel
+	ret := <-channel
+	switch ret.(type) {
+	case error:
+		return nil, ret.(error)
+	default:
+		return channel, nil
+	}
 }
 
 // AquireJob gets given job and updates it's status to StatusProcessing.
@@ -322,7 +359,14 @@ func (db *DataStoreMongo) AquireJob(ctx context.Context,
 		"$set": bson.M{"status": model.StatusProcessing},
 	}
 
-	err := collQueue.FindOneAndUpdate(ctx, query, update).Decode(aquiredJob)
+	upsert := true
+	after := mopts.After
+	opt := mopts.FindOneAndUpdateOptions{
+		ReturnDocument: &after,
+		Upsert:         &upsert,
+	}
+
+	err := collQueue.FindOneAndUpdate(ctx, query, update, &opt).Decode(aquiredJob)
 	if err == mongo.ErrNoDocuments {
 		return nil, nil
 	} else if err != nil {
@@ -344,12 +388,7 @@ func (db *DataStoreMongo) UpdateJobAddResult(ctx context.Context,
 	job *model.Job, result *model.TaskResult) error {
 	collection := db.client.Database(db.dbName).
 		Collection(JobsCollectionName)
-	var update bson.M
-	if job.Results == nil {
-		update = bson.M{"$set": bson.M{"results": bson.A{result}}}
-	} else {
-		update = bson.M{"$addToSet": bson.M{"results": result}}
-	}
+	update := bson.M{"$addToSet": bson.M{"results": result}}
 	_, err := collection.UpdateOne(ctx, bson.M{"_id": job.ID}, update)
 	if err != nil {
 		return err
@@ -381,7 +420,7 @@ func (db *DataStoreMongo) UpdateJobStatus(
 	return nil
 }
 
-// GetJobStatusByNameAndID get the task execution status for a job
+// GetJobByNameAndID get the task execution status for a job
 // by workflow name and ID
 func (db *DataStoreMongo) GetJobByNameAndID(
 	ctx context.Context, name string, ID string) (*model.Job, error) {
@@ -402,7 +441,14 @@ func (db *DataStoreMongo) GetJobByNameAndID(
 	return &job, nil
 }
 
-// Shutdown shuts down the datastore GetJobs process
-func (db *DataStoreMongo) Shutdown() {
-	db.shutdown = true
+// Close disconnects the client
+func (db *DataStoreMongo) Close() {
+	ctx := context.Background()
+	disconnectClient(ctx, db.client)
+}
+
+func (db *DataStoreMongo) dropDatabase() error {
+	ctx := context.Background()
+	err := db.client.Database(db.dbName).Drop(ctx)
+	return err
 }

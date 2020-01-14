@@ -73,10 +73,10 @@ The workflows are defined as JSON files. A sample workflow follows:
         {
             "name": "delete_device_inventory",
             "type": "http",
-            "taskdef": {
-            "uri": "http://www.mocky.io/v2/5de377e13000006800e9c9c2?mocky-delay=2000ms",
-            "method": "PUT",
-            "payload": "{\"device_id\": \"${workflow.input.device_id}\"}",
+            "http": {
+                "uri": "http://www.mocky.io/v2/5de377e13000006800e9c9c2?mocky-delay=2000ms",
+                "method": "PUT",
+                "payload": "{\"device_id\": \"${workflow.input.device_id}\"}",
                 "headers": {
                     "X-MEN-RequestID": "${workflow.input.request_id}",
                     "Authorization": "${workflow.input.authorization}"

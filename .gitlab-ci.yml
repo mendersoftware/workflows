@@ -17,6 +17,12 @@ before_script:
   - export SERVICE_IMAGE=$DOCKER_REPOSITORY:$DOCKER_TAG
   - export COMMIT_TAG="$CI_COMMIT_REF_SLUG"_"$CI_COMMIT_SHA"
 
+test:unit:
+  services:
+    - mongo:4.0
+  variables:
+    WORKFLOWS_MONGO_URL: "mongodb://mongo"
+
 build:
   stage: build
   tags:

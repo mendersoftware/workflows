@@ -1,4 +1,4 @@
-// Copyright 2019 Northern.tech AS
+// Copyright 2020 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -15,10 +15,10 @@
 package http
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/mendersoftware/workflows/model"
@@ -33,12 +33,12 @@ type WorkflowController struct {
 
 // NewWorkflowController returns a new StatusController
 func NewWorkflowController(dataStore store.DataStore) *WorkflowController {
-
 	return &WorkflowController{
 		dataStore: dataStore,
 	}
 }
 
+// RegisterWorkflow responds to POST /api/v1/metadata/workflows
 func (h WorkflowController) RegisterWorkflow(c *gin.Context) {
 	var workflow model.Workflow
 	rawData, err := c.GetRawData()
@@ -61,9 +61,13 @@ func (h WorkflowController) RegisterWorkflow(c *gin.Context) {
 		})
 		return
 	}
-	_, err = h.dataStore.InsertWorkflows(workflow)
+	_, err = h.dataStore.InsertWorkflows(c, workflow)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
+		httpStatus := http.StatusBadRequest
+		if err == store.ErrWorkflowAlreadyExists {
+			httpStatus = http.StatusConflict
+		}
+		c.JSON(httpStatus, gin.H{
 			"error": err.Error(),
 		})
 		return
@@ -71,14 +75,15 @@ func (h WorkflowController) RegisterWorkflow(c *gin.Context) {
 	c.Status(http.StatusCreated)
 }
 
+// GetWorkflows responds to GET /api/v1/metadata/workflows
 func (h WorkflowController) GetWorkflows(c *gin.Context) {
-	c.JSON(http.StatusOK, h.dataStore.GetWorkflows())
+	c.JSON(http.StatusOK, h.dataStore.GetWorkflows(c))
 }
 
 // StartWorkflow responds to POST /api/workflow/:name
 func (h WorkflowController) StartWorkflow(c *gin.Context) {
 	var name string = c.Param("name")
-	var inputParameters map[string]string
+	var inputParameters map[string]interface{}
 	var jobInputParameters []model.InputParameter
 
 	if err := c.BindJSON(&inputParameters); err != nil {
@@ -90,19 +95,27 @@ func (h WorkflowController) StartWorkflow(c *gin.Context) {
 	}
 
 	for key, value := range inputParameters {
+		value = 1
+		valueString, ok := value.(string)
+		if !ok {
+			valueInt, ok := value.(int)
+			if !ok {
+				continue
+			}
+			valueString = strconv.FormatInt(int64(valueInt), 10)
+		}
 		jobInputParameters = append(jobInputParameters, model.InputParameter{
 			Name:  key,
-			Value: value,
+			Value: valueString,
 		})
 	}
 
-	ctx := context.Background()
 	job := &model.Job{
 		WorkflowName:    name,
 		InputParameters: jobInputParameters,
 	}
 
-	job, err := h.dataStore.InsertJob(ctx, job)
+	job, err := h.dataStore.InsertJob(c, job)
 	if err != nil {
 		switch err {
 		case store.ErrWorkflowNotFound:
@@ -128,8 +141,7 @@ func (h WorkflowController) GetWorkflowByNameAndID(c *gin.Context) {
 	var name string = c.Param("name")
 	var id string = c.Param("id")
 
-	ctx := context.Background()
-	job, err := h.dataStore.GetJobByNameAndID(ctx, name, id)
+	job, err := h.dataStore.GetJobByNameAndID(c, name, id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, err.Error())
 		return

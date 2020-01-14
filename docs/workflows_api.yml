@@ -15,6 +15,10 @@ responses:
     description: Not Found.
     schema:
       $ref: "#/definitions/Error"
+  ConflictError: # 409
+    description: Conflict, record already exists.
+    schema:
+      $ref: "#/definitions/Error"
   InternalServerError: # 500
     description: Internal Server Error.
     schema:
@@ -146,7 +150,8 @@ paths:
           description: Successful response.
         400:
           $ref: "#/responses/InvalidRequestError"
-
+        409:
+          $ref: "#/responses/ConflictError"
 
 definitions:
   Error:
@@ -158,7 +163,18 @@ definitions:
         type: string
     example:
       application/json:
-          error: "failed to decode device group data: JSON payload is empty"
+          error: "failed: JSON payload is empty"
+
+  CLIParams:
+    description: CLI parameters
+    type: object
+    properties:
+      command:
+        type: array
+        items:
+          type: string
+      executionTimeOut:
+        type: integer
 
   HTTPParams:
     description: HTTP parameters
@@ -174,6 +190,10 @@ definitions:
         type: string
       headers:
         type: object
+      statusCodes:
+        type: array
+        items:
+          type: integer
       connectionTimeOut:
         type: integer
       readTimeOut:
@@ -187,15 +207,13 @@ definitions:
         type: string
       type:
         type: string
-      taskdef:
-        type: object
-        enum:
-          - $ref: "#/definitions/HTTPParams"
-        # TODO: Add task definitions for other types as implemented
+      cli:
+        $ref: "#/definitions/CLIParams"
+      http:
+        $ref: "#/definitions/HTTPParams"
     required:
       - name
       - type
-      - taskdef
 
   Workflow:
     type: object
@@ -236,7 +254,21 @@ definitions:
         name: key
         value: parameter
 
-  TaskResultRequest:
+  TaskResultCLI:
+    type: object
+    properties:
+      command:
+        type: array
+        items:
+          type: string
+      output:
+        type: string
+      error:
+        type: string
+      exitCode:
+        type: integer
+
+  TaskResultHTTPRequest:
     type: object
     properties:
       statusCode:
@@ -244,7 +276,7 @@ definitions:
       body:
         type: string
 
-  TaskResultResponse:
+  TaskResultHTTPResponse:
     type: object
     properties:
       uri:
@@ -261,10 +293,14 @@ definitions:
   TaskResult:
     type: object
     properties:
+      success:
+        type: boolean
+      cli:
+        $ref: "#/definitions/TaskResultCLI"
       request:
-        $ref: "#/definitions/TaskResultRequest"
+        $ref: "#/definitions/TaskResultHTTPRequest"
       response:
-        $ref: "#/definitions/TaskResultResponse"
+        $ref: "#/definitions/TaskResultHTTPResponse"
 
   JobStatus:
     type: object
