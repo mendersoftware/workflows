@@ -1,4 +1,4 @@
-// Copyright 2019 Northern.tech AS
+// Copyright 2020 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -21,22 +21,22 @@ import (
 	"github.com/mendersoftware/workflows/model"
 )
 
+// Error messages
 var (
 	ErrWorkflowNotFound      = errors.New("Workflow not found")
 	ErrWorkflowMissingName   = errors.New("Workflow missing name")
 	ErrWorkflowAlreadyExists = errors.New("Workflow already exists")
 )
 
-// DataStoreMongoInterface for DataStore  services
+// DataStore interface for DataStore services
 type DataStore interface {
-	InsertWorkflows(workflow ...model.Workflow) (int, error)
-	GetWorkflowByName(workflowName string) (*model.Workflow, error)
-	GetWorkflows() []model.Workflow
+	InsertWorkflows(ctx context.Context, workflow ...model.Workflow) (int, error)
+	GetWorkflowByName(ctx context.Context, workflowName string) (*model.Workflow, error)
+	GetWorkflows(ctx context.Context) []model.Workflow
 	InsertJob(ctx context.Context, job *model.Job) (*model.Job, error)
-	GetJobs(ctx context.Context) <-chan *model.Job
+	GetJobs(ctx context.Context, included []string, excluded []string) (<-chan interface{}, error)
 	AquireJob(ctx context.Context, job *model.Job) (*model.Job, error)
 	UpdateJobAddResult(ctx context.Context, job *model.Job, result *model.TaskResult) error
 	UpdateJobStatus(ctx context.Context, job *model.Job, status int) error
 	GetJobByNameAndID(ctx context.Context, name string, ID string) (*model.Job, error)
-	Shutdown()
 }

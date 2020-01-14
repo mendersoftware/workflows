@@ -12,19 +12,22 @@ services:
           - mongo-workflows
 
   workflows-worker:
-    image: 'registry.mender.io/workflows:master'
-    command: /usr/bin/workflows --config /etc/workflows/config.yml worker --automigrate
+    image: mendersoftware/workflows:master
+    command: worker --automigrate
     networks:
       mender:
         aliases:
           - workflows-worker
     
   workflows-server:
-    image: 'registry.mender.io/workflows:master'
-    command: /usr/bin/workflows --config /etc/workflows/config.yml server --automigrate
+    image: mendersoftware/workflows:master
+    command: server --automigrate
+    ports:
+    - "8080:8080"
     networks:
       mender:
         aliases:
           - workflows-server
+
 networks:
     mender:

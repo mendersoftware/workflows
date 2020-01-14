@@ -1,4 +1,4 @@
-// Copyright 2019 Northern.tech AS
+// Copyright 2020 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -15,7 +15,6 @@
 package model
 
 import (
-	"encoding/json"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -34,7 +33,123 @@ func TestParseWorkflowFromJSON(t *testing.T) {
 		{
 			"name": "delete_device_inventory",
 			"type": "http",
-			"taskdef": {
+			"http": {
+				"uri": "http://mender-inventory:8080/api/0.1.0/devices/${workflow.input.device_id}",
+				"method": "DELETE",
+				"body": "Payload",
+				"headers": {
+					"X-MEN-RequestID": "${workflow.input.request_id}",
+					"Authorization": "${workflow.input.authorization}"
+				},
+				"statusCodes": [
+					200,
+					201
+				],
+				"connectionTimeOut": 1000,
+				"readTimeOut": 1000
+			}
+		}
+	],
+	"inputParameters": [
+		"device_id",
+		"request_id",
+		"authorization"
+	],
+	"schemaVersion": 1
+}`)
+
+	var workflow, err = ParseWorkflowFromJSON(data)
+	assert.Nil(t, err)
+	assert.NotNil(t, workflow)
+	assert.Equal(t, "decommission_device", workflow.Name)
+	assert.Equal(t, "Removes device info from all services.", workflow.Description)
+	assert.Equal(t, 4, workflow.Version)
+	assert.Equal(t, 1, workflow.SchemaVersion)
+
+	var inputParameters = workflow.InputParameters
+	assert.Len(t, inputParameters, 3)
+	assert.Equal(t, inputParameters[0], "device_id")
+	assert.Equal(t, inputParameters[1], "request_id")
+	assert.Equal(t, inputParameters[2], "authorization")
+
+	var tasks = workflow.Tasks
+	assert.Len(t, tasks, 1)
+	assert.Equal(t, tasks[0].Name, "delete_device_inventory")
+	assert.Equal(t, tasks[0].Type, TaskTypeHTTP)
+
+	var httpTask *HTTPTask = tasks[0].HTTP
+	assert.Equal(t, httpTask.URI, "http://mender-inventory:8080/api/0.1.0/devices/${workflow.input.device_id}")
+	assert.Equal(t, httpTask.Method, "DELETE")
+	assert.Equal(t, httpTask.Body, "Payload")
+	assert.Len(t, httpTask.Headers, 2)
+	assert.Len(t, httpTask.StatusCodes, 2)
+	assert.Equal(t, httpTask.StatusCodes[0], 200)
+	assert.Equal(t, httpTask.StatusCodes[1], 201)
+	assert.Equal(t, httpTask.Headers["X-MEN-RequestID"], "${workflow.input.request_id}")
+	assert.Equal(t, httpTask.Headers["Authorization"], "${workflow.input.authorization}")
+	assert.Equal(t, httpTask.ConnectionTimeOut, 1000)
+	assert.Equal(t, httpTask.ReadTimeOut, 1000)
+}
+
+func TestParseWorkflowWithCLIFromJSON(t *testing.T) {
+	data := []byte(`
+{
+	"name": "test_cli",
+	"description": "Test CLI",
+	"version": 1,
+	"tasks": [
+		{
+			"name": "run_echo",
+			"type": "cli",
+			"cli": {
+				"command": [
+					"echo",
+					"1"
+				],
+				"executionTimeOut": 1000
+			}
+		}
+	],
+	"schemaVersion": 1
+}`)
+
+	var workflow, err = ParseWorkflowFromJSON(data)
+	assert.Nil(t, err)
+	assert.NotNil(t, workflow)
+	assert.Equal(t, "test_cli", workflow.Name)
+	assert.Equal(t, "Test CLI", workflow.Description)
+	assert.Equal(t, 1, workflow.Version)
+	assert.Equal(t, 1, workflow.SchemaVersion)
+
+	var tasks = workflow.Tasks
+	assert.Len(t, tasks, 1)
+	assert.Equal(t, tasks[0].Name, "run_echo")
+	assert.Equal(t, tasks[0].Type, TaskTypeCLI)
+
+	var cliTask *CLITask = tasks[0].CLI
+	assert.Equal(t, cliTask.Command, []string{"echo", "1"})
+	assert.Equal(t, cliTask.ExecutionTimeOut, 1000)
+}
+
+func TestParseWorkflowFromInvalidJSON(t *testing.T) {
+	data := []byte(`INVALID JSON`)
+
+	var workflow, err = ParseWorkflowFromJSON(data)
+	assert.Nil(t, workflow)
+	assert.NotNil(t, err)
+}
+
+func TestGetWorkflowsFromPath(t *testing.T) {
+	data := []byte(`
+{
+	"name": "decommission_device",
+	"description": "Removes device info from all services.",
+	"version": 4,
+	"tasks": [
+		{
+			"name": "delete_device_inventory",
+			"type": "http",
+			"http": {
 				"uri": "http://mender-inventory:8080/api/0.1.0/devices/${workflow.input.device_id}",
 				"method": "DELETE",
 				"body": "Payload",
@@ -54,76 +169,6 @@ func TestParseWorkflowFromJSON(t *testing.T) {
 	],
 	"schemaVersion": 1
 }`)
-
-	var workflow, _ = ParseWorkflowFromJSON(data)
-	assert.NotNil(t, workflow)
-	assert.Equal(t, "decommission_device", workflow.Name)
-	assert.Equal(t, "Removes device info from all services.", workflow.Description)
-	assert.Equal(t, 4, workflow.Version)
-	assert.Equal(t, 1, workflow.SchemaVersion)
-
-	var inputParameters = workflow.InputParameters
-	assert.Len(t, inputParameters, 3)
-	assert.Equal(t, inputParameters[0], "device_id")
-	assert.Equal(t, inputParameters[1], "request_id")
-	assert.Equal(t, inputParameters[2], "authorization")
-
-	var tasks = workflow.Tasks
-	assert.Len(t, tasks, 1)
-	assert.Equal(t, tasks[0].Name, "delete_device_inventory")
-	assert.Equal(t, tasks[0].Type, "http")
-	assert.NotNil(t, tasks[0].Taskdef)
-	var httpTask HTTPTask
-	err := json.Unmarshal(tasks[0].Taskdef, &httpTask)
-	assert.NoError(t, err)
-	assert.Equal(t, httpTask.URI, "http://mender-inventory:8080/api/0.1.0/devices/${workflow.input.device_id}")
-	assert.Equal(t, httpTask.Method, "DELETE")
-	assert.Equal(t, httpTask.Body, "Payload")
-	assert.Len(t, httpTask.Headers, 2)
-	assert.Equal(t, httpTask.Headers["X-MEN-RequestID"], "${workflow.input.request_id}")
-	assert.Equal(t, httpTask.Headers["Authorization"], "${workflow.input.authorization}")
-	assert.Equal(t, httpTask.ConnectionTimeOut, 1000)
-	assert.Equal(t, httpTask.ReadTimeOut, 1000)
-}
-
-func TestParseWorkflowFromInvalidJSON(t *testing.T) {
-	data := []byte(`INVALID JSON`)
-
-	var workflow, err = ParseWorkflowFromJSON(data)
-	assert.Nil(t, workflow)
-	assert.NotNil(t, err)
-}
-
-func TestGetWorkflowsFromPath(t *testing.T) {
-	data := []byte(`
-	{
-		"name": "decommission_device",
-		"description": "Removes device info from all services.",
-		"version": 4,
-		"tasks": [
-			{
-				"name": "delete_device_inventory",
-				"type": "HTTP",
-				"http": {
-					"uri": "http://mender-inventory:8080/api/0.1.0/devices/${workflow.input.device_id}",
-					"method": "DELETE",
-					"body": "Payload",
-					"headers": {
-						"X-MEN-RequestID": "${workflow.input.request_id}",
-						"Authorization": "${workflow.input.authorization}"
-					},
-					"connectionTimeOut": 1000,
-					"readTimeOut": 1000
-				}
-			}
-		],
-		"inputParameters": [
-			"device_id",
-			"request_id",
-			"authorization"
-		],
-		"schemaVersion": 1
-	}`)
 
 	dir, _ := ioutil.TempDir("", "example")
 	defer os.RemoveAll(dir) // clean up

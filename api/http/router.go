@@ -1,4 +1,4 @@
-// Copyright 2019 Northern.tech AS
+// Copyright 2020 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -19,13 +19,14 @@ import (
 	"github.com/mendersoftware/workflows/store"
 )
 
+// API URL used by the HTTP router
 const (
-	ApiUrlStatus = "/status"
+	APIURLStatus = "/status"
 
-	ApiUrlWorkflow   = "/api/v1/workflow/:name"
-	ApiUrlWorkflowId = "/api/v1/workflow/:name/:id"
+	APIURLWorkflow   = "/api/v1/workflow/:name"
+	APIURLWorkflowID = "/api/v1/workflow/:name/:id"
 
-	ApiUrlWorkflows = "/api/v1/metadata/workflows"
+	APIURLWorkflows = "/api/v1/metadata/workflows"
 )
 
 // NewRouter returns the gin router
@@ -36,14 +37,14 @@ func NewRouter(dataStore store.DataStore) *gin.Engine {
 	router.Use(gin.Recovery())
 
 	status := NewStatusController()
-	router.GET(ApiUrlStatus, status.Status)
+	router.GET(APIURLStatus, status.Status)
 
 	workflow := NewWorkflowController(dataStore)
-	router.POST(ApiUrlWorkflow, workflow.StartWorkflow)
-	router.GET(ApiUrlWorkflowId, workflow.GetWorkflowByNameAndID)
+	router.POST(APIURLWorkflow, workflow.StartWorkflow)
+	router.GET(APIURLWorkflowID, workflow.GetWorkflowByNameAndID)
 
-	router.POST(ApiUrlWorkflows, workflow.RegisterWorkflow)
-	router.GET(ApiUrlWorkflows, workflow.GetWorkflows)
+	router.POST(APIURLWorkflows, workflow.RegisterWorkflow)
+	router.GET(APIURLWorkflows, workflow.GetWorkflows)
 
 	return router
 }

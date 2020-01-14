@@ -1,4 +1,4 @@
-// Copyright 2019 Northern.tech AS
+// Copyright 2020 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ import (
 
 	"github.com/mendersoftware/go-lib-micro/mongo/migrate"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	mopts "go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -32,10 +33,10 @@ type migration1_0_0 struct {
 func (m *migration1_0_0) Up(from migrate.Version) error {
 	ctx := context.Background()
 	database := m.client.Database(m.db)
-	database.RunCommand(ctx, bson.M{
-		"create": JobQueueCollectionName,
-		"capped": true,
-		"size":   1024 * 1024 * 1024 * 64,
+	database.RunCommand(ctx, bson.D{
+		primitive.E{Key: "create", Value: JobQueueCollectionName},
+		primitive.E{Key: "capped", Value: true},
+		primitive.E{Key: "size", Value: 1024 * 1024 * 1024 * 64},
 	})
 	collQueue := database.Collection(JobQueueCollectionName)
 	collJobs := database.Collection(JobsCollectionName)

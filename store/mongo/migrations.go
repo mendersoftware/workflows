@@ -1,4 +1,4 @@
-// Copyright 2019 Northern.tech AS
+// Copyright 2020 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ const (
 func Migrate(ctx context.Context,
 	db string,
 	version string,
-	client *MongoClient,
+	client *Client,
 	automigrate bool) error {
 	l := log.FromContext(ctx)
 

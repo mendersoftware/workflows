@@ -1,4 +1,4 @@
-// Copyright 2019 Northern.tech AS
+// Copyright 2020 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -18,18 +18,19 @@ import (
 	"github.com/pkg/errors"
 )
 
+// Status
 const (
 	StatusDone = iota
 	StatusPending
 	StatusProcessing
 	StatusFailure
-
-	// Error messages
-	ErrMsgMissingParamF = "Missing input parameters: %s"
 )
 
+// ErrMsgMissingParamF is the error message for missing input parameters
+const ErrMsgMissingParamF = "Missing input parameters: %s"
+
 var (
-	// Errors
+	// ErrInvalidStatus is the error for invalid status
 	ErrInvalidStatus = errors.New("Invalid status")
 )
 
@@ -50,7 +51,7 @@ type Job struct {
 
 	// Results produced by a finished job. If status is not "done" this
 	// field will always be nil.
-	Results *[]TaskResult `json:"results" bson:"results"`
+	Results []TaskResult `json:"results" bson:"results,omitempty"`
 }
 
 // InputParameter defines the input parameter of a job
@@ -64,20 +65,30 @@ type InputParameter struct {
 
 // TaskResult contains the result of the execution of a task
 type TaskResult struct {
-	Request  TaskResultRequest  `json:"request" bson:"request"`
-	Response TaskResultResponse `json:"response" bson:"response"`
+	Success      bool                    `json:"success" bson:"success"`
+	CLI          *TaskResultCLI          `json:"cli" bson:"cli,omitempty"`
+	HTTPRequest  *TaskResultHTTPRequest  `json:"httpRequest" bson:"httpRequest,omitempty"`
+	HTTPResponse *TaskResultHTTPResponse `json:"httpResponse" bson:"httpResponse,omitempty"`
 }
 
-// TaskResultRequest contains the request
-type TaskResultRequest struct {
+// TaskResultCLI contains the CLI command, the output and the exit status
+type TaskResultCLI struct {
+	Command  []string `json:"command" bson:"command"`
+	Output   string   `json:"output" bson:"output"`
+	Error    string   `json:"error" bson:"error"`
+	ExitCode int      `json:"exitCode" bson:"exitCode"`
+}
+
+// TaskResultHTTPRequest contains the request
+type TaskResultHTTPRequest struct {
 	URI     string   `json:"uri" bson:"uri"`
 	Method  string   `json:"method" bson:"method"`
 	Body    string   `json:"body" bson:"body"`
 	Headers []string `json:"headers" bson:"headers"`
 }
 
-// TaskResultResponse contains the response
-type TaskResultResponse struct {
+// TaskResultHTTPResponse contains the response
+type TaskResultHTTPResponse struct {
 	StatusCode int    `json:"statusCode" bson:"status_code"`
 	Body       string `json:"body" bson:"body"`
 }
@@ -100,7 +111,7 @@ func (job *Job) Validate(workflow *Workflow) error {
 	return nil
 }
 
-// GetStatus returns the job's status as a string
+// StatusToString returns the job's status as a string
 func StatusToString(status int) string {
 	var ret string
 	switch status {
