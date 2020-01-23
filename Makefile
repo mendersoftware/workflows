@@ -13,7 +13,7 @@ build:
 
 .PHONY: test
 test:
-	$(GO) test -cover -coverprofile=coverage.txt $(PACKAGES) && echo "\n==>\033[32m Ok\033[m\n" || exit 1
+	WORKFLOWS_MONGO_URL="mongodb://localhost" $(GO) test -cover -coverprofile=coverage.txt $(PACKAGES) && echo "\n==>\033[32m Ok\033[m\n" || exit 1
 
 .PHONY: test-short
 test-short:

@@ -185,6 +185,18 @@ func NewDataStoreWithClient(client *Client, c config.Reader) *DataStoreMongo {
 	}
 }
 
+// LoadWorkflows from filesystem if the workflowsPath setting is provided
+func (db *DataStoreMongo) LoadWorkflows(ctx context.Context) error {
+	workflowsPath := config.Config.GetString(dconfig.SettingWorkflowsPath)
+	if workflowsPath != "" {
+		workflows := model.GetWorkflowsFromPath(workflowsPath)
+		for _, workflow := range workflows {
+			db.InsertWorkflows(ctx, *workflow)
+		}
+	}
+	return nil
+}
+
 // InsertWorkflows inserts a workflow to the database and cache and returns the number of
 // inserted elements or an error for the first error generated.
 func (db *DataStoreMongo) InsertWorkflows(ctx context.Context, workflows ...model.Workflow) (int, error) {

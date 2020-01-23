@@ -17,8 +17,13 @@ package mongo
 import (
 	"context"
 	"flag"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"testing"
 
+	"github.com/mendersoftware/go-lib-micro/config"
+	dconfig "github.com/mendersoftware/workflows/config"
 	"github.com/mendersoftware/workflows/model"
 	"github.com/stretchr/testify/assert"
 )
@@ -82,6 +87,62 @@ func TestInsertWorkflows(t *testing.T) {
 	assert.Equal(t, workflow.SchemaVersion, workflowFromDb.SchemaVersion)
 	assert.Equal(t, workflow.Version, workflowFromDb.Version)
 	assert.Equal(t, workflow.InputParameters, workflowFromDb.InputParameters)
+}
+
+func TestLoadWorkflows(t *testing.T) {
+	flag.Parse()
+	if testing.Short() {
+		t.Skip()
+	}
+
+	data := []byte(`
+{
+	"name": "decommission_device_from_filesystem",
+	"description": "Removes device info from all services.",
+	"version": 4,
+	"tasks": [
+		{
+			"name": "delete_device_inventory",
+			"type": "http",
+			"http": {
+				"uri": "http://mender-inventory:8080/api/0.1.0/devices/${workflow.input.device_id}",
+				"method": "DELETE",
+				"body": "Payload",
+				"headers": {
+					"X-MEN-RequestID": "${workflow.input.request_id}",
+					"Authorization": "${workflow.input.authorization}"
+				},
+				"connectionTimeOut": 1000,
+				"readTimeOut": 1000
+			}
+		}
+	],
+	"inputParameters": [
+		"device_id",
+		"request_id",
+		"authorization"
+	],
+	"schemaVersion": 1
+}`)
+
+	dir, _ := ioutil.TempDir("", "example")
+	defer os.RemoveAll(dir) // clean up
+
+	config.Config.Set(dconfig.SettingWorkflowsPath, dir)
+
+	tmpfn := filepath.Join(dir, "test.json")
+	ioutil.WriteFile(tmpfn, data, 0666)
+
+	ctx := context.Background()
+	err := testDataStore.LoadWorkflows(ctx)
+	assert.Nil(t, err)
+
+	workflowFromDb, err := testDataStore.GetWorkflowByName(ctx, "decommission_device_from_filesystem")
+	assert.Nil(t, err)
+	assert.Equal(t, "decommission_device_from_filesystem", workflowFromDb.Name)
+	assert.Equal(t, "Removes device info from all services.", workflowFromDb.Description)
+	assert.Equal(t, 1, workflowFromDb.SchemaVersion)
+	assert.Equal(t, 4, workflowFromDb.Version)
 }
 
 func TestInsertWorkflowsMissingName(t *testing.T) {
