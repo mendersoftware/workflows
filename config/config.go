@@ -1,4 +1,4 @@
-// Copyright 2019 Northern.tech AS
+// Copyright 2020 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ const (
 	// SettingMongo is the config key for the mongo URL
 	SettingMongo = "mongo-url"
 	// SettingMongoDefault is the default value for the mongo URL
-	SettingMongoDefault = "mongodb://localhost"
+	SettingMongoDefault = "mongodb://mender-mongo:27017"
 
 	// SettingDbName is the config key for the mongo database name
 	SettingDbName = "mongo-dbname"
