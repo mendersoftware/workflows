@@ -148,7 +148,14 @@ func TestWorkflowFoundAndStartedWithParameters(t *testing.T) {
 			func(_ context.Context) bool {
 				return true
 			}),
-		mocklib.AnythingOfType("*model.Job"),
+		mocklib.MatchedBy(
+			func(job *model.Job) bool {
+				assert.Len(t, job.InputParameters, 1)
+				assert.Equal(t, job.InputParameters[0].Name, "key")
+				assert.Equal(t, job.InputParameters[0].Value, "value")
+
+				return true
+			}),
 	).Return(mockedJob, nil)
 
 	dataStore.On("GetJobByNameAndID",
@@ -214,7 +221,7 @@ func TestWorkflowFoundAndStartedWithNonStringParameter(t *testing.T) {
 			func(job *model.Job) bool {
 				assert.Len(t, job.InputParameters, 1)
 				assert.Equal(t, job.InputParameters[0].Name, "key")
-				assert.Equal(t, job.InputParameters[0].Value, "1")
+				assert.Equal(t, job.InputParameters[0].Value, "2")
 
 				return true
 			}),
@@ -230,7 +237,7 @@ func TestWorkflowFoundAndStartedWithNonStringParameter(t *testing.T) {
 	).Return(mockedJob, nil)
 
 	payload := `{
-      "key": 1
+      "key": "2"
 	}`
 
 	url := strings.Replace(APIURLWorkflow, ":name", mockedJob.WorkflowName, 1)

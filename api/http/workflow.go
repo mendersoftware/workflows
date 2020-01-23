@@ -95,7 +95,6 @@ func (h WorkflowController) StartWorkflow(c *gin.Context) {
 	}
 
 	for key, value := range inputParameters {
-		value = 1
 		valueString, ok := value.(string)
 		if !ok {
 			valueInt, ok := value.(int)
