@@ -45,6 +45,8 @@ func InitAndRun(conf config.Reader, workflows Workflows, dataStore store.DataSto
 	// eventually.
 	defer cancel()
 
+	dataStore.LoadWorkflows(ctx)
+
 	channel, err := dataStore.GetJobs(ctx, workflows.Included, workflows.Excluded)
 	if err != nil {
 		return errors.Wrap(err, "Failed to start job scheduler")

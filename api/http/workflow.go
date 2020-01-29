@@ -18,7 +18,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/mendersoftware/workflows/model"
@@ -80,6 +80,18 @@ func (h WorkflowController) GetWorkflows(c *gin.Context) {
 	c.JSON(http.StatusOK, h.dataStore.GetWorkflows(c))
 }
 
+func convertAnythingToString(value interface{}) (string, error) {
+	valueString, ok := value.(string)
+	if !ok {
+		valueBytes, err := json.Marshal(value)
+		if err != nil {
+			return "", err
+		}
+		valueString = string(valueBytes)
+	}
+	return valueString, nil
+}
+
 // StartWorkflow responds to POST /api/workflow/:name
 func (h WorkflowController) StartWorkflow(c *gin.Context) {
 	var name string = c.Param("name")
@@ -95,19 +107,28 @@ func (h WorkflowController) StartWorkflow(c *gin.Context) {
 	}
 
 	for key, value := range inputParameters {
-		value = 1
-		valueString, ok := value.(string)
-		if !ok {
-			valueInt, ok := value.(int)
-			if !ok {
-				continue
+		valueSlice, ok := value.([]interface{})
+		if ok {
+			values := make([]string, 0, 10)
+			for _, value := range valueSlice {
+				valueString, err := convertAnythingToString(value)
+				if err == nil {
+					values = append(values, valueString)
+				}
 			}
-			valueString = strconv.FormatInt(int64(valueInt), 10)
+			jobInputParameters = append(jobInputParameters, model.InputParameter{
+				Name:  key,
+				Value: strings.Join(values, ","),
+			})
+		} else {
+			valueString, err := convertAnythingToString(value)
+			if err == nil {
+				jobInputParameters = append(jobInputParameters, model.InputParameter{
+					Name:  key,
+					Value: valueString,
+				})
+			}
 		}
-		jobInputParameters = append(jobInputParameters, model.InputParameter{
-			Name:  key,
-			Value: valueString,
-		})
 	}
 
 	job := &model.Job{

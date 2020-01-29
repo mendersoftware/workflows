@@ -33,6 +33,7 @@ type DataStore interface {
 	InsertWorkflows(ctx context.Context, workflow ...model.Workflow) (int, error)
 	GetWorkflowByName(ctx context.Context, workflowName string) (*model.Workflow, error)
 	GetWorkflows(ctx context.Context) []model.Workflow
+	LoadWorkflows(ctx context.Context) error
 	InsertJob(ctx context.Context, job *model.Job) (*model.Job, error)
 	GetJobs(ctx context.Context, included []string, excluded []string) (<-chan interface{}, error)
 	AquireJob(ctx context.Context, job *model.Job) (*model.Job, error)

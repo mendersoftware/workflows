@@ -32,6 +32,19 @@ func NewDataStore() *DataStore {
 	return &DataStore{}
 }
 
+// LoadWorkflows from filesystem if the workflowsPath setting is provided
+func (db *DataStore) LoadWorkflows(ctx context.Context) error {
+	ret := db.Called(ctx)
+
+	var r0 error
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r0 = rf(ctx)
+	} else {
+		r0 = ret.Error(1)
+	}
+	return r0
+}
+
 // InsertWorkflows inserts one or multiple workflows
 func (db *DataStore) InsertWorkflows(ctx context.Context,
 	workflows ...model.Workflow) (int, error) {
