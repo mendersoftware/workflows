@@ -29,7 +29,7 @@ build:
     - docker
   image: docker
   services:
-    - docker:dind
+    - docker:19.03.5-dind
   script:
     - echo "building ${CI_PROJECT_NAME} for ${SERVICE_IMAGE}"
     - docker build -t $SERVICE_IMAGE .
@@ -47,7 +47,7 @@ publish:image:
     - docker
   image: docker
   services:
-    - docker:dind
+    - docker:19.03.5-dind
   dependencies:
     - build
   script:
