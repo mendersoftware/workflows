@@ -1,0 +1,11 @@
+{
+    "name": "provision_device",
+    "description": "Provision a device",
+    "version": 1,
+    "tasks": [
+
+    ],
+    "inputParameters": [
+
+    ]
+}
