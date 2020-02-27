@@ -1,111 +1,64 @@
 [![Build Status](https://gitlab.com/Northern.tech/Mender/workflows/badges/master/pipeline.svg)](https://gitlab.com/Northern.tech/Mender/workflows/pipelines)
 [![codecov](https://codecov.io/gh/mendersoftware/workflows/branch/master/graph/badge.svg)](https://codecov.io/gh/mendersoftware/workflows)
+[![Go Report Card](https://goreportcard.com/badge/github.com/mendersoftware/workflows)](https://goreportcard.com/report/github.com/mendersoftware/workflows)
 [![Docker pulls](https://img.shields.io/docker/pulls/mendersoftware/workflows.svg?maxAge=3600)](https://hub.docker.com/r/mendersoftware/workflows/)
 
-# Introduction
+Mender: Workflows orchestrator
+==============================
 
-In order to explore possible paths for MEN-2934, we created a PoC based on:
+Mender is an open source over-the-air (OTA) software updater for embedded Linux
+devices. Mender comprises a client running at the embedded device, as well as
+a server that manages deployments across many devices.
 
-* API service which mimics the Conductor API to start workflows
+This repository contains the Mender Workflows orchestrator, which is part of the
+Mender server. The Mender server is designed as a microservices architecture
+and comprises several repositories.
 
-* Worker process which processes API-only tasks
+## Getting started
 
-* MongoDB as data storage service and message bus, using tailable cursors.
+To start using Mender, we recommend that you begin with the Getting started
+section in [the Mender documentation](https://docs.mender.io/).
 
-The PoC source code can be found here:
-https://github.com/tranchitella/workflows
+## Building from source
 
-## Technical details
+As the Mender server is designed as microservices architecture, it requires several
+repositories to be built to be fully functional. If you are testing the Mender server it
+is therefore easier to follow the getting started section above as it integrates these
+services.
 
-We developed a golang service using the [Gin Gonic](https://github.com/gin-gonic/gin) framework which mimicks the Conductor API to request the execution of workflows. The same binary can be used as worker to listen to workflows' jobs and process them.
-
-### API
-
-API exposes the following end-points:
-
-* GET /status
-  Healtcheck end-point
-
-* POST /api/workflow/:name
-  Start the workflow with name `name`
-
-* GET /api/workflow/:name/:id
-  Monitor the execution statos of the job with id `id` for the workflow `name`
-
-The API uses two collections:
-
-* `jobs`: capped collection which supports tailable cursors; we insert the workflow execution call, together with the input parameters, into this collection when the `POST /api/workflow:name` endpoint is invoked. It is not possible to remove or update documents from this collection and it will automatically recycle the documents as it reaches the capped size.
-
-* `jobs_status`: a traditional collection used to store the job execution status. The very same document is appended to this collection as well when the `POST /api/workflow:name` endpoint is invoked with status `pending`. This document is updated by the worker to reflect the current execution status.
-
-You start the API server with the command:
+If you would like to build the Workflows orchestrator independently, you can follow
+these steps:
 
 ```
-$ ./bin/workflows -config config.yaml server
+git clone https://github.com/mendersoftware/workflows.git
+cd workflows
+make build
 ```
 
-The API supports automigration at startup using the `--automigrate` flag.
+## Contributing
 
-### Worker
+We welcome and ask for your contribution. If you would like to contribute to Mender, please read our guide on how to best get started [contributing code or
+documentation](https://github.com/mendersoftware/mender/blob/master/CONTRIBUTING.md).
 
-The worker opens a tailable cursor on the `jobs` collections to get notified when a new workflow job is requested to run.
-The job execution is started parallely in a gorouting with a concurrency limit, managed by a monitoring channel, set in the configuration file.
+## License
 
-As the worker picks up the job from the queue it updates the `jobs_status` it updates the status to `processing` using an atomic `FindOneAndUpdate` query against the `jobs_status` collection. The document containing the `job_status` is updated after the execution of each step of the tasks. After all the tasks are performed the status is updated to `done`.
-You start the worker with the command:
+Mender is licensed under the Apache License, Version 2.0. See
+[LICENSE](https://github.com/mendersoftware/workflows/blob/master/LICENSE) for the
+full license text.
 
-```
-$ ./bin/workflows -config config.yaml worker
-```
+## Security disclosure
 
-The worker supports automigration at startup using the `--automigrate` flag.
+We take security very seriously. If you come across any issue regarding
+security, please disclose the information by sending an email to
+[security@mender.io](security@mender.io). Please do not create a new public
+issue. We thank you in advance for your cooperation.
 
-### Workflows
+## Connect with us
 
-The workflows are defined as JSON files. A sample workflow follows:
-
-```json
-{
-    "name": "decommission_device",
-    "description": "Removes device info from all services.",
-    "version": 4,
-    "tasks": [
-        {
-            "name": "delete_device_inventory",
-            "type": "http",
-            "http": {
-                "uri": "http://www.mocky.io/v2/5de377e13000006800e9c9c2?mocky-delay=2000ms",
-                "method": "PUT",
-                "payload": "{\"device_id\": \"${workflow.input.device_id}\"}",
-                "headers": {
-                    "X-MEN-RequestID": "${workflow.input.request_id}",
-                    "Authorization": "${workflow.input.authorization}"
-                },
-                "connectionTimeOut": 1000,
-                "readTimeOut": 1000
-            }
-        }
-    ],
-    "inputParameters": [
-        "device_id",
-        "request_id",
-        "authorization"
-    ],
-    "schemaVersion": 1
-}
-```
-
-Workflows are loadad by the API server and the worker at start-up time from the path specified in the configuration file.
-
-### Conclusions
-
-The PoC is successful, the worker can execute workflows parallely, customize the HTTP calls with the parameters and manage the concurrency to not exploit the available resources.
-The latency of tailable mongodb cursor is negligible.
-
-There are known limitations that have to be worked on to reach the status of MVP:
-
-* Support for other types of tasks (eg. running external commands)
-* More verbose logging
-* Task retry in case of failure
-* Workflow recovery / retry in case of failure
-* Improve testing (unit, acceptance, integration)
+* Join the [Mender Hub discussion forum](https://hub.mender.io)
+* Follow us on [Twitter](https://twitter.com/mender_io). Please
+  feel free to tweet us questions.
+* Fork us on [Github](https://github.com/mendersoftware)
+* Create an issue in the [bugtracker](https://tracker.mender.io/projects/MEN)
+* Email us at [contact@mender.io](mailto:contact@mender.io)
+* Connect to the [#mender IRC channel on Freenode](http://webchat.freenode.net/?channels=mender)
