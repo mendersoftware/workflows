@@ -8,7 +8,7 @@ listen: :8080
 # Defaults to: "mongodb://localhost"
 # Overwrite with environment variable: WORKFLOWS_MONGO_URL
 
-mongo-url: mongodb://mongo-workflows:27017
+mongo-url: mongodb://mender-mongo:27017
 
 # Mongodb database name
 # Defaults to: "workflows"
