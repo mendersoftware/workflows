@@ -12,8 +12,8 @@ FROM alpine:3.10
 RUN apk update && apk upgrade && \
         apk add --no-cache ca-certificates xz
 RUN mkdir -p /etc/workflows
-COPY ./config.yaml /etc/workflows
+COPY ./worker/config.yaml /etc/workflows/config.yaml
 COPY --from=builder /go/src/github.com/mendersoftware/workflows/workflows /usr/bin
-ENTRYPOINT ["/usr/bin/workflows", "--config", "/etc/workflows/config.yaml"]
-
-EXPOSE 8080
+COPY ./worker/decommission_device.json /etc/workflows/definitions/decommission_device.json
+COPY ./worker/provision_device.json /etc/workflows/definitions/provision_device.json
+ENTRYPOINT ["/usr/bin/workflows", "--config", "/etc/workflows/config.yaml", "worker"]

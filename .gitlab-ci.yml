@@ -15,6 +15,8 @@ before_script:
   - export DOCKER_REPOSITORY="mendersoftware/${CI_PROJECT_NAME}"
   - export DOCKER_TAG=${CI_COMMIT_REF_SLUG:-master}
   - export SERVICE_IMAGE=$DOCKER_REPOSITORY:$DOCKER_TAG
+  - export WORKER_DOCKER_REPOSITORY="mendersoftware/${CI_PROJECT_NAME}-worker"
+  - export WORKER_SERVICE_IMAGE=$WORKER_DOCKER_REPOSITORY:$DOCKER_TAG
   - export COMMIT_TAG="$CI_COMMIT_REF_SLUG"_"$CI_COMMIT_SHA"
 
 test:unit:
@@ -23,7 +25,7 @@ test:unit:
   variables:
     WORKFLOWS_MONGO_URL: "mongodb://mongo"
 
-build:
+build:server:
   stage: build
   tags:
     - docker
@@ -39,7 +41,23 @@ build:
     paths:
       - image.tar
 
-publish:image:
+build:worker:
+  stage: build
+  tags:
+    - docker
+  image: docker
+  services:
+    - docker:19.03.5-dind
+  script:
+    - echo "building ${CI_PROJECT_NAME} for ${WORKER_SERVICE_IMAGE}"
+    - docker build -t $WORKER_SERVICE_IMAGE .
+    - docker save $WORKER_SERVICE_IMAGE > worker_image.tar
+  artifacts:
+    expire_in: 2w
+    paths:
+      - worker_image.tar
+
+publish:image_server:
   stage: publish
   only:
     - /^(master|[0-9]+\.[0-9]+\.x)$/
@@ -49,7 +67,7 @@ publish:image:
   services:
     - docker:19.03.5-dind
   dependencies:
-    - build
+    - build:server
   script:
     - docker load -i image.tar
     - docker tag $SERVICE_IMAGE $DOCKER_REPOSITORY:$COMMIT_TAG
@@ -57,3 +75,22 @@ publish:image:
     - echo -n $DOCKER_HUB_PASSWORD | docker login -u $DOCKER_HUB_USERNAME --password-stdin
     - docker push $DOCKER_REPOSITORY:$COMMIT_TAG
     - docker push $SERVICE_IMAGE
+
+publish:image_worker:
+  stage: publish
+  only:
+    - /^(master|[0-9]+\.[0-9]+\.x)$/
+  tags:
+    - docker
+  image: docker
+  services:
+    - docker:19.03.5-dind
+  dependencies:
+    - build:worker
+  script:
+    - docker load -i worker_image.tar
+    - docker tag $WORKER_SERVICE_IMAGE $WORKER_DOCKER_REPOSITORY:$COMMIT_TAG
+    - docker tag $WORKER_SERVICE_IMAGE $WORKER_DOCKER_REPOSITORY:$CI_COMMIT_REF_SLUG
+    - echo -n $DOCKER_HUB_PASSWORD | docker login -u $DOCKER_HUB_USERNAME --password-stdin
+    - docker push $WORKER_DOCKER_REPOSITORY:$COMMIT_TAG
+    - docker push $WORKER_SERVICE_IMAGE
