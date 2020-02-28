@@ -1,0 +1,34 @@
+version: '2.1'
+services:
+
+  mongodb:
+    image: 'bitnami/mongodb:4.0'
+    ports:
+      - "27017:27017"
+    networks:
+      acceptance-tests:
+        aliases:
+          - mender-mongo
+
+  workflows-worker:
+    image: mendersoftware/workflows-worker:prtest
+    volumes:
+      - ".:/testing"
+    networks:
+      acceptance-tests:
+        aliases:
+          - workflows-worker
+
+  workflows-server:
+    image: mendersoftware/workflows:prtest
+    ports:
+      - "8080:8080"
+    volumes:
+      - ".:/testing"
+    networks:
+      acceptance-tests:
+        aliases:
+          - workflows-server
+
+networks:
+    acceptance-tests:

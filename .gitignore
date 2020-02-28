@@ -13,5 +13,6 @@
 .*.swp
 
 coverage.txt
-etc/*.json
-bin/*
+coverage-acceptance.txt
+coverage-acceptance-worker.txt
+./bin/

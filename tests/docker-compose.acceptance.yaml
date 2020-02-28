@@ -1,0 +1,17 @@
+version: '2.1'
+services:
+
+  acceptance-testing:
+    image: acceptance-testing:latest
+    command: sh -c "while true; do sleep 5; done;"
+    volumes:
+      - ".:/testing"
+    networks:
+      - acceptance-tests
+    depends_on:
+      - mongodb
+      - workflows-worker
+      - workflows-server
+
+networks:
+    acceptance-tests:

@@ -19,11 +19,55 @@ before_script:
   - export WORKER_SERVICE_IMAGE=$WORKER_DOCKER_REPOSITORY:$DOCKER_TAG
   - export COMMIT_TAG="$CI_COMMIT_REF_SLUG"_"$CI_COMMIT_SHA"
 
+test:prepare_acceptance:
+  stage: .pre
+  image: docker
+  services:
+    - docker:19.03.5-dind
+  script:
+    - docker build -f Dockerfile.acceptance-testing -t $DOCKER_REPOSITORY:prtest .
+    - docker build -f Dockerfile.acceptance-testing.worker -t $WORKER_DOCKER_REPOSITORY:prtest .
+    - docker build -f tests/Dockerfile tests -t acceptance-testing:latest
+    - docker save $DOCKER_REPOSITORY:prtest > prtest_image.tar
+    - docker save $WORKER_DOCKER_REPOSITORY:prtest > prtest_worker_image.tar
+    - docker save acceptance-testing:latest > acceptance_testing_image.tar
+  artifacts:
+    expire_in: 2w
+    paths:
+      - prtest_image.tar
+      - prtest_worker_image.tar
+      - acceptance_testing_image.tar
+
 test:unit:
   services:
     - mongo:4.0
   variables:
     WORKFLOWS_MONGO_URL: "mongodb://mongo"
+
+test:acceptance_tests:
+  stage: test
+  tags:
+    - docker
+  image: tiangolo/docker-with-compose
+  services:
+    - docker:19.03.5-dind
+  dependencies:
+    - test:prepare_acceptance
+  before_script:
+    - docker load -i prtest_image.tar
+    - docker load -i prtest_worker_image.tar
+    - docker load -i acceptance_testing_image.tar
+  script:
+    - make acceptance-testing-up
+    - make acceptance-testing-run
+  after_script:
+    - make acceptance-testing-logs
+    - make acceptance-testing-down
+  artifacts:
+    expire_in: 2w
+    paths:
+      - tests/coverage-acceptance.txt
+      - tests/coverage-acceptance-worker.txt
 
 build:server:
   stage: build
@@ -56,6 +100,17 @@ build:worker:
     expire_in: 2w
     paths:
       - worker_image.tar
+
+publish:acceptance_tests:
+  stage: publish
+  image: alpine
+  dependencies:
+    - test:acceptance_tests
+  before_script:
+    - apk add --no-cache bash curl findutils git
+  script:
+    - bash -c "bash <(curl -s https://codecov.io/bash) -Z -F acceptance -f ./tests/coverage-acceptance.txt"
+    - bash -c "bash <(curl -s https://codecov.io/bash) -Z -F acceptance-worker -f ./tests/coverage-acceptance-worker.txt"
 
 publish:image_server:
   stage: publish
