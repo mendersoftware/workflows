@@ -94,7 +94,7 @@ build:worker:
     - docker:19.03.5-dind
   script:
     - echo "building ${CI_PROJECT_NAME} for ${WORKER_SERVICE_IMAGE}"
-    - docker build -t $WORKER_SERVICE_IMAGE .
+    - docker build -t $WORKER_SERVICE_IMAGE -f Dockerfile.worker .
     - docker save $WORKER_SERVICE_IMAGE > worker_image.tar
   artifacts:
     expire_in: 2w
