@@ -14,6 +14,7 @@ services:
     image: mendersoftware/workflows-worker:prtest
     volumes:
       - ".:/testing"
+      - "../worker/:/etc/workflows/definitions"
     networks:
       acceptance-tests:
         aliases:

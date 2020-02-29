@@ -59,6 +59,7 @@ test:acceptance_tests:
     - docker load -i acceptance_testing_image.tar
   script:
     - make acceptance-testing-up
+    - sh -c "sleep 30"
     - make acceptance-testing-run
   after_script:
     - make acceptance-testing-logs
