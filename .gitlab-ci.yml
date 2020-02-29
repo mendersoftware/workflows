@@ -111,7 +111,7 @@ publish:acceptance_tests:
     - apk add --no-cache bash curl findutils git
   script:
     - bash -c "bash <(curl -s https://codecov.io/bash) -Z -F acceptance -f ./tests/coverage-acceptance.txt"
-    - bash -c "bash <(curl -s https://codecov.io/bash) -Z -F acceptance-worker -f ./tests/coverage-acceptance-worker.txt"
+    - bash -c "bash <(curl -s https://codecov.io/bash) -Z -F acceptanceworker -f ./tests/coverage-acceptance-worker.txt"
 
 publish:image_server:
   stage: publish
