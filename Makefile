@@ -2,8 +2,8 @@ GO ?= go
 GOFMT ?= gofmt "-s"
 PACKAGES ?= $(shell $(GO) list ./...)
 GOFILES := $(shell find . -name "*.go" -type f -not -path './vendor/*')
-COMPOSECMD := docker-compose -f "docker-compose.yaml" "up" -d
-COMPOSEFILES_ACCEPTANCE_TESTING = -f tests/docker-compose.yaml -f tests/docker-compose.acceptance.yaml
+COMPOSECMD := docker-compose -f "docker-compose.yml" "up" -d
+COMPOSEFILES_ACCEPTANCE_TESTING = -f tests/docker-compose.yml -f tests/docker-compose.acceptance.yml
 
 
 .PHONY: all
