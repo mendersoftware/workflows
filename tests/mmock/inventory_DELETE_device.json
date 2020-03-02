@@ -1,0 +1,10 @@
+{
+	"description": "inventory: DELETE device",
+	"request": {
+		"method": "DELETE",
+		"path": "/api/0.1.0/devices/*"
+	},
+	"response": {
+		"statusCode": 204
+	}
+}

@@ -30,6 +30,10 @@ import (
 )
 
 func main() {
+	doMain(os.Args)
+}
+
+func doMain(args []string) {
 	var configPath string
 
 	app := &cli.App{
@@ -99,7 +103,7 @@ func main() {
 		return nil
 	}
 
-	err := app.Run(os.Args)
+	err := app.Run(args)
 	if err != nil {
 		log.Fatal(err)
 	}
