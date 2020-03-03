@@ -16,3 +16,4 @@ coverage.txt
 coverage-acceptance.txt
 coverage-acceptance-worker.txt
 ./bin/
+.vscode/
