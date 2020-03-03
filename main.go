@@ -124,11 +124,22 @@ func cmdWorker(args *cli.Context) error {
 		return err
 	}
 	defer dataStore.Close()
+
+	var included, excluded []string
+
 	includedWorkflows := args.String("workflows")
+	if includedWorkflows != "" {
+		included = strings.Split(includedWorkflows, ",")
+	}
+
 	excludedWorkflows := args.String("excluded-workflows")
+	if excludedWorkflows != "" {
+		excluded = strings.Split(excludedWorkflows, ",")
+	}
+
 	workflows := worker.Workflows{
-		Included: strings.Split(includedWorkflows, ","),
-		Excluded: strings.Split(excludedWorkflows, ","),
+		Included: included,
+		Excluded: excluded,
 	}
 	return worker.InitAndRun(config.Config, workflows, dataStore)
 }

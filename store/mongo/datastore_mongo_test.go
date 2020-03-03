@@ -21,6 +21,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/mendersoftware/go-lib-micro/config"
 	dconfig "github.com/mendersoftware/workflows/config"
@@ -599,6 +600,67 @@ func TestGetJobsIncludedWorkflowName(t *testing.T) {
 	assert.Equal(t, model.StatusPending, jobReceived.Status)
 }
 
+func TestGetJobsIncludedWorkflowNameNotFound(t *testing.T) {
+	flag.Parse()
+	if testing.Short() {
+		t.Skip()
+	}
+
+	workflow := model.Workflow{
+		Name:          "TestGetJobsIncludedWorkflowNameNotFound",
+		Description:   "Description",
+		SchemaVersion: 1,
+		Version:       1,
+		Tasks: []model.Task{
+			{
+				Name: "task_1",
+				Type: model.TaskTypeCLI,
+			},
+		},
+		InputParameters: []string{
+			"key1",
+			"key2",
+		},
+	}
+
+	ctx := context.Background()
+	count, _ := testDataStore.InsertWorkflows(ctx, workflow)
+	assert.Equal(t, 1, count)
+
+	job := &model.Job{
+		WorkflowName: workflow.Name,
+		InputParameters: []model.InputParameter{
+			{
+				Name:  "key1",
+				Value: "value1",
+			},
+			{
+				Name:  "key2",
+				Value: "value2",
+			},
+		},
+	}
+
+	_, err := testDataStore.InsertJob(ctx, job)
+	assert.Nil(t, err)
+
+	channel, _ := testDataStore.GetJobs(ctx, []string{"NotFound"}, []string{})
+	var jobReceived *model.Job
+	select {
+	case obj := <-channel:
+		jobReceived = obj.(*model.Job)
+		if jobReceived.WorkflowName == job.WorkflowName {
+			break
+		} else {
+			jobReceived = nil
+		}
+	case <-time.After(3 * time.Second):
+		break
+	}
+
+	assert.Nil(t, jobReceived)
+}
+
 func TestGetJobsExcludedWorkflowName(t *testing.T) {
 	flag.Parse()
 	if testing.Short() {
@@ -656,6 +718,67 @@ func TestGetJobsExcludedWorkflowName(t *testing.T) {
 	assert.Equal(t, job.WorkflowName, jobReceived.WorkflowName)
 	assert.Equal(t, job.InputParameters, jobReceived.InputParameters)
 	assert.Equal(t, model.StatusPending, jobReceived.Status)
+}
+
+func TestGetJobsExcludedWorkflowNameNotFound(t *testing.T) {
+	flag.Parse()
+	if testing.Short() {
+		t.Skip()
+	}
+
+	workflow := model.Workflow{
+		Name:          "TestGetJobsExcludedWorkflowNameNotFound",
+		Description:   "Description",
+		SchemaVersion: 1,
+		Version:       1,
+		Tasks: []model.Task{
+			{
+				Name: "task_1",
+				Type: model.TaskTypeCLI,
+			},
+		},
+		InputParameters: []string{
+			"key1",
+			"key2",
+		},
+	}
+
+	ctx := context.Background()
+	count, _ := testDataStore.InsertWorkflows(ctx, workflow)
+	assert.Equal(t, 1, count)
+
+	job := &model.Job{
+		WorkflowName: workflow.Name,
+		InputParameters: []model.InputParameter{
+			{
+				Name:  "key1",
+				Value: "value1",
+			},
+			{
+				Name:  "key2",
+				Value: "value2",
+			},
+		},
+	}
+
+	_, err := testDataStore.InsertJob(ctx, job)
+	assert.Nil(t, err)
+
+	channel, _ := testDataStore.GetJobs(ctx, []string{}, []string{"TestGetJobsExcludedWorkflowNameNotFound"})
+	var jobReceived *model.Job
+	select {
+	case obj := <-channel:
+		jobReceived = obj.(*model.Job)
+		if jobReceived.WorkflowName == job.WorkflowName {
+			break
+		} else {
+			jobReceived = nil
+		}
+	case <-time.After(3 * time.Second):
+		break
+	}
+
+	assert.Nil(t, jobReceived)
 }
 
 func TestGetJobsIncludedAndExcludedWorkflowNames(t *testing.T) {

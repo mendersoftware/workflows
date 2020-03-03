@@ -11,10 +11,16 @@ RUN cd /go/src/github.com/mendersoftware/workflows && \
 
 FROM alpine:3.10
 RUN apk update && apk upgrade && \
-        apk add --no-cache ca-certificates xz
+    apk add --no-cache ca-certificates xz
 RUN mkdir -p /etc/workflows
 COPY ./config.yaml /etc/workflows
 COPY --from=builder /go/src/github.com/mendersoftware/workflows/workflows-test /usr/bin
-ENTRYPOINT ["/usr/bin/workflows-test", "-test.coverprofile=/testing/coverage-acceptance.txt", "-acceptance-tests", "-test.run=TestRunMain", "-cli-args=--config=/etc/workflows/config.yaml server --automigrate"]
+ENTRYPOINT [ \
+    "/usr/bin/workflows-test", \
+    "-test.coverprofile=/testing/coverage-acceptance.txt", \
+    "-acceptance-tests", \
+    "-test.run=TestRunMain", \
+    "-cli-args=--config=/etc/workflows/config.yaml server --automigrate" \
+]
 
 EXPOSE 8080

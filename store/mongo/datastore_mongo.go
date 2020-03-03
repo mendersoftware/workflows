@@ -305,7 +305,15 @@ func (db *DataStoreMongo) GetJobs(ctx context.Context, included []string, exclud
 		findOptions.SetMaxTime(10 * time.Second)
 		findOptions.SetBatchSize(100)
 
-		query := bson.M{"status": model.StatusPending}
+		query := bson.M{}
+		query["$and"] = []bson.M{}
+		query["$and"] = append(query["$and"].([]bson.M), bson.M{"status": model.StatusPending})
+		if len(included) > 0 {
+			query["$and"] = append(query["$and"].([]bson.M), bson.M{"workflow_name": bson.M{"$in": included}})
+		}
+		if len(excluded) > 0 {
+			query["$and"] = append(query["$and"].([]bson.M), bson.M{"workflow_name": bson.M{"$nin": excluded}})
+		}
 
 		database := db.client.Database(db.dbName)
 		collQueue := database.Collection(JobQueueCollectionName)
