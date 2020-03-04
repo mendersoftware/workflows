@@ -18,6 +18,7 @@ package model
 const (
 	TaskTypeCLI  = "cli"
 	TaskTypeHTTP = "http"
+	TaskTypeSMTP = "smtp"
 )
 
 // Task stores the definition of a task within a workflow
@@ -26,6 +27,7 @@ type Task struct {
 	Type string    `json:"type" bson:"type"`
 	HTTP *HTTPTask `json:"http,omitempty" bson:"http,omitempty"`
 	CLI  *CLITask  `json:"cli,omitempty" bson:"cli,omitempty"`
+	SMTP *SMTPTask `json:"smtp,omitempty" bson:"smtp,omitempty"`
 }
 
 // HTTPTask stores the parameters of the HTTP calls for a WorkflowTask
@@ -44,4 +46,15 @@ type HTTPTask struct {
 type CLITask struct {
 	Command          []string `json:"command" bson:"command"`
 	ExecutionTimeOut int      `json:"executionTimeOut" bson:"executionTimeOut"`
+}
+
+// SMTPTask stores the parameters of the SMTP messages for a WorkflowTask
+type SMTPTask struct {
+	From    string   `json:"from" bson:"from"`
+	To      []string `json:"to" bson:"to"`
+	Cc      []string `json:"cc" bson:"cc"`
+	Bcc     []string `json:"bcc" bson:"bcc"`
+	Subject string   `json:"subject" bson:"subject"`
+	Body    string   `json:"body" bson:"body"`
+	Timeout int      `json:"timeout" bson:"timeout"`
 }

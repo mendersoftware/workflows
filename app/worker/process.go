@@ -116,6 +116,15 @@ func processTask(task model.Task, job *model.Job,
 		}
 		result, err := processCLITask(cliTask, job, workflow)
 		return result, err
+	case model.TaskTypeSMTP:
+		var smtpTask *model.SMTPTask = task.SMTP
+		if smtpTask == nil {
+			return nil, fmt.Errorf(
+				"Error: Task definition incompatible " +
+					"with specified type (smtp)")
+		}
+		result, err := processSMTPTask(smtpTask, job, workflow)
+		return result, err
 	default:
 		err := fmt.Errorf("Unrecognized task type: %s", task.Type)
 		return nil, err
