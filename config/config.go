@@ -50,6 +50,22 @@ const (
 	// SettingDbPassword is the config key for the mongo password
 	SettingDbPassword = "mongo_password"
 
+	// SettingSMTPHost is the config key for the SMTP host
+	SettingSMTPHost = "smtp_host"
+	// SettingSMTPHostDefault is the default value for the SMTP host
+	SettingSMTPHostDefault = "localhost:25"
+
+	// SettingSMTPAuthMechanism is the config key for the SMTP auth mechanism
+	SettingSMTPAuthMechanism = "smtp_auth_mechanism"
+	// SettingSMTPAuthMechanismDefault is the default value for the SMTP auth mechanism
+	SettingSMTPAuthMechanismDefault = "PLAIN"
+
+	// SettingSMTPUsername is the config key for the SMTP username
+	SettingSMTPUsername = "smtp_username"
+
+	// SettingSMTPPassword is the config key for the SMTP password
+	SettingSMTPPassword = "smtp_password"
+
 	// SettingWorkflowsPath is the config key for the workflows path
 	SettingWorkflowsPath = "workflows_path"
 
@@ -67,6 +83,8 @@ var (
 		{Key: SettingDbName, Value: SettingDbNameDefault},
 		{Key: SettingDbSSL, Value: SettingDbSSLDefault},
 		{Key: SettingDbSSLSkipVerify, Value: SettingDbSSLSkipVerifyDefault},
+		{Key: SettingSMTPHost, Value: SettingSMTPHostDefault},
+		{Key: SettingSMTPAuthMechanism, Value: SettingSMTPAuthMechanismDefault},
 		{Key: SettingConcurrency, Value: SettingConcurrencyDefault},
 	}
 )

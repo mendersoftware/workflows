@@ -45,12 +45,41 @@ mongo-dbname: workflows
 
 # mongo_password: secret
 
+# SMTP host
+# Defaults to: localhost:25
+# Overwrite with environment variable: WORKFLOWS_SMTP_HOST
+
+# smtp_host: "localhost:25"
+
+# SMTP auth mechanism
+# Defaults to: PLAIN
+# Valid values: PLAIN, CRAM-MD5
+# Overwrite with environment variable: WORKFLOWS_SMTP_AUTH_MECHANISM
+
+# smtp_auth_mechanism: PLAIN
+
+# SMTP username
+# Defaults to: none
+# Overwrite with environment variable: WORKFLOWS_SMTP_USERNAME
+
+# smtp_username: username
+
+# SMTP password
+# Defaults to: none
+# Overwrite with environment variable: WORKFLOWS_SMTP_PASSWORD
+
+# smtp_password: password
+
 # Workflows path
 # The path containing the workflows definitions
 # Defaults to: none
 # Overwrite with environment variable: WORKFLOWS_WORKFLOWS_PATH
 
+# workflows_path: "/etc/workflows/definitions"
+
 # Concurrency limit
 # The maximum number of jobs to be processed in parallel
 # Defaults to: 10
 # Overwrite with environment variable: WORKFLOWS_CONCURRENCY
+
+# concurrency: 10

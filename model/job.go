@@ -69,6 +69,7 @@ type TaskResult struct {
 	CLI          *TaskResultCLI          `json:"cli" bson:"cli,omitempty"`
 	HTTPRequest  *TaskResultHTTPRequest  `json:"httpRequest" bson:"httpRequest,omitempty"`
 	HTTPResponse *TaskResultHTTPResponse `json:"httpResponse" bson:"httpResponse,omitempty"`
+	SMTP         *TaskResultSMTP         `json:"smtp" bson:"smtp,omitempty"`
 }
 
 // TaskResultCLI contains the CLI command, the output and the exit status
@@ -91,6 +92,14 @@ type TaskResultHTTPRequest struct {
 type TaskResultHTTPResponse struct {
 	StatusCode int    `json:"statusCode" bson:"status_code"`
 	Body       string `json:"body" bson:"body"`
+}
+
+// TaskResultSMTP contains the SMTP message, the output and the exit status
+type TaskResultSMTP struct {
+	Sender     string   `json:"sender" bson:"sender"`
+	Recipients []string `json:"recipients" bson:"recipients"`
+	Message    string   `json:"message" bson:"message"`
+	Error      string   `json:"error" bson:"error"`
 }
 
 // Validate job against workflow. Check that all required parameters are present.
