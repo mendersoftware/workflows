@@ -15,12 +15,14 @@
 package worker
 
 import (
+	"io/ioutil"
 	"net/smtp"
 	"strings"
 
 	"github.com/mendersoftware/go-lib-micro/config"
 	dconfig "github.com/mendersoftware/workflows/config"
 	"github.com/mendersoftware/workflows/model"
+	"github.com/pkg/errors"
 )
 
 var smtpClient SMTPClientInterface = new(SMTPClient)
@@ -55,6 +57,16 @@ func processSMTPTask(smtpTask *model.SMTPTask, job *model.Job,
 	from := processJobString(smtpTask.From, workflow, job)
 	subject := processJobString(smtpTask.Subject, workflow, job)
 	body := processJobString(smtpTask.Body, workflow, job)
+	if strings.HasPrefix(body,"@") {
+		filePath:=body[1:]
+		buffer,err:=ioutil.ReadFile(filePath)
+		if err!=nil {
+			result.Success = false
+			result.SMTP.Error = err.Error()
+			return result, errors.Wrap(err,"cant load file " + filePath)
+		}
+		body = processJobString(string(buffer), workflow, job)
+	}
 
 	msg := []byte("From: " + from + "\r\n" +
 		"To: " + strings.Join(to, ", ") + "\r\n" +
