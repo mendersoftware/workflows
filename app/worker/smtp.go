@@ -15,7 +15,6 @@
 package worker
 
 import (
-	"github.com/pkg/errors"
 	"io/ioutil"
 	"net/smtp"
 	"strings"
@@ -23,6 +22,7 @@ import (
 	"github.com/mendersoftware/go-lib-micro/config"
 	dconfig "github.com/mendersoftware/workflows/config"
 	"github.com/mendersoftware/workflows/model"
+	"github.com/pkg/errors"
 )
 
 var smtpClient SMTPClientInterface = new(SMTPClient)

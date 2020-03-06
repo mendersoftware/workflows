@@ -16,7 +16,9 @@ package worker
 
 import (
 	"context"
+	"io/ioutil"
 	"net/smtp"
+	"os"
 	"testing"
 
 	"github.com/pkg/errors"
@@ -120,6 +122,185 @@ func TestProcessJobSMTP(t *testing.T) {
 	err := processJob(ctx, job, dataStore)
 
 	assert.Nil(t, err)
+
+	dataStore.AssertExpectations(t)
+	mockedSMTPClient.AssertExpectations(t)
+
+	smtpClient = originalSMTPClient
+}
+
+func TestProcessJobSMTPLoadFromFile(t *testing.T) {
+	var mockedSMTPClient = new(SMTPClientMock)
+	var originalSMTPClient = smtpClient
+	smtpClient = mockedSMTPClient
+
+	mockedSMTPClient.On("SendMail",
+		"",
+		mocklib.MatchedBy(
+			func(_ smtp.Auth) bool {
+				return true
+			}),
+		"no-reply@mender.io",
+		[]string{
+			"user@mender.io",
+			"support@mender.io",
+			"archive@mender.io",
+		},
+		mocklib.MatchedBy(
+			func(_ []byte) bool {
+				return true
+			}),
+	).Return(nil)
+
+	ctx := context.Background()
+	dataStore := mock.NewDataStore()
+	tmpFile,err := ioutil.TempFile("","mail.body")
+	assert.Nil(t, err)
+
+	defer os.Remove(tmpFile.Name())
+
+	_, err = tmpFile.Write([]byte("Hello\n\n This is the TestProcessJobSMTPLoadFromFile" +
+		"sedning greetings.\n\nTestProcessJobSMTPLoadFromFile"))
+	assert.Nil(t, err)
+
+	err = tmpFile.Close()
+	assert.Nil(t, err)
+
+	workflow := &model.Workflow{
+		Name: "test",
+		Tasks: []model.Task{
+			{
+				Name: "task_1",
+				Type: model.TaskTypeSMTP,
+				SMTP: &model.SMTPTask{
+					From:    "no-reply@mender.io",
+					To:      []string{"user@mender.io"},
+					Cc:      []string{"support@mender.io"},
+					Bcc:     []string{"archive@mender.io"},
+					Subject: "Subject",
+					Body:    "@" + tmpFile.Name(),
+				},
+			},
+		},
+	}
+
+	job := &model.Job{
+		WorkflowName: workflow.Name,
+		Status:       model.StatusPending,
+	}
+
+	dataStore.On("GetWorkflowByName",
+		mocklib.MatchedBy(
+			func(_ context.Context) bool {
+				return true
+			}),
+		workflow.Name,
+	).Return(workflow, nil)
+
+	dataStore.On("AquireJob",
+		mocklib.MatchedBy(
+			func(_ context.Context) bool {
+				return true
+			}),
+		job,
+	).Return(job, nil)
+
+	dataStore.On("UpdateJobStatus",
+		mocklib.MatchedBy(
+			func(_ context.Context) bool {
+				return true
+			}),
+		job,
+		model.StatusDone,
+	).Return(nil)
+
+	dataStore.On("UpdateJobAddResult",
+		mocklib.MatchedBy(
+			func(_ context.Context) bool {
+				return true
+			}),
+		job,
+		mocklib.MatchedBy(
+			func(taskResult *model.TaskResult) bool {
+				assert.True(t, taskResult.Success)
+				assert.Equal(t, workflow.Tasks[0].SMTP.From, taskResult.SMTP.Sender)
+				assert.Equal(t, "", taskResult.SMTP.Error)
+
+				return true
+			}),
+	).Return(nil)
+
+	err = processJob(ctx, job, dataStore)
+
+	assert.Nil(t, err)
+
+	dataStore.AssertExpectations(t)
+	mockedSMTPClient.AssertExpectations(t)
+
+	smtpClient = originalSMTPClient
+}
+
+func TestProcessJobSMTPLoadFromFileFailed(t *testing.T) {
+	var mockedSMTPClient = new(SMTPClientMock)
+	var originalSMTPClient = smtpClient
+	smtpClient = mockedSMTPClient
+
+	ctx := context.Background()
+	dataStore := mock.NewDataStore()
+
+	workflow := &model.Workflow{
+		Name: "test",
+		Tasks: []model.Task{
+			{
+				Name: "task_1",
+				Type: model.TaskTypeSMTP,
+				SMTP: &model.SMTPTask{
+					From:    "no-reply@mender.io",
+					To:      []string{"user@mender.io"},
+					Cc:      []string{"support@mender.io"},
+					Bcc:     []string{"archive@mender.io"},
+					Subject: "Subject",
+					Body:    "@/this/file/does/not/exits/for/sure",
+				},
+			},
+		},
+	}
+
+	job := &model.Job{
+		WorkflowName: workflow.Name,
+		Status:       model.StatusPending,
+	}
+
+	dataStore.On("GetWorkflowByName",
+		mocklib.MatchedBy(
+			func(_ context.Context) bool {
+				return true
+			}),
+		workflow.Name,
+	).Return(workflow, nil)
+
+	dataStore.On("AquireJob",
+		mocklib.MatchedBy(
+			func(_ context.Context) bool {
+				return true
+			}),
+		job,
+	).Return(job, nil)
+
+	dataStore.On("UpdateJobStatus",
+		mocklib.MatchedBy(
+			func(_ context.Context) bool {
+				return true
+			}),
+		job,
+		model.StatusFailure,
+	).Return(nil)
+
+	err := processJob(ctx, job, dataStore)
+
+	assert.NotNil(t, err)
+	assert.Equal(t, err.Error(), "cant load file /this/file/does/not/exits/for/sure:" +
+		" open /this/file/does/not/exits/for/sure: no such file or directory")
 
 	dataStore.AssertExpectations(t)
 	mockedSMTPClient.AssertExpectations(t)
