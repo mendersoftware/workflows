@@ -21,6 +21,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mendersoftware/go-lib-micro/log"
 	"github.com/mendersoftware/workflows/model"
 )
 
@@ -36,7 +37,7 @@ var makeHTTPRequest = func(req *http.Request, timeout time.Duration) (*http.Resp
 }
 
 func processHTTPTask(httpTask *model.HTTPTask, job *model.Job,
-	workflow *model.Workflow) (*model.TaskResult, error) {
+	workflow *model.Workflow, l *log.Logger) (*model.TaskResult, error) {
 	uri := processJobString(httpTask.URI, workflow, job)
 	payloadString := processJobString(httpTask.Body, workflow, job)
 	payload := strings.NewReader(payloadString)
@@ -53,7 +54,10 @@ func processHTTPTask(httpTask *model.HTTPTask, job *model.Job,
 		headersToBeSent = append(headersToBeSent,
 			fmt.Sprintf("%s: %s", name, headerValue))
 	}
+
+	l.Debugf("processHTTPTask makeHTTPRequest '%v'",req)
 	res, err := makeHTTPRequest(req, time.Duration(httpTask.ReadTimeOut)*time.Second)
+	l.Debugf("processHTTPTask makeHTTPRequest returned '%v','%v'",res,err)
 	if err != nil {
 		return nil, err
 	}

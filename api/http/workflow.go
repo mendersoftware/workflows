@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/mendersoftware/go-lib-micro/log"
 	"github.com/mendersoftware/workflows/model"
 	"github.com/mendersoftware/workflows/store"
 )
@@ -98,6 +99,9 @@ func (h WorkflowController) StartWorkflow(c *gin.Context) {
 	var inputParameters map[string]interface{}
 	var jobInputParameters []model.InputParameter
 
+	l := log.FromContext(c.Request.Context())
+
+	l.Infof("StartWorkflow starting workflow %s", name)
 	if err := c.BindJSON(&inputParameters); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": fmt.Sprintf("Unable to parse the input parameters: %s",
@@ -137,6 +141,7 @@ func (h WorkflowController) StartWorkflow(c *gin.Context) {
 	}
 
 	job, err := h.dataStore.InsertJob(c, job)
+	l.Infof("StartWorkflow db.InsertJob returned %v,%v", job, err)
 	if err != nil {
 		switch err {
 		case store.ErrWorkflowNotFound:
@@ -155,6 +160,7 @@ func (h WorkflowController) StartWorkflow(c *gin.Context) {
 		"id":   job.ID,
 		"name": name,
 	})
+	l.Infof("StartWorkflow starting workflow %s : StatusCreated", name)
 }
 
 // GetWorkflowByNameAndID responds to GET /api/workflow/:name/:id
