@@ -7,7 +7,7 @@ def test_decommission_device(mmock_url, workflows_url):
     device_id = "1"
     request_id = "1234567890"
     res = requests.post(
-        workflows_url + "/api/v1/workflow/decommission_device",
+        workflows_url + "/api/workflow/decommission_device",
         json={
             "request_id": request_id,
             "authorization": "Bearer TEST",
@@ -25,7 +25,7 @@ def test_decommission_device(mmock_url, workflows_url):
     for i in range(10):
         time.sleep(1)
         res = requests.get(
-            workflows_url + "/api/v1/workflow/decommission_device/" + response["id"]
+            workflows_url + "/api/workflow/decommission_device/" + response["id"]
         )
         assert res.status_code == 200
         # if status is done, break

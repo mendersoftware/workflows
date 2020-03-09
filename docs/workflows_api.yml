@@ -58,7 +58,7 @@ paths:
         500:
           $ref: "#/responses/InternalServerError"
 
-  /api/v1/workflow/{name}:
+  /api/workflow/{name}:
     post:
       summary: Start a new workflow
       description: |
@@ -94,7 +94,7 @@ paths:
         404:
             $ref: "#/responses/NotFoundError"
 
-  /api/v1/workflow/{name}/{id}:
+  /api/workflow/{name}/{id}:
     get:
       summary: Gets the workflow status for the given id.
       description: |
@@ -121,7 +121,7 @@ paths:
         404:
           $ref: "#/responses/NotFoundError"
 
-  /api/v1/metadata/workflows:
+  /api/metadata/workflows:
     get:
       summary: Get all workflow definitions
       produces:

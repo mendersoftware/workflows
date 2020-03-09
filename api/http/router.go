@@ -23,10 +23,10 @@ import (
 const (
 	APIURLStatus = "/status"
 
-	APIURLWorkflow   = "/api/v1/workflow/:name"
-	APIURLWorkflowID = "/api/v1/workflow/:name/:id"
+	APIURLWorkflow   = "/api/workflow/:name"
+	APIURLWorkflowID = "/api/workflow/:name/:id"
 
-	APIURLWorkflows = "/api/v1/metadata/workflows"
+	APIURLWorkflows = "/api/metadata/workflows"
 )
 
 // NewRouter returns the gin router
