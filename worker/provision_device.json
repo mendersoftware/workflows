@@ -10,7 +10,7 @@
                "uri": "http://mender-inventory:8080/api/internal/v1/inventory/devices",
                "method": "POST",
                "contentType": "application/json",
-               "body": "${workflow.input.device}",
+               "body": "{\"id\":\"${workflow.input.device}\"}",
                "headers": {
                   "X-MEN-RequestID": "${workflow.input.request_id}",
                   "Authorization": "${workflow.input.authorization}"
