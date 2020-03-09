@@ -60,7 +60,8 @@ func processJob(ctx context.Context, job *model.Job,
 
 	success := true
 	for _, task := range workflow.Tasks {
-		result, err := processTask(task, job, workflow)
+		l.Infof("%s: started, %s task :%s", job.ID, job.WorkflowName, task.Name)
+		result, err := processTask(task, job, workflow, l)
 		if err != nil {
 			dataStore.UpdateJobStatus(ctx, job, model.StatusFailure)
 			if err != nil {
@@ -95,7 +96,7 @@ func processJob(ctx context.Context, job *model.Job,
 }
 
 func processTask(task model.Task, job *model.Job,
-	workflow *model.Workflow) (*model.TaskResult, error) {
+	workflow *model.Workflow, l *log.Logger) (*model.TaskResult, error) {
 
 	switch task.Type {
 	case model.TaskTypeHTTP:
@@ -105,7 +106,8 @@ func processTask(task model.Task, job *model.Job,
 				"Error: Task definition incompatible " +
 					"with specified type (http)")
 		}
-		result, err := processHTTPTask(httpTask, job, workflow)
+		l.Infof("processTask: calling http task: %s %s", httpTask.Method, httpTask.URI)
+		result, err := processHTTPTask(httpTask, job, workflow, l)
 		return result, err
 	case model.TaskTypeCLI:
 		var cliTask *model.CLITask = task.CLI
@@ -123,7 +125,9 @@ func processTask(task model.Task, job *model.Job,
 				"Error: Task definition incompatible " +
 					"with specified type (smtp)")
 		}
-		result, err := processSMTPTask(smtpTask, job, workflow)
+		l.Infof("processTask: calling smtp task: From: %s To: %s Subject: %s",
+			smtpTask.From, smtpTask.To, smtpTask.Subject)
+		result, err := processSMTPTask(smtpTask, job, workflow, l)
 		return result, err
 	default:
 		err := fmt.Errorf("Unrecognized task type: %s", task.Type)
