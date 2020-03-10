@@ -66,6 +66,7 @@ def test_decommission_device(mmock_url, workflows_url):
                     "X-Men-Requestid": [request_id],
                 },
                 "cookies": {},
+                "body": "",
             },
         },
         {
@@ -85,8 +86,9 @@ def test_decommission_device(mmock_url, workflows_url):
                     "X-Men-Requestid": [request_id],
                 },
                 "cookies": {},
+                "body": "",
             },
         },
     ]
-    assert expected[0]["request"].items() <= response[0]["request"].items()
-    assert expected[1]["request"].items() <= response[1]["request"].items()
+    assert expected[0]["request"] == response[0]["request"]
+    assert expected[1]["request"] == response[1]["request"]
