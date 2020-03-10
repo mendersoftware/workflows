@@ -23,9 +23,9 @@ import (
 
 func processJobString(data string, workflow *model.Workflow, job *model.Job) string {
 	for _, param := range job.InputParameters {
-		data = strings.Replace(data,
+		data = strings.ReplaceAll(data,
 			fmt.Sprintf("${workflow.input.%s}", param.Name),
-			param.Value, 1)
+			param.Value)
 	}
 
 	return data
