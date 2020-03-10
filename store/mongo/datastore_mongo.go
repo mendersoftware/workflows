@@ -359,13 +359,13 @@ func (db *DataStoreMongo) GetJobs(ctx context.Context, included []string, exclud
 	}
 }
 
-// AquireJob gets given job and updates it's status to StatusProcessing.
+// AcquireJob gets given job and updates it's status to StatusProcessing.
 // On success, the updated job is returned - if the job does not exist nil
 // is returned, otherwise a mongo error is returned.
-func (db *DataStoreMongo) AquireJob(ctx context.Context,
+func (db *DataStoreMongo) AcquireJob(ctx context.Context,
 	job *model.Job) (*model.Job, error) {
 
-	var aquiredJob *model.Job = new(model.Job)
+	var acquiredJob *model.Job = new(model.Job)
 
 	database := db.client.Database(db.dbName)
 	collJobs := database.Collection(JobsCollectionName)
@@ -386,7 +386,7 @@ func (db *DataStoreMongo) AquireJob(ctx context.Context,
 		Upsert:         &upsert,
 	}
 
-	err := collQueue.FindOneAndUpdate(ctx, query, update, &opt).Decode(aquiredJob)
+	err := collQueue.FindOneAndUpdate(ctx, query, update, &opt).Decode(acquiredJob)
 	if err == mongo.ErrNoDocuments {
 		return nil, nil
 	} else if err != nil {
@@ -400,7 +400,7 @@ func (db *DataStoreMongo) AquireJob(ctx context.Context,
 		return nil, err
 	}
 
-	return aquiredJob, nil
+	return acquiredJob, nil
 }
 
 // UpdateJobAddResult add a task execution result to a job status

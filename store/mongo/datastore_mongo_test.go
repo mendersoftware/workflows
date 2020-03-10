@@ -305,10 +305,10 @@ func TestAcquireJob(t *testing.T) {
 	inserted, err := testDataStore.InsertJob(ctx, job)
 	assert.Nil(t, err)
 
-	aquired, err := testDataStore.AquireJob(ctx, inserted)
+	acquired, err := testDataStore.AcquireJob(ctx, inserted)
 	assert.Nil(t, err)
-	assert.NotNil(t, aquired)
-	assert.Equal(t, model.StatusProcessing, aquired.Status)
+	assert.NotNil(t, acquired)
+	assert.Equal(t, model.StatusProcessing, acquired.Status)
 }
 
 func TestUpdateJobStatus(t *testing.T) {

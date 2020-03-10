@@ -65,7 +65,7 @@ func TestProcessJobHTTP(t *testing.T) {
 		workflow.Name,
 	).Return(workflow, nil)
 
-	dataStore.On("AquireJob",
+	dataStore.On("AcquireJob",
 		mocklib.MatchedBy(
 			func(_ context.Context) bool {
 				return true
@@ -158,7 +158,7 @@ func TestProcessJobHTTPValidStatusCode(t *testing.T) {
 		workflow.Name,
 	).Return(workflow, nil)
 
-	dataStore.On("AquireJob",
+	dataStore.On("AcquireJob",
 		mocklib.MatchedBy(
 			func(_ context.Context) bool {
 				return true
@@ -267,7 +267,7 @@ func TestProcessJobHTTPWrongStatusCode(t *testing.T) {
 		workflow.Name,
 	).Return(workflow, nil)
 
-	dataStore.On("AquireJob",
+	dataStore.On("AcquireJob",
 		mocklib.MatchedBy(
 			func(_ context.Context) bool {
 				return true
@@ -348,7 +348,7 @@ func TestProcessJobHTTPFailedIncompatibleDefinition(t *testing.T) {
 		workflow.Name,
 	).Return(workflow, nil)
 
-	dataStore.On("AquireJob",
+	dataStore.On("AcquireJob",
 		mocklib.MatchedBy(
 			func(_ context.Context) bool {
 				return true

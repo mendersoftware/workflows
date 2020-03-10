@@ -38,7 +38,7 @@ func processJob(ctx context.Context, job *model.Job,
 		return nil
 	}
 
-	acquiredJob, err := dataStore.AquireJob(ctx, job)
+	acquiredJob, err := dataStore.AcquireJob(ctx, job)
 	if err != nil {
 		l.Error(err.Error())
 		err := dataStore.UpdateJobStatus(ctx, job, model.StatusFailure)

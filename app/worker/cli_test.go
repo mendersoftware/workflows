@@ -58,7 +58,7 @@ func TestProcessJobCLI(t *testing.T) {
 		workflow.Name,
 	).Return(workflow, nil)
 
-	dataStore.On("AquireJob",
+	dataStore.On("AcquireJob",
 		mocklib.MatchedBy(
 			func(_ context.Context) bool {
 				return true
@@ -149,7 +149,7 @@ func TestProcessJobCLIWrongExitCode(t *testing.T) {
 		workflow.Name,
 	).Return(workflow, nil)
 
-	dataStore.On("AquireJob",
+	dataStore.On("AcquireJob",
 		mocklib.MatchedBy(
 			func(_ context.Context) bool {
 				return true
@@ -225,7 +225,7 @@ func TestProcessJobCLTimeOut(t *testing.T) {
 		workflow.Name,
 	).Return(workflow, nil)
 
-	dataStore.On("AquireJob",
+	dataStore.On("AcquireJob",
 		mocklib.MatchedBy(
 			func(_ context.Context) bool {
 				return true
@@ -293,7 +293,7 @@ func TestProcessJobCLIFailedIncompatibleDefinition(t *testing.T) {
 		workflow.Name,
 	).Return(workflow, nil)
 
-	dataStore.On("AquireJob",
+	dataStore.On("AcquireJob",
 		mocklib.MatchedBy(
 			func(_ context.Context) bool {
 				return true
