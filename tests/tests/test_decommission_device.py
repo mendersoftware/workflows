@@ -62,6 +62,7 @@ def test_decommission_device(mmock_url, workflows_url):
                 "headers": {
                     "Accept-Encoding": ["gzip"],
                     "Authorization": ["Bearer TEST"],
+                    "Content-Type": [""],
                     "User-Agent": ["Go-http-client/1.1"],
                     "X-Men-Requestid": [request_id],
                 },
@@ -81,6 +82,7 @@ def test_decommission_device(mmock_url, workflows_url):
                 "headers": {
                     "Accept-Encoding": ["gzip"],
                     "Authorization": ["Bearer TEST"],
+                    "Content-Type": [""],
                     "User-Agent": ["Go-http-client/1.1"],
                     "X-Men-Requestid": [request_id],
                 },
@@ -88,5 +90,6 @@ def test_decommission_device(mmock_url, workflows_url):
             },
         },
     ]
+
     assert expected[0]["request"].items() <= response[0]["request"].items()
     assert expected[1]["request"].items() <= response[1]["request"].items()

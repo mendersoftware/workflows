@@ -60,6 +60,7 @@ def test_provision_device(mmock_url, workflows_url):
                 "Accept-Encoding": ["gzip"],
                 "Authorization": ["Bearer TEST"],
                 "Content-Length": ["1"],
+                "Content-Type": ["application/json"],
                 "User-Agent": ["Go-http-client/1.1"],
                 "X-Men-Requestid": ["1234567890"],
             },
@@ -67,4 +68,4 @@ def test_provision_device(mmock_url, workflows_url):
             "body": "1",
         },
     }
-    assert expected.items() <= response[0].items()
+    assert expected["request"].items() <= response[0]["request"].items()
