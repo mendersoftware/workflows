@@ -43,6 +43,7 @@ func processHTTPTask(httpTask *model.HTTPTask, job *model.Job,
 	payload := strings.NewReader(payloadString)
 
 	req, err := http.NewRequest(httpTask.Method, uri, payload)
+	req.Header.Set("Content-Type", httpTask.ContentType)
 	if err != nil {
 		return nil, err
 	}
