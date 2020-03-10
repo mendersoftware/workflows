@@ -86,7 +86,7 @@ func TestProcessJobSMTP(t *testing.T) {
 		workflow.Name,
 	).Return(workflow, nil)
 
-	dataStore.On("AquireJob",
+	dataStore.On("AcquireJob",
 		mocklib.MatchedBy(
 			func(_ context.Context) bool {
 				return true
@@ -197,7 +197,7 @@ func TestProcessJobSMTPLoadFromFile(t *testing.T) {
 		workflow.Name,
 	).Return(workflow, nil)
 
-	dataStore.On("AquireJob",
+	dataStore.On("AcquireJob",
 		mocklib.MatchedBy(
 			func(_ context.Context) bool {
 				return true
@@ -279,7 +279,7 @@ func TestProcessJobSMTPLoadFromFileFailed(t *testing.T) {
 		workflow.Name,
 	).Return(workflow, nil)
 
-	dataStore.On("AquireJob",
+	dataStore.On("AcquireJob",
 		mocklib.MatchedBy(
 			func(_ context.Context) bool {
 				return true
@@ -367,7 +367,7 @@ func TestProcessJobSMTPFailure(t *testing.T) {
 		workflow.Name,
 	).Return(workflow, nil)
 
-	dataStore.On("AquireJob",
+	dataStore.On("AcquireJob",
 		mocklib.MatchedBy(
 			func(_ context.Context) bool {
 				return true

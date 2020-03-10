@@ -154,8 +154,8 @@ func (db *DataStore) GetJobs(ctx context.Context, included []string, excluded []
 	return r0, r1
 }
 
-// AquireJob gets given job and updates it's status to StatusProcessing.
-func (db *DataStore) AquireJob(ctx context.Context,
+// AcquireJob gets given job and updates it's status to StatusProcessing.
+func (db *DataStore) AcquireJob(ctx context.Context,
 	job *model.Job) (*model.Job, error) {
 	ret := db.Called(ctx, job)
 

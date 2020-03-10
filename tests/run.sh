@@ -1,3 +1,3 @@
 #!/bin/sh
 
-py.test -s --tb=short /testing/tests "$@"
+py.test -s --tb=short -vv /testing/tests "$@"

@@ -82,7 +82,7 @@ func TestProcessJobFailedJobIsNotPending(t *testing.T) {
 		job.WorkflowName,
 	).Return(workflow, nil)
 
-	dataStore.On("AquireJob",
+	dataStore.On("AcquireJob",
 		ctx,
 		job,
 	).Return(nil, errors.New("not found"))

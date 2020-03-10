@@ -47,6 +47,10 @@ func processHTTPTask(httpTask *model.HTTPTask, job *model.Job,
 		return nil, err
 	}
 
+	if httpTask.ContentType != "" {
+		req.Header.Add("Content-Type", httpTask.ContentType)
+	}
+
 	var headersToBeSent []string
 	for name, value := range httpTask.Headers {
 		headerValue := processJobString(value, workflow, job)
@@ -55,9 +59,9 @@ func processHTTPTask(httpTask *model.HTTPTask, job *model.Job,
 			fmt.Sprintf("%s: %s", name, headerValue))
 	}
 
-	l.Debugf("processHTTPTask makeHTTPRequest '%v'",req)
+	l.Debugf("processHTTPTask makeHTTPRequest '%v'", req)
 	res, err := makeHTTPRequest(req, time.Duration(httpTask.ReadTimeOut)*time.Second)
-	l.Debugf("processHTTPTask makeHTTPRequest returned '%v','%v'",res,err)
+	l.Debugf("processHTTPTask makeHTTPRequest returned '%v','%v'", res, err)
 	if err != nil {
 		return nil, err
 	}

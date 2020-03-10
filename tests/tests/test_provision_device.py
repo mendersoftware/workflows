@@ -9,7 +9,7 @@ def test_provision_device(mmock_url, workflows_url):
         json={
             "request_id": "1234567890",
             "authorization": "Bearer TEST",
-            "device": "1",
+            "device": "{\"id\": \"1\"}",
         },
     )
     assert res.status_code == 201
@@ -37,7 +37,7 @@ def test_provision_device(mmock_url, workflows_url):
     assert {"name": "authorization", "value": "Bearer TEST"} in response[
         "inputParameters"
     ]
-    assert {"name": "device", "value": "1"} in response["inputParameters"]
+    assert {"name": "device", "value": "{\"id\": \"1\"}"} in response["inputParameters"]
     assert response["status"] == "done"
     assert len(response["results"]) == 1
     assert response["results"][0]["success"] == True
@@ -57,14 +57,15 @@ def test_provision_device(mmock_url, workflows_url):
             "queryStringParameters": {},
             "fragment": "",
             "headers": {
+                "Content-Type": ["application/json"],
                 "Accept-Encoding": ["gzip"],
                 "Authorization": ["Bearer TEST"],
-                "Content-Length": ["1"],
+                "Content-Length": ["11"],
                 "User-Agent": ["Go-http-client/1.1"],
                 "X-Men-Requestid": ["1234567890"],
             },
             "cookies": {},
-            "body": "1",
+            "body": "{\"id\": \"1\"}",
         },
     }
-    assert expected.items() <= response[0].items()
+    assert expected["request"] == response[0]["request"]
