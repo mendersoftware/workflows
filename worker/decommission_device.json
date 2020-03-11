@@ -7,28 +7,28 @@
             "name": "delete_device_inventory",
             "type": "http",
             "http": {
-               "uri": "http://mender-inventory:8080/api/0.1.0/devices/${workflow.input.device_id}",
-               "method": "DELETE",
-               "headers": {
-                  "X-MEN-RequestID": "${workflow.input.request_id}",
-                  "Authorization": "${workflow.input.authorization}"
-               },
-               "connectionTimeOut":1000,
-               "readTimeOut":1000
+                "uri": "http://mender-inventory:8080/api/0.1.0/devices/${workflow.input.device_id}",
+                "method": "DELETE",
+                "headers": {
+                    "X-MEN-RequestID": "${workflow.input.request_id}",
+                    "Authorization": "${workflow.input.authorization}"
+                },
+                "connectionTimeOut": 1000,
+                "readTimeOut": 1000
             }
         },
         {
             "name": "delete_device_deployments",
             "type": "http",
             "http": {
-               "uri": "http://mender-deployments:8080/api/management/v1/deployments/deployments/devices/${workflow.input.device_id}",
-               "method": "DELETE",
-               "headers": {
-                  "X-MEN-RequestID": "${workflow.input.request_id}",
-                  "Authorization": "${workflow.input.authorization}"
-               },
-               "connectionTimeOut":1000,
-               "readTimeOut":1000
+                "uri": "http://mender-deployments:8080/api/management/v1/deployments/deployments/devices/${workflow.input.device_id}",
+                "method": "DELETE",
+                "headers": {
+                    "X-MEN-RequestID": "${workflow.input.request_id}",
+                    "Authorization": "${workflow.input.authorization}"
+                },
+                "connectionTimeOut": 1000,
+                "readTimeOut": 1000
             }
         }
     ],

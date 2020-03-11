@@ -9,7 +9,7 @@ def test_provision_device(mmock_url, workflows_url):
         json={
             "request_id": "1234567890",
             "authorization": "Bearer TEST",
-            "device": "{\"id\": \"1\"}",
+            "device": '{"id": "1"}',
         },
     )
     assert res.status_code == 201
@@ -37,7 +37,7 @@ def test_provision_device(mmock_url, workflows_url):
     assert {"name": "authorization", "value": "Bearer TEST"} in response[
         "inputParameters"
     ]
-    assert {"name": "device", "value": "{\"id\": \"1\"}"} in response["inputParameters"]
+    assert {"name": "device", "value": '{"id": "1"}'} in response["inputParameters"]
     assert response["status"] == "done"
     assert len(response["results"]) == 1
     assert response["results"][0]["success"] == True
@@ -65,7 +65,7 @@ def test_provision_device(mmock_url, workflows_url):
                 "X-Men-Requestid": ["1234567890"],
             },
             "cookies": {},
-            "body": "{\"id\": \"1\"}",
+            "body": '{"id": "1"}',
         },
     }
     assert expected["request"] == response[0]["request"]
