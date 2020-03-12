@@ -342,7 +342,7 @@ func (db *DataStoreMongo) GetJobs(ctx context.Context, included []string, exclud
 					channel <- job
 				}
 			}
-			if cur.ID() == 0 {
+			if cur.ID() == 0 || cur.Err() != nil {
 				channel <- errors.New("message bus cursor died")
 				break
 			}
