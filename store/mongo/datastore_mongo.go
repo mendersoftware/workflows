@@ -278,15 +278,28 @@ func (db *DataStoreMongo) InsertJob(
 	collQueue := database.Collection(JobQueueCollectionName)
 	collJobs := database.Collection(JobsCollectionName)
 
-	// insert the Job in the capped transaction we use as message queue
-	if _, err := collQueue.InsertOne(ctx, job); err != nil {
-		return nil, errors.Wrap(err,
-			"Error inserting job to message queue")
+	var session mongo.Session
+	var err error
+
+	if session, err = db.client.StartSession(); err != nil {
+		return nil, err
 	}
-	// insert the same pending job into the global collection
-	if _, err := collJobs.InsertOne(ctx, job); err != nil {
-		return nil, errors.Wrap(err,
-			"Error inserting job into jobs collection")
+	defer session.EndSession(ctx)
+
+	if err = mongo.WithSession(ctx, session, func(sc mongo.SessionContext) error {
+		// insert the same pending job into the global collection
+		if _, err := collJobs.InsertOne(ctx, job); err != nil {
+			return errors.Wrap(err,
+				"Error inserting job into jobs collection")
+		}
+		// insert the Job in the capped transaction we use as message queue
+		if _, err := collQueue.InsertOne(ctx, job); err != nil {
+			return errors.Wrap(err,
+				"Error inserting job to message queue")
+		}
+		return nil
+	}); err != nil {
+		return nil, err
 	}
 
 	return job, nil
