@@ -6,6 +6,7 @@
         {
             "name": "delete_device_inventory",
             "type": "http",
+            "retries": 3,
             "http": {
                 "uri": "http://mender-inventory:8080/api/0.1.0/devices/${workflow.input.device_id}",
                 "method": "DELETE",
@@ -13,13 +14,14 @@
                     "X-MEN-RequestID": "${workflow.input.request_id}",
                     "Authorization": "${workflow.input.authorization}"
                 },
-                "connectionTimeOut": 1000,
-                "readTimeOut": 1000
+                "connectionTimeOut": 8000,
+                "readTimeOut": 8000
             }
         },
         {
             "name": "delete_device_deployments",
             "type": "http",
+            "retries": 3,
             "http": {
                 "uri": "http://mender-deployments:8080/api/management/v1/deployments/deployments/devices/${workflow.input.device_id}",
                 "method": "DELETE",
@@ -27,8 +29,8 @@
                     "X-MEN-RequestID": "${workflow.input.request_id}",
                     "Authorization": "${workflow.input.authorization}"
                 },
-                "connectionTimeOut": 1000,
-                "readTimeOut": 1000
+                "connectionTimeOut": 8000,
+                "readTimeOut": 8000
             }
         }
     ],

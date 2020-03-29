@@ -61,11 +61,19 @@ func processJob(ctx context.Context, job *model.Job,
 	success := true
 	for _, task := range workflow.Tasks {
 		l.Infof("%s: started, %s task :%s", job.ID, job.WorkflowName, task.Name)
-		result, err := processTask(task, job, workflow, l)
-		if err != nil {
-			dataStore.UpdateJobStatus(ctx, job, model.StatusFailure)
+		var (
+			result  *model.TaskResult
+			attempt uint8 = 0
+		)
+		for attempt <= task.Retries {
+			result, err = processTask(task, job, workflow, l)
 			if err != nil {
+				dataStore.UpdateJobStatus(ctx, job, model.StatusFailure)
 				return err
+			}
+			attempt++
+			if result.Success {
+				break
 			}
 		}
 		err = dataStore.UpdateJobAddResult(ctx, job, result)

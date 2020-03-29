@@ -1,11 +1,12 @@
 {
     "name": "provision_device",
     "description": "Provision device.",
-    "version": 1,
+    "version": 2,
     "tasks": [
         {
             "name": "create_device_inventory",
             "type": "http",
+            "retries": 3,
             "http": {
                 "uri": "http://mender-inventory:8080/api/internal/v1/inventory/devices",
                 "method": "POST",
@@ -15,8 +16,8 @@
                     "X-MEN-RequestID": "${workflow.input.request_id}",
                     "Authorization": "${workflow.input.authorization}"
                 },
-                "connectionTimeOut": 1000,
-                "readTimeOut": 1000
+                "connectionTimeOut": 8000,
+                "readTimeOut": 8000
             }
         }
     ],
