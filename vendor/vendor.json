@@ -322,6 +322,12 @@
 			"revisionTime": "2019-09-17T10:36:37Z"
 		},
 		{
+			"checksumSHA1": "ObkoPyyPj74DuNdtbx/NV07AbMc=",
+			"path": "github.com/thedevsaddam/gojsonq",
+			"revision": "daf407b8fd5cff529e6da882baf4a2c2e096f212",
+			"revisionTime": "2020-03-27T15:30:58Z"
+		},
+		{
 			"checksumSHA1": "JWmqQjxnUg8PRe1QfYCmzAcWDvM=",
 			"path": "github.com/ugorji/go/codec",
 			"revision": "42bc974514ff101a54c6b72a0e4dee29d96c0b26",
