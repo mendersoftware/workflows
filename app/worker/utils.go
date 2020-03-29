@@ -15,18 +15,87 @@
 package worker
 
 import (
-	"fmt"
+	"encoding/json"
+	"os"
+	"regexp"
 	"strings"
 
 	"github.com/mendersoftware/workflows/model"
+	"github.com/thedevsaddam/gojsonq"
 )
 
+const (
+	workflowEnvVariable   = "env."
+	workflowInputVariable = "workflow.input."
+	regexVariable         = `\$\{([^\}]+)\}`
+	regexOutputVariable   = `(.*)\.json\.(.*)`
+)
+
+var reExpression = regexp.MustCompile(regexVariable)
+var reExpressionOutput = regexp.MustCompile(regexOutputVariable)
+
 func processJobString(data string, workflow *model.Workflow, job *model.Job) string {
-	for _, param := range job.InputParameters {
-		data = strings.ReplaceAll(data,
-			fmt.Sprintf("${workflow.input.%s}", param.Name),
-			param.Value)
+	matches := reExpression.FindAllStringSubmatch(data, -1)
+
+	// search for ${...} expressions in the data string
+	for _, submatch := range matches {
+		// content of the ${...} expression, without the brackets
+		match := submatch[1]
+		if strings.HasPrefix(match, workflowInputVariable) && len(match) > len(workflowInputVariable) {
+			// Replace ${workflow.input.KEY} with the KEY input variable
+			paramName := match[len(workflowInputVariable):len(match)]
+			for _, param := range job.InputParameters {
+				if param.Name == paramName {
+					data = strings.ReplaceAll(data, submatch[0], param.Value)
+					break
+				}
+			}
+		} else if strings.HasPrefix(match, workflowEnvVariable) && len(match) > len(workflowEnvVariable) {
+			// Replace ${env.KEY} with the KEY environment variable
+			envName := match[len(workflowEnvVariable):len(match)]
+			envValue := os.Getenv(envName)
+			data = strings.ReplaceAll(data, submatch[0], envValue)
+		} else if output := reExpressionOutput.FindStringSubmatch(match); len(output) > 0 {
+			// Replace ${TASK_NAME.json.JSONPATH} with the value of the JSONPATH expression from the
+			// JSON output of the previous task with name TASK_NAME. If the output is not a valid JSON
+			// or the JSONPATH does not resolve to a value, replace with empty string
+			for _, result := range job.Results {
+				if result.Name == output[1] {
+					varKey := output[2]
+					var output string
+					if result.Type == model.TaskTypeHTTP {
+						output = result.HTTPResponse.Body
+					} else if result.Type == model.TaskTypeCLI {
+						output = result.CLI.Output
+					} else {
+						continue
+					}
+					varValue := gojsonq.New().FromString(output).Find(varKey)
+					if varValue == nil {
+						varValue = ""
+					}
+					varValueString, err := ConvertAnythingToString(varValue)
+					if err == nil {
+						data = strings.ReplaceAll(data, submatch[0], varValueString)
+					}
+					break
+				}
+			}
+		}
 	}
 
 	return data
+}
+
+// ConvertAnythingToString returns the string representation of anything
+func ConvertAnythingToString(value interface{}) (string, error) {
+	valueString, ok := value.(string)
+	if !ok {
+		valueBytes, err := json.Marshal(value)
+		if err != nil {
+			return "", err
+		}
+		valueString = string(valueBytes)
+	}
+	return valueString, nil
 }

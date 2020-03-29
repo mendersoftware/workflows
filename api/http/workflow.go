@@ -22,6 +22,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/mendersoftware/go-lib-micro/log"
+	"github.com/mendersoftware/workflows/app/worker"
 	"github.com/mendersoftware/workflows/model"
 	"github.com/mendersoftware/workflows/store"
 )
@@ -81,18 +82,6 @@ func (h WorkflowController) GetWorkflows(c *gin.Context) {
 	c.JSON(http.StatusOK, h.dataStore.GetWorkflows(c))
 }
 
-func convertAnythingToString(value interface{}) (string, error) {
-	valueString, ok := value.(string)
-	if !ok {
-		valueBytes, err := json.Marshal(value)
-		if err != nil {
-			return "", err
-		}
-		valueString = string(valueBytes)
-	}
-	return valueString, nil
-}
-
 // StartWorkflow responds to POST /api/workflow/:name
 func (h WorkflowController) StartWorkflow(c *gin.Context) {
 	var name string = c.Param("name")
@@ -115,7 +104,7 @@ func (h WorkflowController) StartWorkflow(c *gin.Context) {
 		if ok {
 			values := make([]string, 0, 10)
 			for _, value := range valueSlice {
-				valueString, err := convertAnythingToString(value)
+				valueString, err := worker.ConvertAnythingToString(value)
 				if err == nil {
 					values = append(values, valueString)
 				}
@@ -125,7 +114,7 @@ func (h WorkflowController) StartWorkflow(c *gin.Context) {
 				Value: strings.Join(values, ","),
 			})
 		} else {
-			valueString, err := convertAnythingToString(value)
+			valueString, err := worker.ConvertAnythingToString(value)
 			if err == nil {
 				jobInputParameters = append(jobInputParameters, model.InputParameter{
 					Name:  key,
