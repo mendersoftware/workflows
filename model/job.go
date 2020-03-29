@@ -65,6 +65,8 @@ type InputParameter struct {
 
 // TaskResult contains the result of the execution of a task
 type TaskResult struct {
+	Name         string                  `json:"name" bson:"name"`
+	Type         string                  `json:"type" bson:"type"`
 	Success      bool                    `json:"success" bson:"success"`
 	CLI          *TaskResultCLI          `json:"cli" bson:"cli,omitempty"`
 	HTTPRequest  *TaskResultHTTPRequest  `json:"httpRequest" bson:"httpRequest,omitempty"`
