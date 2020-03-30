@@ -23,11 +23,12 @@ const (
 
 // Task stores the definition of a task within a workflow
 type Task struct {
-	Name string    `json:"name" bson:"name"`
-	Type string    `json:"type" bson:"type"`
-	HTTP *HTTPTask `json:"http,omitempty" bson:"http,omitempty"`
-	CLI  *CLITask  `json:"cli,omitempty" bson:"cli,omitempty"`
-	SMTP *SMTPTask `json:"smtp,omitempty" bson:"smtp,omitempty"`
+	Name    string    `json:"name" bson:"name"`
+	Type    string    `json:"type" bson:"type"`
+	Retries uint8     `json:"retries" bson:"retries"`
+	HTTP    *HTTPTask `json:"http,omitempty" bson:"http,omitempty"`
+	CLI     *CLITask  `json:"cli,omitempty" bson:"cli,omitempty"`
+	SMTP    *SMTPTask `json:"smtp,omitempty" bson:"smtp,omitempty"`
 }
 
 // HTTPTask stores the parameters of the HTTP calls for a WorkflowTask
