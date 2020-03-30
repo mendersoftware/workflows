@@ -76,6 +76,7 @@ func processJob(ctx context.Context, job *model.Job,
 				break
 			}
 		}
+		job.Results = append(job.Results, *result)
 		err = dataStore.UpdateJobAddResult(ctx, job, result)
 		if err != nil {
 			l.Errorf("Error uploading results: %s", err.Error())
