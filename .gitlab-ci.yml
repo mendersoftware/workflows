@@ -116,7 +116,7 @@ publish:acceptance_tests:
 publish:image_server:
   stage: publish
   only:
-    - /^(master|[0-9]+\.[0-9]+\.x)$/
+    - /^(master|staging|[0-9]+\.[0-9]+\.x)$/
   tags:
     - docker
   image: docker
@@ -135,7 +135,7 @@ publish:image_server:
 publish:image_worker:
   stage: publish
   only:
-    - /^(master|[0-9]+\.[0-9]+\.x)$/
+    - /^(master|staging|[0-9]+\.[0-9]+\.x)$/
   tags:
     - docker
   image: docker
