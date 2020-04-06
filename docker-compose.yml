@@ -3,9 +3,9 @@ services:
   mongodb:
     image: 'bitnami/mongodb:4.0'
     ports:
-    - "27017:27017"
+      - "27017:27017"
     volumes:
-    - ./data/mongodb:/opt/mongodb
+      - ./data/mongodb:/opt/mongodb
     networks:
       mender:
         aliases:
@@ -23,7 +23,7 @@ services:
     image: mendersoftware/workflows:master
     command: server --automigrate
     ports:
-    - "8080:8080"
+      - "8080:8080"
     networks:
       mender:
         aliases:

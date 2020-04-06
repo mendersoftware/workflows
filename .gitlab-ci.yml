@@ -1,3 +1,6 @@
+variables:
+  DOCKER_REPOSITORY: mendersoftware/workflows # server; worker image defined in required jobs
+
 stages:
   - test
   - build
@@ -10,20 +13,16 @@ include:
     file: '.gitlab-ci-check-golang-unittests.yml'
   - project: 'Northern.tech/Mender/mendertesting'
     file: '.gitlab-ci-check-apidocs.yml'
-
-before_script:
-  - export DOCKER_REPOSITORY="mendersoftware/${CI_PROJECT_NAME}"
-  - export DOCKER_TAG=${CI_COMMIT_REF_SLUG:-master}
-  - export SERVICE_IMAGE=$DOCKER_REPOSITORY:$DOCKER_TAG
-  - export WORKER_DOCKER_REPOSITORY="mendersoftware/${CI_PROJECT_NAME}-worker"
-  - export WORKER_SERVICE_IMAGE=$WORKER_DOCKER_REPOSITORY:$DOCKER_TAG
-  - export COMMIT_TAG="$CI_COMMIT_REF_SLUG"_"$CI_COMMIT_SHA"
+  - project: 'Northern.tech/Mender/mendertesting'
+    file: '.gitlab-ci-check-docker-build.yml'
 
 test:prepare_acceptance:
   stage: .pre
   image: docker
   services:
     - docker:19.03.5-dind
+  before_script:
+    - export WORKER_DOCKER_REPOSITORY="mendersoftware/workflows-worker"
   script:
     - docker build -f Dockerfile.acceptance-testing -t $DOCKER_REPOSITORY:prtest .
     - docker build -f Dockerfile.acceptance-testing.worker -t $WORKER_DOCKER_REPOSITORY:prtest .
@@ -70,37 +69,13 @@ test:acceptance_tests:
       - tests/coverage-acceptance.txt
       - tests/coverage-acceptance-worker.txt
 
-build:server:
-  stage: build
-  tags:
-    - docker
-  image: docker
-  services:
-    - docker:19.03.5-dind
-  script:
-    - echo "building ${CI_PROJECT_NAME} for ${SERVICE_IMAGE}"
-    - docker build -t $SERVICE_IMAGE .
-    - docker save $SERVICE_IMAGE > image.tar
-  artifacts:
-    expire_in: 2w
-    paths:
-      - image.tar
-
-build:worker:
-  stage: build
-  tags:
-    - docker
-  image: docker
-  services:
-    - docker:19.03.5-dind
-  script:
-    - echo "building ${CI_PROJECT_NAME} for ${WORKER_SERVICE_IMAGE}"
-    - docker build -t $WORKER_SERVICE_IMAGE -f Dockerfile.worker .
-    - docker save $WORKER_SERVICE_IMAGE > worker_image.tar
-  artifacts:
-    expire_in: 2w
-    paths:
-      - worker_image.tar
+# workflows (server) is built and published by the template; specify
+# jobs only for the worker
+build:docker:worker:
+  extends: build:docker
+  variables:
+    DOCKER_REPOSITORY: mendersoftware/workflows-worker
+    DOCKERFILE: Dockerfile.worker
 
 publish:acceptance_tests:
   stage: publish
@@ -113,40 +88,9 @@ publish:acceptance_tests:
     - bash -c "bash <(curl -s https://codecov.io/bash) -Z -F acceptance -f ./tests/coverage-acceptance.txt"
     - bash -c "bash <(curl -s https://codecov.io/bash) -Z -F acceptanceworker -f ./tests/coverage-acceptance-worker.txt"
 
-publish:image_server:
-  stage: publish
-  only:
-    - /^(master|staging|[0-9]+\.[0-9]+\.x)$/
-  tags:
-    - docker
-  image: docker
-  services:
-    - docker:19.03.5-dind
+publish:image:worker:
+  extends: publish:image
   dependencies:
-    - build:server
-  script:
-    - docker load -i image.tar
-    - docker tag $SERVICE_IMAGE $DOCKER_REPOSITORY:$COMMIT_TAG
-    - docker tag $SERVICE_IMAGE $DOCKER_REPOSITORY:$CI_COMMIT_REF_SLUG
-    - echo -n $DOCKER_HUB_PASSWORD | docker login -u $DOCKER_HUB_USERNAME --password-stdin
-    - docker push $DOCKER_REPOSITORY:$COMMIT_TAG
-    - docker push $SERVICE_IMAGE
-
-publish:image_worker:
-  stage: publish
-  only:
-    - /^(master|staging|[0-9]+\.[0-9]+\.x)$/
-  tags:
-    - docker
-  image: docker
-  services:
-    - docker:19.03.5-dind
-  dependencies:
-    - build:worker
-  script:
-    - docker load -i worker_image.tar
-    - docker tag $WORKER_SERVICE_IMAGE $WORKER_DOCKER_REPOSITORY:$COMMIT_TAG
-    - docker tag $WORKER_SERVICE_IMAGE $WORKER_DOCKER_REPOSITORY:$CI_COMMIT_REF_SLUG
-    - echo -n $DOCKER_HUB_PASSWORD | docker login -u $DOCKER_HUB_USERNAME --password-stdin
-    - docker push $WORKER_DOCKER_REPOSITORY:$COMMIT_TAG
-    - docker push $WORKER_SERVICE_IMAGE
+    - build:docker:worker
+  variables:
+    DOCKER_REPOSITORY: mendersoftware/workflows-worker
