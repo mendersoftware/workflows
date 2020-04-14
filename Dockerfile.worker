@@ -16,4 +16,5 @@ COPY ./worker/config.yaml /etc/workflows/config.yaml
 COPY --from=builder /go/src/github.com/mendersoftware/workflows/workflows /usr/bin
 COPY ./worker/decommission_device.json /etc/workflows/definitions/decommission_device.json
 COPY ./worker/provision_device.json /etc/workflows/definitions/provision_device.json
+COPY ./worker/update_device_status.json /etc/workflows/definitions/update_device_status.json
 ENTRYPOINT ["/usr/bin/workflows", "--config", "/etc/workflows/config.yaml", "worker"]
