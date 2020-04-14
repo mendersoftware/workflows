@@ -15,13 +15,14 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"github.com/mendersoftware/go-lib-micro/config"
+	"github.com/mendersoftware/workflows/model"
+	"github.com/urfave/cli"
 	"log"
 	"os"
 	"strings"
-
-	"github.com/mendersoftware/go-lib-micro/config"
-	"github.com/urfave/cli"
 
 	"github.com/mendersoftware/workflows/app/server"
 	"github.com/mendersoftware/workflows/app/worker"
@@ -80,6 +81,21 @@ func doMain(args []string) {
 				Name:   "migrate",
 				Usage:  "Run the migrations",
 				Action: cmdMigrate,
+			},
+			{
+				Name:   "list-jobs",
+				Usage:  "List jobs",
+				Action: cmdListJobs,
+				Flags: []cli.Flag{
+					cli.Int64Flag{
+						Name:  "page",
+						Usage: "page number to show",
+					},
+					cli.Int64Flag{
+						Name:  "perPage",
+						Usage: "number of results per page",
+					},
+				},
 			},
 		},
 	}
@@ -149,5 +165,38 @@ func cmdMigrate(args *cli.Context) error {
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+func cmdListJobs(args *cli.Context) error {
+	dataStore, err := store.SetupDataStore(false)
+	if err != nil {
+		return err
+	}
+	defer dataStore.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	var page int64
+	var perPage int64
+	page = args.Int64("page")
+	perPage = args.Int64("perPage")
+
+	if page < 1 {
+		page = 1
+	}
+	if perPage < 1 {
+		perPage = 75
+	}
+	jobs, count, _ := dataStore.GetAllJobs(ctx, page, perPage)
+	fmt.Printf("all jobs: %d; page: %d/%d perPage:%d\n%29s %24s %10s %s\n",
+		count, page, count/perPage, perPage, "insert time", "id", "status", "workflow")
+	for _, j := range jobs {
+		format := "Mon, 2 Jan 2006 15:04:05 MST"
+		fmt.Printf("%29s %24s %10s %s\n", j.InsertTime.Format(format), j.ID, model.StatusToString(j.Status), j.WorkflowName)
+	}
+	fmt.Printf("all jobs: %d; page: %d/%d\n", count, page, count/perPage)
+
 	return nil
 }

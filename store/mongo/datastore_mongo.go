@@ -25,6 +25,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	mopts "go.mongodb.org/mongo-driver/mongo/options"
 	"go.mongodb.org/mongo-driver/mongo/readconcern"
 	"go.mongodb.org/mongo-driver/mongo/writeconcern"
@@ -186,13 +187,23 @@ func NewDataStoreWithClient(client *Client, c config.Reader) *DataStoreMongo {
 }
 
 // LoadWorkflows from filesystem if the workflowsPath setting is provided
-func (db *DataStoreMongo) LoadWorkflows(ctx context.Context) error {
+func (db *DataStoreMongo) LoadWorkflows(ctx context.Context, l *log.Logger) error {
 	workflowsPath := config.Config.GetString(dconfig.SettingWorkflowsPath)
 	if workflowsPath != "" {
 		workflows := model.GetWorkflowsFromPath(workflowsPath)
+		l.Infof("LoadWorkflows: loading %d workflows from %s.", len(workflows), workflowsPath)
 		for _, workflow := range workflows {
-			db.InsertWorkflows(ctx, *workflow)
+			l.Infof("LoadWorkflows: loading %s v%d.", workflow.Name, workflow.Version)
+			count, err := db.InsertWorkflows(ctx, *workflow)
+			if count != 1 {
+				l.Infof("LoadWorkflows: not loaded: %s v%d.", workflow.Name, workflow.Version)
+			}
+			if err != nil {
+				l.Infof("LoadWorkflows: error loading: %s v%d: %s.", workflow.Name, workflow.Version, err.Error())
+			}
 		}
+	} else {
+		l.Info("LoadWorkflows: empty workflowsPath, not loading workflows")
 	}
 	return nil
 }
@@ -208,7 +219,7 @@ func (db *DataStoreMongo) InsertWorkflows(ctx context.Context, workflows ...mode
 		}
 		workflowDb, _ := db.GetWorkflowByName(ctx, workflow.Name)
 		if workflowDb != nil && workflowDb.Version >= workflow.Version {
-			return i, store.ErrWorkflowAlreadyExists
+			return i + 1, store.ErrWorkflowAlreadyExists
 		}
 		if workflowDb == nil || workflowDb.Version < workflow.Version {
 			upsert := true
@@ -218,7 +229,7 @@ func (db *DataStoreMongo) InsertWorkflows(ctx context.Context, workflows ...mode
 			query := bson.M{"_id": workflow.Name}
 			update := bson.M{"$set": workflow}
 			if _, err := collWflows.UpdateOne(ctx, query, update, opt); err != nil {
-				return i, err
+				return i + 1, err
 			}
 		}
 		db.workflows[workflow.Name] = &workflow
@@ -273,6 +284,7 @@ func (db *DataStoreMongo) InsertJob(
 	id := primitive.NewObjectID()
 	job.ID = id.Hex()
 	job.Status = model.StatusPending
+	job.InsertTime = time.Now()
 
 	database := db.client.Database(db.dbName)
 	collQueue := database.Collection(JobQueueCollectionName)
@@ -472,6 +484,30 @@ func (db *DataStoreMongo) GetJobByNameAndID(
 	}
 
 	return &job, nil
+}
+
+func (db *DataStoreMongo) GetAllJobs(
+	ctx context.Context, page int64, perPage int64) ([]model.Job, int64, error) {
+	collection := db.client.Database(db.dbName).
+		Collection(JobsCollectionName)
+	findOptions := &options.FindOptions{}
+	findOptions.SetSkip(int64((page - 1) * perPage))
+	findOptions.SetLimit(int64(perPage))
+	sortField := bson.M{}
+	sortField["insert_time"] = -1
+	findOptions.SetSort(sortField)
+	cur, err := collection.Find(ctx, bson.M{}, findOptions)
+
+	var jobs []model.Job
+	err = cur.All(ctx, &jobs)
+	if err == mongo.ErrNoDocuments {
+		return []model.Job{}, 0, nil
+	} else if err != nil {
+		return []model.Job{}, 0, err
+	}
+
+	count, err := collection.CountDocuments(ctx, bson.M{})
+	return jobs, count, nil
 }
 
 // Close disconnects the client

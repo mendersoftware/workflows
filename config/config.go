@@ -73,6 +73,11 @@ const (
 	SettingConcurrency = "concurrency"
 	// SettingConcurrencyDefault is the default value for the concurrency limit
 	SettingConcurrencyDefault = 10
+
+	// SettingDebugLog is the config key for the truning on the debug log
+	SettingDebugLog = "debug_log"
+	// SettingDebugLogDefault is the default value for the debug log enabling
+	SettingDebugLogDefault = false
 )
 
 var (
@@ -86,5 +91,6 @@ var (
 		{Key: SettingSMTPHost, Value: SettingSMTPHostDefault},
 		{Key: SettingSMTPAuthMechanism, Value: SettingSMTPAuthMechanismDefault},
 		{Key: SettingConcurrency, Value: SettingConcurrencyDefault},
+		{Key: SettingDebugLog, Value: SettingDebugLogDefault},
 	}
 )

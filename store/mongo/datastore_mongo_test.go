@@ -17,6 +17,7 @@ package mongo
 import (
 	"context"
 	"flag"
+	"go.mongodb.org/mongo-driver/bson"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -24,6 +25,7 @@ import (
 	"time"
 
 	"github.com/mendersoftware/go-lib-micro/config"
+	"github.com/mendersoftware/go-lib-micro/log"
 	dconfig "github.com/mendersoftware/workflows/config"
 	"github.com/mendersoftware/workflows/model"
 	"github.com/stretchr/testify/assert"
@@ -54,7 +56,7 @@ func TestInsertWorkflows(t *testing.T) {
 
 	ctx := context.Background()
 	count, _ := testDataStore.InsertWorkflows(ctx, workflow, workflow)
-	assert.Equal(t, 1, count)
+	assert.Equal(t, 2, count)
 
 	workflowFromDb, err := testDataStore.GetWorkflowByName(ctx, workflow.Name)
 	assert.Nil(t, err)
@@ -74,12 +76,12 @@ func TestInsertWorkflows(t *testing.T) {
 
 	count, err = testDataStore.InsertWorkflows(ctx, workflow)
 	assert.NotNil(t, err)
-	assert.Equal(t, 0, count)
+	assert.Equal(t, 1, count)
 
 	testDataStore.workflows = make(map[string]*model.Workflow)
 	count, err = testDataStore.InsertWorkflows(ctx, workflow)
 	assert.NotNil(t, err)
-	assert.Equal(t, 0, count)
+	assert.Equal(t, 1, count)
 
 	workflowFromDb, err = testDataStore.GetWorkflowByName(ctx, workflow.Name)
 	assert.Nil(t, err)
@@ -135,7 +137,7 @@ func TestLoadWorkflows(t *testing.T) {
 	ioutil.WriteFile(tmpfn, data, 0666)
 
 	ctx := context.Background()
-	err := testDataStore.LoadWorkflows(ctx)
+	err := testDataStore.LoadWorkflows(ctx, log.FromContext(ctx))
 	assert.Nil(t, err)
 
 	workflowFromDb, err := testDataStore.GetWorkflowByName(ctx, "decommission_device_from_filesystem")
@@ -838,4 +840,62 @@ func TestGetJobsIncludedAndExcludedWorkflowNames(t *testing.T) {
 	assert.Equal(t, job.WorkflowName, jobReceived.WorkflowName)
 	assert.Equal(t, job.InputParameters, jobReceived.InputParameters)
 	assert.Equal(t, model.StatusPending, jobReceived.Status)
+}
+
+func TestGetAllJobs(t *testing.T) {
+	flag.Parse()
+	if testing.Short() {
+		t.Skip()
+	}
+
+	workflow := model.Workflow{
+		Name:          "TestGetJobsIncludedAndExcludedWorkflowNames",
+		Description:   "Description",
+		SchemaVersion: 1,
+		Version:       1,
+		Tasks: []model.Task{
+			{
+				Name: "task_1",
+				Type: model.TaskTypeCLI,
+			},
+		},
+		InputParameters: []string{
+			"key1",
+			"key2",
+		},
+	}
+
+	ctx := context.Background()
+	count, _ := testDataStore.InsertWorkflows(ctx, workflow)
+	assert.Equal(t, 1, count)
+
+	job := &model.Job{
+		WorkflowName: workflow.Name,
+		InputParameters: []model.InputParameter{
+			{
+				Name:  "key1",
+				Value: "value1",
+			},
+			{
+				Name:  "key2",
+				Value: "value2",
+			},
+		},
+	}
+
+	database := testDataStore.client.Database(testDataStore.dbName)
+	collJobs := database.Collection(JobsCollectionName)
+	collJobs.DeleteMany(ctx, bson.M{})
+
+	_, err := testDataStore.InsertJob(ctx, job)
+	assert.Nil(t, err)
+
+	jobs, totalCount, err := testDataStore.GetAllJobs(ctx, 1, 4)
+
+	assert.Nil(t, err)
+	assert.Equal(t, 1, len(jobs))
+	assert.Equal(t, int64(1), totalCount)
+	assert.Equal(t, job.WorkflowName, jobs[0].WorkflowName)
+	assert.Equal(t, job.InputParameters, jobs[0].InputParameters)
+	assert.Equal(t, model.StatusPending, jobs[0].Status)
 }

@@ -154,7 +154,7 @@ func TestProcessJobSMTPLoadFromFile(t *testing.T) {
 
 	ctx := context.Background()
 	dataStore := mock.NewDataStore()
-	tmpFile,err := ioutil.TempFile("","mail.body")
+	tmpFile, err := ioutil.TempFile("", "mail.body")
 	assert.Nil(t, err)
 
 	defer os.Remove(tmpFile.Name())
@@ -299,7 +299,7 @@ func TestProcessJobSMTPLoadFromFileFailed(t *testing.T) {
 	err := processJob(ctx, job, dataStore)
 
 	assert.NotNil(t, err)
-	assert.Equal(t, err.Error(), "cant load file /this/file/does/not/exits/for/sure:" +
+	assert.Equal(t, err.Error(), "cant load file /this/file/does/not/exits/for/sure:"+
 		" open /this/file/does/not/exits/for/sure: no such file or directory")
 
 	dataStore.AssertExpectations(t)

@@ -11,9 +11,11 @@
 *.rej
 *.exe
 .*.swp
+workflows
 
 coverage.txt
 coverage-acceptance.txt
 coverage-acceptance-worker.txt
 ./bin/
 .vscode/
+.idea

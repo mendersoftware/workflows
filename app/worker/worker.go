@@ -45,13 +45,17 @@ func InitAndRun(conf config.Reader, workflows Workflows, dataStore store.DataSto
 	// eventually.
 	defer cancel()
 
-	dataStore.LoadWorkflows(ctx)
+	if conf.GetBool(dconfig.SettingDebugLog) {
+		log.Setup(true)
+	}
+	l := log.FromContext(ctx)
+
+	dataStore.LoadWorkflows(ctx, l)
 
 	channel, err := dataStore.GetJobs(ctx, workflows.Included, workflows.Excluded)
 	if err != nil {
 		return errors.Wrap(err, "Failed to start job scheduler")
 	}
-	l := log.FromContext(ctx)
 
 	var msg interface{}
 	concurrency := conf.GetInt(dconfig.SettingConcurrency)
@@ -77,6 +81,7 @@ func InitAndRun(conf config.Reader, workflows Workflows, dataStore store.DataSto
 			go func(ctx context.Context,
 				job *model.Job, dataStore store.DataStore) {
 				defer func() { <-sem }()
+				l.Infof("Worker: processing job %s workflow %s: ", job.ID, job.WorkflowName)
 				processJob(ctx, job, dataStore)
 			}(ctx, job, dataStore)
 

@@ -16,6 +16,7 @@ package model
 
 import (
 	"github.com/pkg/errors"
+	"time"
 )
 
 // Status
@@ -52,6 +53,9 @@ type Job struct {
 	// Results produced by a finished job. If status is not "done" this
 	// field will always be nil.
 	Results []TaskResult `json:"results" bson:"results,omitempty"`
+
+	// insert time
+	InsertTime time.Time `json:"insert_time" bson:"insert_time,omitempty"`
 }
 
 // InputParameter defines the input parameter of a job

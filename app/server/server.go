@@ -33,9 +33,12 @@ import (
 // InitAndRun initializes the server and runs it
 func InitAndRun(conf config.Reader, dataStore store.DataStore) error {
 	ctx := context.Background()
-	dataStore.LoadWorkflows(ctx)
 
+	log.Setup(conf.GetBool(dconfig.SettingDebugLog))
 	l := log.FromContext(ctx)
+
+	dataStore.LoadWorkflows(ctx, l)
+
 	var listen = conf.GetString(dconfig.SettingListen)
 	var router = api.NewRouter(dataStore)
 	srv := &http.Server{
