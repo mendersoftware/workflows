@@ -6,6 +6,22 @@
 Mender: Workflows orchestrator
 ==============================
 
+## Listing jobs
+
+Current state of jobs can be checked via list-jobs commandline:
+```shell script
+#./workflows list-jobs --page 1 --perPage 4
+all jobs: 750; page: 1/187 perPage:4
+                  insert time                       id     status workflow
+Thu, 16 Apr 2020 12:27:05 UTC 5e984f1958e80bdb83970d8a       done update_device_status
+Thu, 16 Apr 2020 12:26:50 UTC 5e984f0a58e80bdb83970d89     failed provision_device
+Thu, 16 Apr 2020 12:26:50 UTC 5e984f0a58e80bdb83970d88       done update_device_status
+Thu, 16 Apr 2020 12:26:50 UTC 5e984f0a58e80bdb83970d87     failed provision_device
+all jobs: 750; page: 1/187
+```
+
+## General
+
 Mender is an open source over-the-air (OTA) software updater for embedded Linux
 devices. Mender comprises a client running at the embedded device, as well as
 a server that manages deployments across many devices.
