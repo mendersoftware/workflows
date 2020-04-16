@@ -19,6 +19,7 @@ import (
 
 	"github.com/stretchr/testify/mock"
 
+	"github.com/mendersoftware/go-lib-micro/log"
 	"github.com/mendersoftware/workflows/model"
 )
 
@@ -33,12 +34,12 @@ func NewDataStore() *DataStore {
 }
 
 // LoadWorkflows from filesystem if the workflowsPath setting is provided
-func (db *DataStore) LoadWorkflows(ctx context.Context) error {
-	ret := db.Called(ctx)
+func (db *DataStore) LoadWorkflows(ctx context.Context, l *log.Logger) error {
+	ret := db.Called(ctx, l)
 
 	var r0 error
-	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
-		r0 = rf(ctx)
+	if rf, ok := ret.Get(1).(func(context.Context, *log.Logger) error); ok {
+		r0 = rf(ctx, l)
 	} else {
 		r0 = ret.Error(1)
 	}
@@ -235,4 +236,35 @@ func (db *DataStore) GetJobByNameAndID(ctx context.Context,
 	}
 
 	return r0, r1
+}
+
+func (db *DataStore) GetAllJobs(ctx context.Context, page int64, perPage int64) ([]model.Job, int64, error) {
+	ret := db.Called(ctx, page, perPage)
+
+	var r0 []model.Job
+	if rf, ok := ret.Get(0).(func(context.Context, int64, int64) []model.Job); ok {
+		r0 = rf(ctx, page, perPage)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]model.Job)
+		}
+	}
+
+	var r1 int64
+	if rf, ok := ret.Get(1).(func(
+		context.Context,int64,int64) int64); ok {
+		r1 = rf(ctx,page,perPage)
+	} else {
+		r1 = ret.Get(1).(int64)
+	}
+
+	var r2 error
+	if rf, ok := ret.Get(2).(func(
+		context.Context,int64,int64) error); ok {
+		r2 = rf(ctx,page,perPage)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
 }

@@ -100,13 +100,13 @@ func processSMTPTask(smtpTask *model.SMTPTask, job *model.Job,
 	}
 
 	err := smtpClient.SendMail(smtpHostname, auth, from, recipients, msg)
-	l.Debugf("processSMTPTask: smtpClient.SendMail returned %v",err)
+	l.Debugf("processSMTPTask: smtpClient.SendMail returned %v", err)
 	if err != nil {
-		l.Errorf("processSMTPTask: smtpClient.SendMail returned %v",err)
+		l.Errorf("processSMTPTask: smtpClient.SendMail returned %v", err)
 		result.Success = false
 		result.SMTP.Error = err.Error()
 	} else {
-		l.Infof("processSMTPTask: email successfully sent to %v",recipients)
+		l.Infof("processSMTPTask: email successfully sent to %v", recipients)
 		result.Success = true
 	}
 
