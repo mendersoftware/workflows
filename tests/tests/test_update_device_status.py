@@ -55,7 +55,10 @@ def test_update_device_status(mmock_url, workflows_url):
             "host": "mender-inventory",
             "port": "8080",
             "method": "POST",
-            "path": "/api/internal/v2/inventory/devices/" + tenant_id + "/" + device_status,
+            "path": "/api/internal/v1/inventory/tenants/"
+            + tenant_id
+            + "/devices/"
+            + device_status,
             "queryStringParameters": {},
             "fragment": "",
             "headers": {
