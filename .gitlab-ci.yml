@@ -62,6 +62,8 @@ test:acceptance_tests:
     - make acceptance-testing-up
     - sh -c "sleep 30"
     - make acceptance-testing-run
+    - ls -al tests
+    - find . -name coverage-acceptance.txt
   after_script:
     - make acceptance-testing-logs
     - make acceptance-testing-down
