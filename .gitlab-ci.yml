@@ -96,3 +96,10 @@ publish:image:worker:
     - build:docker:worker
   variables:
     DOCKER_REPOSITORY: mendersoftware/workflows-worker
+
+publish:image:mender:worker:
+  extends: publish:image:mender
+  dependencies:
+    - build:docker:worker
+  variables:
+    DOCKER_REPOSITORY: mendersoftware/workflows-worker
