@@ -48,7 +48,9 @@ func TestProcessJobSMTP(t *testing.T) {
 			"archive@mender.io",
 		},
 		mocklib.MatchedBy(
-			func(_ []byte) bool {
+			func(msg []byte) bool {
+				assert.NotEqual(t, "", string(msg))
+
 				return true
 			}),
 	).Return(nil)

@@ -101,9 +101,6 @@ func processSMTPTask(smtpTask *model.SMTPTask, job *model.Job,
 		"\r\n" +
 		altContent.String())
 
-	var msg []byte
-	msgBuffer.Read(msg)
-
 	result.SMTP.Sender = from
 	result.SMTP.Recipients = recipients
 	result.SMTP.Message = msgBuffer.String()
@@ -123,7 +120,7 @@ func processSMTPTask(smtpTask *model.SMTPTask, job *model.Job,
 		}
 	}
 
-	err = smtpClient.SendMail(smtpHostname, auth, from, recipients, msg)
+	err = smtpClient.SendMail(smtpHostname, auth, from, recipients, msgBuffer.Bytes())
 	l.Debugf("processSMTPTask: smtpClient.SendMail returned %v", err)
 	if err != nil {
 		l.Errorf("processSMTPTask: smtpClient.SendMail returned %v", err)
