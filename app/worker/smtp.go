@@ -15,16 +15,17 @@
 package worker
 
 import (
-	"io/ioutil"
+	"bytes"
+	"mime/multipart"
 	"net"
 	"net/smtp"
+	"net/textproto"
 	"strings"
 
 	"github.com/mendersoftware/go-lib-micro/config"
 	"github.com/mendersoftware/go-lib-micro/log"
 	dconfig "github.com/mendersoftware/workflows/config"
 	"github.com/mendersoftware/workflows/model"
-	"github.com/pkg/errors"
 )
 
 var smtpClient SMTPClientInterface = new(SMTPClient)
@@ -59,30 +60,53 @@ func processSMTPTask(smtpTask *model.SMTPTask, job *model.Job,
 
 	from := processJobString(smtpTask.From, workflow, job)
 	subject := processJobString(smtpTask.Subject, workflow, job)
-	body := processJobString(smtpTask.Body, workflow, job)
-	if strings.HasPrefix(body, "@") {
-		filePath := body[1:]
-		buffer, err := ioutil.ReadFile(filePath)
-		if err != nil {
-			result.Success = false
-			result.SMTP.Error = err.Error()
-			l.Infof("processSMTPTask error reading file: '%s'", err.Error())
-			return result, errors.Wrap(err, "cant load file "+filePath)
-		}
-		body = processJobString(string(buffer), workflow, job)
-	}
-	l.Debugf("processSMTPTask body mail: '\n%s\n'", body)
 
-	msg := []byte("From: " + from + "\r\n" +
+	var err error
+	var body, HTML string
+	if body, err = processJobStringOrFile(smtpTask.Body, workflow, job); err != nil {
+		result.Success = false
+		result.SMTP.Error = err.Error()
+		l.Infof("processSMTPTask error reading file: '%s'", err.Error())
+		return result, err
+	}
+	l.Debugf("processSMTPTask body text: '\n%s\n'", body)
+
+	if HTML, err = processJobStringOrFile(smtpTask.HTML, workflow, job); err != nil {
+		result.Success = false
+		result.SMTP.Error = err.Error()
+		l.Infof("processSMTPTask error reading file: '%s'", err.Error())
+		return result, err
+	}
+	l.Debugf("processSMTPTask body HTML: '\n%s\n'", HTML)
+
+	altContent := &bytes.Buffer{}
+	altWriter := multipart.NewWriter(altContent)
+	if HTML != "" {
+		childContent, _ := altWriter.CreatePart(textproto.MIMEHeader{"Content-Type": {"text/html"}})
+		childContent.Write([]byte(HTML))
+	}
+	if body != "" {
+		childContent, _ := altWriter.CreatePart(textproto.MIMEHeader{"Content-Type": {"text/plain"}})
+		childContent.Write([]byte(body))
+	}
+	altWriter.Close()
+
+	msgBuffer := &bytes.Buffer{}
+	msgBuffer.WriteString("From: " + from + "\r\n" +
 		"To: " + strings.Join(to, ", ") + "\r\n" +
 		"Cc: " + strings.Join(cc, ", ") + "\r\n" +
 		"Subject: " + subject + "\r\n" +
+		"MIME-Version: 1.0\r\n" +
+		"Content-Type: multipart/alternative; boundary=" + altWriter.Boundary() + "\r\n" +
 		"\r\n" +
-		body + "\r\n")
+		altContent.String())
+
+	var msg []byte
+	msgBuffer.Read(msg)
 
 	result.SMTP.Sender = from
 	result.SMTP.Recipients = recipients
-	result.SMTP.Message = string(msg)
+	result.SMTP.Message = msgBuffer.String()
 
 	// Set up authentication information
 	smtpHostname := config.Config.GetString(dconfig.SettingSMTPHost)
@@ -99,7 +123,7 @@ func processSMTPTask(smtpTask *model.SMTPTask, job *model.Job,
 		}
 	}
 
-	err := smtpClient.SendMail(smtpHostname, auth, from, recipients, msg)
+	err = smtpClient.SendMail(smtpHostname, auth, from, recipients, msg)
 	l.Debugf("processSMTPTask: smtpClient.SendMail returned %v", err)
 	if err != nil {
 		l.Errorf("processSMTPTask: smtpClient.SendMail returned %v", err)

@@ -19,6 +19,7 @@ import (
 	"io/ioutil"
 	"net/smtp"
 	"os"
+	"regexp"
 	"testing"
 
 	"github.com/pkg/errors"
@@ -68,6 +69,7 @@ func TestProcessJobSMTP(t *testing.T) {
 					Bcc:     []string{"archive@mender.io"},
 					Subject: "Subject",
 					Body:    "Body",
+					HTML:    "<html><body>HTML</body></html>",
 				},
 			},
 		},
@@ -114,6 +116,26 @@ func TestProcessJobSMTP(t *testing.T) {
 				assert.True(t, taskResult.Success)
 				assert.Equal(t, workflow.Tasks[0].SMTP.From, taskResult.SMTP.Sender)
 				assert.Equal(t, "", taskResult.SMTP.Error)
+				msg := taskResult.SMTP.Message
+				re := regexp.MustCompile(`[a-z0-9]{60}`)
+				msg = re.ReplaceAllString(msg, "ID")
+				expected := "From: no-reply@mender.io\r\n" +
+					"To: user@mender.io\r\n" +
+					"Cc: user@mender.io, support@mender.io\r\n" +
+					"Subject: Subject\r\n" +
+					"MIME-Version: 1.0\r\n" +
+					"Content-Type: multipart/alternative; boundary=ID\r\n" +
+					"\r\n" +
+					"--ID\r\n" +
+					"Content-Type: text/html\r\n" +
+					"\r\n" +
+					"<html><body>HTML</body></html>\r\n" +
+					"--ID\r\n" +
+					"Content-Type: text/plain\r\n" +
+					"\r\n" +
+					"Body\r\n" +
+					"--ID--\r\n"
+				assert.Equal(t, expected, msg)
 
 				return true
 			}),
@@ -245,65 +267,95 @@ func TestProcessJobSMTPLoadFromFileFailed(t *testing.T) {
 	var originalSMTPClient = smtpClient
 	smtpClient = mockedSMTPClient
 
-	ctx := context.Background()
-	dataStore := mock.NewDataStore()
-
-	workflow := &model.Workflow{
-		Name: "test",
-		Tasks: []model.Task{
-			{
-				Name: "task_1",
-				Type: model.TaskTypeSMTP,
-				SMTP: &model.SMTPTask{
-					From:    "no-reply@mender.io",
-					To:      []string{"user@mender.io"},
-					Cc:      []string{"support@mender.io"},
-					Bcc:     []string{"archive@mender.io"},
-					Subject: "Subject",
-					Body:    "@/this/file/does/not/exits/for/sure",
+	var testCases = map[string]struct {
+		Workflow *model.Workflow
+	}{
+		"body": {
+			Workflow: &model.Workflow{
+				Name: "test",
+				Tasks: []model.Task{
+					{
+						Name: "task_1",
+						Type: model.TaskTypeSMTP,
+						SMTP: &model.SMTPTask{
+							From:    "no-reply@mender.io",
+							To:      []string{"user@mender.io"},
+							Cc:      []string{"support@mender.io"},
+							Bcc:     []string{"archive@mender.io"},
+							Subject: "Subject",
+							Body:    "@/this/file/does/not/exits/for/sure",
+						},
+					},
+				},
+			},
+		},
+		"html": {
+			Workflow: &model.Workflow{
+				Name: "test",
+				Tasks: []model.Task{
+					{
+						Name: "task_1",
+						Type: model.TaskTypeSMTP,
+						SMTP: &model.SMTPTask{
+							From:    "no-reply@mender.io",
+							To:      []string{"user@mender.io"},
+							Cc:      []string{"support@mender.io"},
+							Bcc:     []string{"archive@mender.io"},
+							Subject: "Subject",
+							HTML:    "@/this/file/does/not/exits/for/sure",
+						},
+					},
 				},
 			},
 		},
 	}
 
-	job := &model.Job{
-		WorkflowName: workflow.Name,
-		Status:       model.StatusPending,
+	for i, tc := range testCases {
+		t.Run(i, func(t *testing.T) {
+			workflow := tc.Workflow
+
+			job := &model.Job{
+				WorkflowName: workflow.Name,
+				Status:       model.StatusPending,
+			}
+
+			ctx := context.Background()
+			dataStore := mock.NewDataStore()
+
+			dataStore.On("GetWorkflowByName",
+				mocklib.MatchedBy(
+					func(_ context.Context) bool {
+						return true
+					}),
+				workflow.Name,
+			).Return(workflow, nil)
+
+			dataStore.On("AcquireJob",
+				mocklib.MatchedBy(
+					func(_ context.Context) bool {
+						return true
+					}),
+				job,
+			).Return(job, nil)
+
+			dataStore.On("UpdateJobStatus",
+				mocklib.MatchedBy(
+					func(_ context.Context) bool {
+						return true
+					}),
+				job,
+				model.StatusFailure,
+			).Return(nil)
+
+			err := processJob(ctx, job, dataStore)
+
+			assert.NotNil(t, err)
+			assert.Equal(t, err.Error(), "open /this/file/does/not/exits/for/sure: no such file or directory")
+
+			dataStore.AssertExpectations(t)
+			mockedSMTPClient.AssertExpectations(t)
+		})
 	}
-
-	dataStore.On("GetWorkflowByName",
-		mocklib.MatchedBy(
-			func(_ context.Context) bool {
-				return true
-			}),
-		workflow.Name,
-	).Return(workflow, nil)
-
-	dataStore.On("AcquireJob",
-		mocklib.MatchedBy(
-			func(_ context.Context) bool {
-				return true
-			}),
-		job,
-	).Return(job, nil)
-
-	dataStore.On("UpdateJobStatus",
-		mocklib.MatchedBy(
-			func(_ context.Context) bool {
-				return true
-			}),
-		job,
-		model.StatusFailure,
-	).Return(nil)
-
-	err := processJob(ctx, job, dataStore)
-
-	assert.NotNil(t, err)
-	assert.Equal(t, err.Error(), "cant load file /this/file/does/not/exits/for/sure:"+
-		" open /this/file/does/not/exits/for/sure: no such file or directory")
-
-	dataStore.AssertExpectations(t)
-	mockedSMTPClient.AssertExpectations(t)
 
 	smtpClient = originalSMTPClient
 }
