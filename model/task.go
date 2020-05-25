@@ -57,5 +57,6 @@ type SMTPTask struct {
 	Bcc     []string `json:"bcc" bson:"bcc"`
 	Subject string   `json:"subject" bson:"subject"`
 	Body    string   `json:"body" bson:"body"`
+	HTML    string   `json:"html" bson:"html"`
 	Timeout int      `json:"timeout" bson:"timeout"`
 }

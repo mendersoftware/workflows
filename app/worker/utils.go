@@ -16,6 +16,7 @@ package worker
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"os"
 	"regexp"
 	"strings"
@@ -85,6 +86,19 @@ func processJobString(data string, workflow *model.Workflow, job *model.Job) str
 	}
 
 	return data
+}
+
+func processJobStringOrFile(data string, workflow *model.Workflow, job *model.Job) (string, error) {
+	data = processJobString(data, workflow, job)
+	if strings.HasPrefix(data, "@") {
+		filePath := data[1:]
+		buffer, err := ioutil.ReadFile(filePath)
+		if err != nil {
+			return "", err
+		}
+		data = processJobString(string(buffer), workflow, job)
+	}
+	return data, nil
 }
 
 // ConvertAnythingToString returns the string representation of anything
