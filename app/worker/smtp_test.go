@@ -35,120 +35,166 @@ func TestProcessJobSMTP(t *testing.T) {
 	var originalSMTPClient = smtpClient
 	smtpClient = mockedSMTPClient
 
-	mockedSMTPClient.On("SendMail",
-		"",
-		mocklib.MatchedBy(
-			func(_ smtp.Auth) bool {
-				return true
-			}),
-		"no-reply@mender.io",
-		[]string{
-			"user@mender.io",
-			"support@mender.io",
-			"archive@mender.io",
+	testCases := map[string]struct {
+		Body     string
+		HTML     string
+		Expected string
+	}{
+		"text and html": {
+			Body: "Body",
+			HTML: "<html><body>HTML</body></html>",
+			Expected: "From: no-reply@mender.io\r\n" +
+				"To: user@mender.io\r\n" +
+				"Cc: user@mender.io, support@mender.io\r\n" +
+				"Subject: Subject\r\n" +
+				"MIME-Version: 1.0\r\n" +
+				"Content-Type: multipart/alternative; boundary=ID\r\n" +
+				"\r\n" +
+				"--ID\r\n" +
+				"Content-Type: text/html\r\n" +
+				"\r\n" +
+				"<html><body>HTML</body></html>\r\n" +
+				"--ID\r\n" +
+				"Content-Type: text/plain\r\n" +
+				"\r\n" +
+				"Body\r\n" +
+				"--ID--\r\n",
 		},
-		mocklib.MatchedBy(
-			func(msg []byte) bool {
-				assert.NotEqual(t, "", string(msg))
+		"text only": {
+			Body: "Body",
+			Expected: "From: no-reply@mender.io\r\n" +
+				"To: user@mender.io\r\n" +
+				"Cc: user@mender.io, support@mender.io\r\n" +
+				"Subject: Subject\r\n" +
+				"MIME-Version: 1.0\r\n" +
+				"Content-Type: multipart/alternative; boundary=ID\r\n" +
+				"\r\n" +
+				"--ID\r\n" +
+				"Content-Type: text/plain\r\n" +
+				"\r\n" +
+				"Body\r\n" +
+				"--ID--\r\n",
+		},
+		"html only": {
+			HTML: "<html><body>HTML</body></html>",
+			Expected: "From: no-reply@mender.io\r\n" +
+				"To: user@mender.io\r\n" +
+				"Cc: user@mender.io, support@mender.io\r\n" +
+				"Subject: Subject\r\n" +
+				"MIME-Version: 1.0\r\n" +
+				"Content-Type: multipart/alternative; boundary=ID\r\n" +
+				"\r\n" +
+				"--ID\r\n" +
+				"Content-Type: text/html\r\n" +
+				"\r\n" +
+				"<html><body>HTML</body></html>\r\n" +
+				"--ID--\r\n",
+		},
+	}
 
-				return true
-			}),
-	).Return(nil)
+	for i, tc := range testCases {
 
-	ctx := context.Background()
-	dataStore := mock.NewDataStore()
-
-	workflow := &model.Workflow{
-		Name: "test",
-		Tasks: []model.Task{
-			{
-				Name: "task_1",
-				Type: model.TaskTypeSMTP,
-				SMTP: &model.SMTPTask{
-					From:    "no-reply@mender.io",
-					To:      []string{"user@mender.io"},
-					Cc:      []string{"support@mender.io"},
-					Bcc:     []string{"archive@mender.io"},
-					Subject: "Subject",
-					Body:    "Body",
-					HTML:    "<html><body>HTML</body></html>",
+		t.Run(i, func(t *testing.T) {
+			mockedSMTPClient.On("SendMail",
+				"",
+				mocklib.MatchedBy(
+					func(_ smtp.Auth) bool {
+						return true
+					}),
+				"no-reply@mender.io",
+				[]string{
+					"user@mender.io",
+					"support@mender.io",
+					"archive@mender.io",
 				},
-			},
-		},
+				mocklib.MatchedBy(
+					func(msg []byte) bool {
+						assert.NotEqual(t, "", string(msg))
+
+						return true
+					}),
+			).Return(nil)
+
+			ctx := context.Background()
+			dataStore := mock.NewDataStore()
+
+			workflow := &model.Workflow{
+				Name: "test",
+				Tasks: []model.Task{
+					{
+						Name: "task_1",
+						Type: model.TaskTypeSMTP,
+						SMTP: &model.SMTPTask{
+							From:    "no-reply@mender.io",
+							To:      []string{"user@mender.io"},
+							Cc:      []string{"support@mender.io"},
+							Bcc:     []string{"archive@mender.io"},
+							Subject: "Subject",
+							Body:    tc.Body,
+							HTML:    tc.HTML,
+						},
+					},
+				},
+			}
+
+			job := &model.Job{
+				WorkflowName: workflow.Name,
+				Status:       model.StatusPending,
+			}
+
+			dataStore.On("GetWorkflowByName",
+				mocklib.MatchedBy(
+					func(_ context.Context) bool {
+						return true
+					}),
+				workflow.Name,
+			).Return(workflow, nil)
+
+			dataStore.On("AcquireJob",
+				mocklib.MatchedBy(
+					func(_ context.Context) bool {
+						return true
+					}),
+				job,
+			).Return(job, nil)
+
+			dataStore.On("UpdateJobStatus",
+				mocklib.MatchedBy(
+					func(_ context.Context) bool {
+						return true
+					}),
+				job,
+				model.StatusDone,
+			).Return(nil)
+
+			dataStore.On("UpdateJobAddResult",
+				mocklib.MatchedBy(
+					func(_ context.Context) bool {
+						return true
+					}),
+				job,
+				mocklib.MatchedBy(
+					func(taskResult *model.TaskResult) bool {
+						assert.True(t, taskResult.Success)
+						assert.Equal(t, workflow.Tasks[0].SMTP.From, taskResult.SMTP.Sender)
+						assert.Equal(t, "", taskResult.SMTP.Error)
+						msg := taskResult.SMTP.Message
+						re := regexp.MustCompile(`[a-z0-9]{60,}`)
+						msg = re.ReplaceAllString(msg, "ID")
+						assert.Equal(t, tc.Expected, msg)
+
+						return true
+					}),
+			).Return(nil)
+
+			err := processJob(ctx, job, dataStore)
+
+			assert.Nil(t, err)
+
+			dataStore.AssertExpectations(t)
+			mockedSMTPClient.AssertExpectations(t)
+		})
 	}
-
-	job := &model.Job{
-		WorkflowName: workflow.Name,
-		Status:       model.StatusPending,
-	}
-
-	dataStore.On("GetWorkflowByName",
-		mocklib.MatchedBy(
-			func(_ context.Context) bool {
-				return true
-			}),
-		workflow.Name,
-	).Return(workflow, nil)
-
-	dataStore.On("AcquireJob",
-		mocklib.MatchedBy(
-			func(_ context.Context) bool {
-				return true
-			}),
-		job,
-	).Return(job, nil)
-
-	dataStore.On("UpdateJobStatus",
-		mocklib.MatchedBy(
-			func(_ context.Context) bool {
-				return true
-			}),
-		job,
-		model.StatusDone,
-	).Return(nil)
-
-	dataStore.On("UpdateJobAddResult",
-		mocklib.MatchedBy(
-			func(_ context.Context) bool {
-				return true
-			}),
-		job,
-		mocklib.MatchedBy(
-			func(taskResult *model.TaskResult) bool {
-				assert.True(t, taskResult.Success)
-				assert.Equal(t, workflow.Tasks[0].SMTP.From, taskResult.SMTP.Sender)
-				assert.Equal(t, "", taskResult.SMTP.Error)
-				msg := taskResult.SMTP.Message
-				re := regexp.MustCompile(`[a-z0-9]{60}`)
-				msg = re.ReplaceAllString(msg, "ID")
-				expected := "From: no-reply@mender.io\r\n" +
-					"To: user@mender.io\r\n" +
-					"Cc: user@mender.io, support@mender.io\r\n" +
-					"Subject: Subject\r\n" +
-					"MIME-Version: 1.0\r\n" +
-					"Content-Type: multipart/alternative; boundary=ID\r\n" +
-					"\r\n" +
-					"--ID\r\n" +
-					"Content-Type: text/html\r\n" +
-					"\r\n" +
-					"<html><body>HTML</body></html>\r\n" +
-					"--ID\r\n" +
-					"Content-Type: text/plain\r\n" +
-					"\r\n" +
-					"Body\r\n" +
-					"--ID--\r\n"
-				assert.Equal(t, expected, msg)
-
-				return true
-			}),
-	).Return(nil)
-
-	err := processJob(ctx, job, dataStore)
-
-	assert.Nil(t, err)
-
-	dataStore.AssertExpectations(t)
-	mockedSMTPClient.AssertExpectations(t)
 
 	smtpClient = originalSMTPClient
 }
