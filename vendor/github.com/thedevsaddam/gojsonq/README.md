@@ -1,7 +1,7 @@
 ![gojsonq-logo](gojsonq.png)
 
 [![Build Status](https://travis-ci.org/thedevsaddam/gojsonq.svg?branch=master)](https://travis-ci.org/thedevsaddam/gojsonq)
-[![Project status](https://img.shields.io/badge/version-v2.5-green.svg)](https://github.com/thedevsaddam/gojsonq/releases)
+[![Project status](https://img.shields.io/badge/version-v2.2-green.svg)](https://github.com/thedevsaddam/gojsonq/releases)
 [![Go Report Card](https://goreportcard.com/badge/github.com/thedevsaddam/gojsonq)](https://goreportcard.com/report/github.com/thedevsaddam/gojsonq)
 [![Coverage Status](https://coveralls.io/repos/github/thedevsaddam/gojsonq/badge.svg?branch=master)](https://coveralls.io/github/thedevsaddam/gojsonq?branch=master)
 [![GoDoc](https://godoc.org/github.com/thedevsaddam/gojsonq?status.svg)](https://godoc.org/github.com/thedevsaddam/gojsonq)
@@ -38,7 +38,7 @@ import "github.com/thedevsaddam/gojsonq"
 
 func main() {
 	const json = `{"name":{"first":"Tom","last":"Hanks"},"age":61}`
-	name := gojsonq.New().FromString(json).Find("name.first")
+	name := gojsonq.New().JSONString(json).Find("name.first")
 	println(name.(string)) // Tom
 }
 ```
@@ -58,7 +58,7 @@ import (
 
 func main() {
 	const json = `{"city":"dhaka","type":"weekly","temperatures":[30,39.9,35.4,33.5,31.6,33.2,30.7]}`
-	avg := gojsonq.New().FromString(json).From("temperatures").Avg()
+	avg := gojsonq.New().JSONString(json).From("temperatures").Avg()
 	fmt.Printf("Average temperature: %.2f", avg) // 33.471428571428575
 }
 ```
@@ -87,9 +87,6 @@ Special thanks to [Nahid Bin Azhar](https://github.com/nahid) for the inspiratio
 ## Contribution
 If you are interested to make the package better please send pull requests or create an issue so that others can fix.
 [Read the contribution guide here](CONTRIBUTING.md)
-
-## Special Thanks
-<a href="https://www.jetbrains.com/?from=gojsonq"><img src="jetbrains-grayscale.png" height="100" width="100" ></a>
 
 ## License
 The **gojsonq** is an open-source software licensed under the [MIT License](LICENSE.md).
