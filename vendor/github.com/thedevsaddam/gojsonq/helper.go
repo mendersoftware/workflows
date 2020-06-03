@@ -65,9 +65,9 @@ func toFloat64(v interface{}) (float64, bool) {
 
 // sortList sorts a list of interfaces
 func sortList(list []interface{}, asc bool) []interface{} {
-	var ss []string
-	var ff []float64
-	var result []interface{}
+	ss := []string{}
+	ff := []float64{}
+	result := []interface{}{}
 	for _, v := range list {
 		// sort elements for string
 		if sv, ok := v.(string); ok {
@@ -231,8 +231,7 @@ func getNestedValue(input interface{}, node, separator string) (interface{}, err
 }
 
 // makeAlias provide syntactic suger. when provide Property name as "user.name as userName"
-// it return userName as output and pure node name like: "user.name".
-// If "user.name" does not use "as" clause then it'll return "user.name", "user.name"
+// it return userName as output and pure node name like: "user.name". If "user.name" does not use "as" clause then it'll return "user.name", "user.name"
 func makeAlias(in, separator string) (string, string) {
 	const alias = " as "
 	in = strings.Replace(in, " As ", alias, -1)

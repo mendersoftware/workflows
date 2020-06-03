@@ -39,7 +39,11 @@ test:prepare_acceptance:
       - prtest_worker_image.tar
       - acceptance_testing_image.tar
 
+test:static:
+  image: golang:1.14
+
 test:unit:
+  image: golang:1.14
   services:
     - mongo:4.0
   variables:

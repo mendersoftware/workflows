@@ -1,6 +1,5 @@
-FROM golang:1.13.5-alpine3.10 as builder
-RUN apk update && apk upgrade && \
-    apk add \
+FROM golang:1.14-alpine3.12 as builder
+RUN apk add --no-cache \
     xz-dev \
     musl-dev \
     gcc
@@ -9,9 +8,8 @@ COPY . /go/src/github.com/mendersoftware/workflows
 RUN cd /go/src/github.com/mendersoftware/workflows && \
     env CGO_ENABLED=0 go test -c -o workflows-test -coverpkg $(go list ./... | grep -v vendor | grep -v mocks | grep -v test | tr  '\n' ,)
 
-FROM alpine:3.10
-RUN apk update && apk upgrade && \
-    apk add --no-cache ca-certificates xz
+FROM alpine:3.12
+RUN apk add --no-cache ca-certificates xz
 RUN mkdir -p /etc/workflows
 COPY ./config.yaml /etc/workflows
 COPY --from=builder /go/src/github.com/mendersoftware/workflows/workflows-test /usr/bin
