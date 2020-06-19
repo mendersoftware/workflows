@@ -6,9 +6,9 @@ info:
     An API for workflow management.
     Intended for use by other services.
 
-host: 'docker.mender.io'
+host: 'mender-workflows-server:8080'
 schemes:
-  - https
+  - http
 
 responses:
   NotFoundError: # 404
