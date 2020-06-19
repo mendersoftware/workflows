@@ -8,7 +8,7 @@ info:
 
 host: 'docker.mender.io'
 schemes:
-  - https
+  - http
 
 responses:
   NotFoundError: # 404
