@@ -22,6 +22,7 @@ import (
 
 	"github.com/mendersoftware/go-lib-micro/log"
 	"github.com/pkg/errors"
+	"gopkg.in/yaml.v3"
 )
 
 // Workflow stores the definition of a workflow
@@ -54,12 +55,19 @@ func GetWorkflowsFromPath(path string) map[string]*Workflow {
 	}
 
 	for _, f := range files {
-		if !strings.HasSuffix(f.Name(), ".json") {
+		if !(strings.HasSuffix(f.Name(), ".json") ||
+			strings.HasSuffix(f.Name(), ".yml") ||
+			strings.HasSuffix(f.Name(), ".yaml")) {
 			continue
 		}
 		fn := filepath.Join(path, f.Name())
 		if data, err := ioutil.ReadFile(fn); err == nil {
-			workflow, err := ParseWorkflowFromJSON([]byte(data))
+			var workflow = &Workflow{}
+			if strings.HasSuffix(f.Name(), ".json") {
+				workflow, err = ParseWorkflowFromJSON(data)
+			} else {
+				err = yaml.Unmarshal(data, workflow)
+			}
 			if err != nil {
 				l.Warn(err.Error())
 				continue
