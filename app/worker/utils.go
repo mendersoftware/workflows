@@ -15,11 +15,13 @@
 package worker
 
 import (
+	"bytes"
 	"encoding/json"
 	"io/ioutil"
 	"os"
 	"regexp"
 	"strings"
+	"text/template"
 
 	"github.com/mendersoftware/workflows/model"
 	"github.com/thedevsaddam/gojsonq"
@@ -44,7 +46,7 @@ func processJobString(data string, workflow *model.Workflow, job *model.Job) str
 		match := submatch[1]
 		if strings.HasPrefix(match, workflowInputVariable) && len(match) > len(workflowInputVariable) {
 			// Replace ${workflow.input.KEY} with the KEY input variable
-			paramName := match[len(workflowInputVariable):len(match)]
+			paramName := match[len(workflowInputVariable):]
 			for _, param := range job.InputParameters {
 				if param.Name == paramName {
 					data = strings.ReplaceAll(data, submatch[0], param.Value)
@@ -53,7 +55,7 @@ func processJobString(data string, workflow *model.Workflow, job *model.Job) str
 			}
 		} else if strings.HasPrefix(match, workflowEnvVariable) && len(match) > len(workflowEnvVariable) {
 			// Replace ${env.KEY} with the KEY environment variable
-			envName := match[len(workflowEnvVariable):len(match)]
+			envName := match[len(workflowEnvVariable):]
 			envValue := os.Getenv(envName)
 			data = strings.ReplaceAll(data, submatch[0], envValue)
 		} else if output := reExpressionOutput.FindStringSubmatch(match); len(output) > 0 {
@@ -86,6 +88,21 @@ func processJobString(data string, workflow *model.Workflow, job *model.Job) str
 	}
 
 	return data
+}
+
+// maybeExecuteGoTemplate tries to parse and execute data as a go template
+// if it fails to do so, data is returned.
+func maybeExecuteGoTemplate(data string, input map[string]interface{}) string {
+	tmpl, err := template.New("go-template").Parse(data)
+	if err != nil {
+		return data
+	}
+	buf := &bytes.Buffer{}
+	err = tmpl.Execute(buf, input)
+	if err != nil {
+		return data
+	}
+	return buf.String()
 }
 
 func processJobStringOrFile(data string, workflow *model.Workflow, job *model.Job) (string, error) {

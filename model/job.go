@@ -44,7 +44,7 @@ type Job struct {
 	WorkflowName string `json:"workflowName" bson:"workflow_name"`
 
 	// InputParameters contains the name of the workflow
-	InputParameters []InputParameter `json:"inputParameters" bson:"input_parameters"`
+	InputParameters InputParameters `json:"inputParameters" bson:"input_parameters"`
 
 	// Enumerated status of the Job and string field used for unmarshalling
 	Status       int    `json:"-" bson:"status"`
@@ -65,6 +65,16 @@ type InputParameter struct {
 
 	// Value of the input parameter
 	Value string `json:"value" bson:"value"`
+}
+
+type InputParameters []InputParameter
+
+func (param InputParameters) Map() map[string]interface{} {
+	var ret = map[string]interface{}{}
+	for _, val := range param {
+		ret[val.Name] = val.Value
+	}
+	return ret
 }
 
 // TaskResult contains the result of the execution of a task

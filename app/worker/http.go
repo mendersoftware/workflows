@@ -40,6 +40,10 @@ func processHTTPTask(httpTask *model.HTTPTask, job *model.Job,
 	workflow *model.Workflow, l *log.Logger) (*model.TaskResult, error) {
 	uri := processJobString(httpTask.URI, workflow, job)
 	payloadString := processJobString(httpTask.Body, workflow, job)
+	payloadString = maybeExecuteGoTemplate(
+		payloadString,
+		job.InputParameters.Map(),
+	)
 	payload := strings.NewReader(payloadString)
 
 	req, err := http.NewRequest(httpTask.Method, uri, payload)

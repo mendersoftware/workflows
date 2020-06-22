@@ -26,12 +26,13 @@ import (
 
 // Workflow stores the definition of a workflow
 type Workflow struct {
-	Name            string   `json:"name" bson:"_id"`
-	Description     string   `json:"description" bson:"description"`
-	Version         int      `json:"version" bson:"version"`
-	SchemaVersion   int      `json:"schemaVersion" bson:"schema_version"`
-	Tasks           []Task   `json:"tasks" bson:"tasks"`
-	InputParameters []string `json:"inputParameters" bson:"input_parameters"`
+	Name               string   `json:"name" bson:"_id"`
+	Description        string   `json:"description" bson:"description"`
+	Version            int      `json:"version" bson:"version"`
+	SchemaVersion      int      `json:"schemaVersion" bson:"schema_version"`
+	Tasks              []Task   `json:"tasks" bson:"tasks"`
+	InputParameters    []string `json:"inputParameters" bson:"input_parameters"`
+	OptionalParameters []string `json:"optionalParameters" bson:"optional_parameters,omitempty"`
 }
 
 // ParseWorkflowFromJSON parse a JSON string and returns a Workflow struct
