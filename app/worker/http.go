@@ -72,6 +72,9 @@ func processHTTPTask(httpTask *model.HTTPTask, job *model.Job,
 	var success bool
 	if len(httpTask.StatusCodes) == 0 {
 		success = true
+		if res.StatusCode >= 400 {
+			success = false
+		}
 	} else {
 		success = false
 		for _, statusCode := range httpTask.StatusCodes {
