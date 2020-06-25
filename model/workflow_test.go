@@ -140,8 +140,17 @@ func TestParseWorkflowFromInvalidJSON(t *testing.T) {
 }
 
 func TestGetWorkflowsFromPath(t *testing.T) {
-	data := []byte(`
-{
+	testCases := []struct {
+		Name string
+
+		//WorkflowFiles maps filenames to file contents
+		WorkflowFiles map[string]string
+		NumSuccessful int
+	}{{
+		Name:          "Successful JSON and YAML",
+		NumSuccessful: 2,
+		WorkflowFiles: map[string]string{
+			"decommission.json": `{
 	"name": "decommission_device",
 	"description": "Removes device info from all services.",
 	"version": 4,
@@ -168,15 +177,100 @@ func TestGetWorkflowsFromPath(t *testing.T) {
 		"authorization"
 	],
 	"schemaVersion": 1
-}`)
+}`,
+			"provision.yaml": `
+name: provision_device
+description: Provision device.
+version: 2
+tasks:
+  - name: create_device_inventory
+    type: http
+    retries: 3
+    http:
+      uri: http://mender-inventory:8080/api/internal/v1/inventory/devices
+      method: POST
+      contentType: application/json
+      body: ${workflow.input.device}
+      headers:
+        X-MEN-RequestID: ${workflow.input.request_id}
+        Authorization: ${workflow.input.authorization}
+      connectionTimeOut: 8000
+      readTimeOut: 8000
+inputParameters:
+  - request_id
+  - authorization
+  - device
+`,
+		},
+	}, {
+		Name: "Bad JSON",
 
-	dir, _ := ioutil.TempDir("", "example")
-	defer os.RemoveAll(dir) // clean up
+		WorkflowFiles: map[string]string{
+			"fail.json": "{{}",
+		},
+	}, {
+		Name: "Bad YAML",
 
-	tmpfn := filepath.Join(dir, "test.json")
-	ioutil.WriteFile(tmpfn, data, 0666)
+		WorkflowFiles: map[string]string{
+			"fail.yml": `  foo: bar: baz`,
+		},
+	}, {
+		Name: "One good / one bad / one non-workflow file",
 
-	workflows := GetWorkflowsFromPath(dir)
-	assert.Len(t, workflows, 1)
-	assert.Equal(t, "decommission_device", workflows["decommission_device"].Name)
+		NumSuccessful: 1,
+		WorkflowFiles: map[string]string{
+			"good.yaml": `
+name: provision_device
+description: Provision device.
+version: 2
+tasks:
+  - name: create_device_inventory
+    type: http
+    retries: 3
+    http:
+      uri: http://mender-inventory:8080/api/internal/v1/inventory/devices
+      method: POST
+      contentType: application/json
+      body: ${workflow.input.device}
+      headers:
+        X-MEN-RequestID: ${workflow.input.request_id}
+        Authorization: ${workflow.input.authorization}
+      connectionTimeOut: 8000
+      readTimeOut: 8000
+inputParameters:
+  - request_id
+  - authorization
+  - device
+`,
+			"bad.json":    `{foo: "bar"}`,
+			"random.file": "random content",
+		},
+	}}
+
+	t.Parallel()
+	for _, testCase := range testCases {
+		t.Run(testCase.Name, func(t *testing.T) {
+			dir, _ := ioutil.TempDir("", "go_test_workflows")
+			defer os.RemoveAll(dir)
+			for filename, contents := range testCase.WorkflowFiles {
+				tmpfn := filepath.Join(dir, filename)
+				ioutil.WriteFile(tmpfn, []byte(contents), 0666)
+
+			}
+			workflows := GetWorkflowsFromPath(dir)
+			assert.Len(t,
+				workflows,
+				testCase.NumSuccessful,
+			)
+			for name, workflow := range workflows {
+				assert.Equal(
+					t, name, workflow.Name,
+				)
+			}
+		})
+	}
+}
+func TestGetWorkflowsFromPathNoSuchDirectory(t *testing.T) {
+	workflows := GetWorkflowsFromPath("/tmp/path/to/directory/that/does/not/exist/at/all")
+	assert.Len(t, workflows, 0)
 }
