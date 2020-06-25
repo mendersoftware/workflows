@@ -30,93 +30,187 @@ import (
 )
 
 func TestProcessJobHTTP(t *testing.T) {
-	ctx := context.Background()
-	dataStore := mock.NewDataStore()
+	const responseBody = "HTTP/Response"
+	testCases := []struct {
+		Name string
 
-	requestBody := "BODY"
-
-	workflow := &model.Workflow{
-		Name: "test",
-		Tasks: []model.Task{
-			{
-				Name: "task_1",
-				Type: model.TaskTypeHTTP,
-				HTTP: &model.HTTPTask{
-					URI:    "http://localhost",
-					Method: "GET",
-					Headers: map[string]string{
-						"X-Header": "Value",
+		Workflow        *model.Workflow
+		JobRequest      *model.TaskResultHTTPRequest
+		InputParameters model.InputParameters
+		Error           interface{}
+	}{{
+		Name: "Plain GET Task",
+		Workflow: &model.Workflow{
+			Name: "test",
+			Tasks: []model.Task{
+				{
+					Name: "task_1",
+					Type: model.TaskTypeHTTP,
+					HTTP: &model.HTTPTask{
+						URI:    "http://localhost",
+						Method: "GET",
+						Headers: map[string]string{
+							"X-Header": "Value",
+						},
 					},
 				},
 			},
 		},
+		JobRequest: &model.TaskResultHTTPRequest{
+			URI:     "http://localhost",
+			Method:  "GET",
+			Headers: []string{"X-Header: Value"},
+		},
+		Error: nil,
+	}, {
+		Name: "Go-template workflow",
+		Workflow: &model.Workflow{
+			Name: "test",
+			Tasks: []model.Task{
+				{
+					Name: "task_1",
+					Type: model.TaskTypeHTTP,
+					HTTP: &model.HTTPTask{
+						URI:    "http://localhost",
+						Method: "POST",
+						Body: "{{/* This is ignored */}}" +
+							"{{range $k, $v := .}}" +
+							"{{$k}}: {{$v}}\n{{end}}",
+						ContentType: "application/yaml",
+						Headers:     map[string]string{"foo": "bar"},
+					},
+				},
+			},
+		},
+		JobRequest: &model.TaskResultHTTPRequest{
+			URI:    "http://localhost",
+			Method: "POST",
+			Headers: []string{
+				"foo: bar",
+			},
+			Body: "foo: bar\npotaito: potato\n",
+		},
+		InputParameters: model.InputParameters{
+			{Name: "foo", Value: "bar"},
+			{Name: "potaito", Value: "potato"},
+		},
+		Error: nil,
+	}, {
+		Name: "Illegal template and variable swap",
+		Workflow: &model.Workflow{
+			Name: "test",
+			Tasks: []model.Task{
+				{
+					Name: "task_1",
+					Type: model.TaskTypeHTTP,
+					HTTP: &model.HTTPTask{
+						URI:         "http://localhost",
+						Method:      "POST",
+						Body:        "{\"${workfolw.input.param}\": \"{{end}}\"",
+						ContentType: "application/yaml",
+					},
+				},
+			},
+		},
+		JobRequest: &model.TaskResultHTTPRequest{
+			URI:    "http://localhost",
+			Method: "POST",
+			Body:   "{\"foobar\": \"{{end}}\"}",
+		},
+		InputParameters: model.InputParameters{
+			{Name: "param", Value: "foobar"},
+		},
+	}}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.Name, func(t *testing.T) {
+			ctx := context.Background()
+			dataStore := mock.NewDataStore()
+			job := &model.Job{
+				WorkflowName:    testCase.Workflow.Name,
+				Status:          model.StatusPending,
+				InputParameters: testCase.InputParameters,
+			}
+			dataStore.On("GetWorkflowByName",
+				mocklib.MatchedBy(
+					func(_ context.Context) bool {
+						return true
+					}),
+				testCase.Workflow.Name,
+			).Return(testCase.Workflow, nil)
+
+			dataStore.On("AcquireJob",
+				mocklib.MatchedBy(
+					func(_ context.Context) bool {
+						return true
+					}),
+				job,
+			).Return(job, nil)
+
+			dataStore.On("UpdateJobStatus",
+				mocklib.MatchedBy(
+					func(_ context.Context) bool {
+						return true
+					}),
+				job,
+				model.StatusDone,
+			).Return(nil)
+
+			if testCase.Error == nil {
+				dataStore.On("UpdateJobAddResult",
+					mocklib.MatchedBy(
+						func(_ context.Context) bool {
+							return true
+						}),
+					job,
+					mocklib.MatchedBy(
+						func(taskResult *model.TaskResult) bool {
+							t.Log(taskResult.HTTPRequest)
+							assert.True(t, taskResult.Success)
+							assert.Equal(t,
+								testCase.Workflow.Tasks[0].HTTP.URI,
+								taskResult.HTTPRequest.URI,
+							)
+							assert.Equal(t,
+								testCase.Workflow.Tasks[0].HTTP.Method,
+								taskResult.HTTPRequest.Method,
+							)
+							assert.Equal(t, testCase.JobRequest.Headers, taskResult.HTTPRequest.Headers)
+							assert.Equal(t, http.StatusOK, taskResult.HTTPResponse.StatusCode)
+							assert.Equal(t, responseBody, taskResult.HTTPResponse.Body)
+
+							return true
+						}),
+				).Return(nil)
+			}
+
+			makeHTTPRequestOriginal := makeHTTPRequest
+			makeHTTPRequest = func(req *http.Request, timeout time.Duration) (*http.Response, error) {
+				resp := &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       ioutil.NopCloser(strings.NewReader(responseBody)),
+				}
+				return resp, nil
+			}
+			err := processJob(ctx, job, dataStore)
+			makeHTTPRequest = makeHTTPRequestOriginal
+
+			switch e := testCase.Error.(type) {
+			case bool:
+				if e {
+					assert.Error(t, err)
+				} else {
+					assert.NoError(t, err)
+				}
+			case error:
+				assert.EqualError(t, err, e.Error())
+			default:
+				assert.NoError(t, err)
+			}
+
+			dataStore.AssertExpectations(t)
+		})
 	}
-
-	job := &model.Job{
-		WorkflowName: workflow.Name,
-		Status:       model.StatusPending,
-	}
-
-	dataStore.On("GetWorkflowByName",
-		mocklib.MatchedBy(
-			func(_ context.Context) bool {
-				return true
-			}),
-		workflow.Name,
-	).Return(workflow, nil)
-
-	dataStore.On("AcquireJob",
-		mocklib.MatchedBy(
-			func(_ context.Context) bool {
-				return true
-			}),
-		job,
-	).Return(job, nil)
-
-	dataStore.On("UpdateJobStatus",
-		mocklib.MatchedBy(
-			func(_ context.Context) bool {
-				return true
-			}),
-		job,
-		model.StatusDone,
-	).Return(nil)
-
-	dataStore.On("UpdateJobAddResult",
-		mocklib.MatchedBy(
-			func(_ context.Context) bool {
-				return true
-			}),
-		job,
-		mocklib.MatchedBy(
-			func(taskResult *model.TaskResult) bool {
-				assert.True(t, taskResult.Success)
-				assert.Equal(t, workflow.Tasks[0].HTTP.URI, taskResult.HTTPRequest.URI)
-				assert.Equal(t, workflow.Tasks[0].HTTP.Method, taskResult.HTTPRequest.Method)
-				assert.Equal(t, []string{
-					"X-Header: Value",
-				}, taskResult.HTTPRequest.Headers)
-				assert.Equal(t, http.StatusOK, taskResult.HTTPResponse.StatusCode)
-				assert.Equal(t, requestBody, taskResult.HTTPResponse.Body)
-
-				return true
-			}),
-	).Return(nil)
-
-	makeHTTPRequestOriginal := makeHTTPRequest
-	makeHTTPRequest = func(req *http.Request, timeout time.Duration) (*http.Response, error) {
-		resp := &http.Response{
-			StatusCode: http.StatusOK,
-			Body:       ioutil.NopCloser(strings.NewReader(requestBody)),
-		}
-		return resp, nil
-	}
-	err := processJob(ctx, job, dataStore)
-	makeHTTPRequest = makeHTTPRequestOriginal
-
-	assert.Nil(t, err)
-
-	dataStore.AssertExpectations(t)
 }
 
 func TestProcessJobHTTPValidStatusCode(t *testing.T) {
