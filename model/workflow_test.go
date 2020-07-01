@@ -48,6 +48,18 @@ func TestParseWorkflowFromJSON(t *testing.T) {
 				"connectionTimeOut": 1000,
 				"readTimeOut": 1000
 			}
+		},
+		{
+			"name": "form_data",
+			"type": "http",
+			"http": {
+				"uri": "http://localhost:8080",
+				"method": "POST",
+				"formdata": {
+					"key": "value",
+					"another_key": "another_value"
+				}
+			}
 		}
 	],
 	"inputParameters": [
@@ -73,9 +85,11 @@ func TestParseWorkflowFromJSON(t *testing.T) {
 	assert.Equal(t, inputParameters[2], "authorization")
 
 	var tasks = workflow.Tasks
-	assert.Len(t, tasks, 1)
+	assert.Len(t, tasks, 2)
 	assert.Equal(t, tasks[0].Name, "delete_device_inventory")
 	assert.Equal(t, tasks[0].Type, TaskTypeHTTP)
+	assert.Equal(t, tasks[1].Name, "form_data")
+	assert.Equal(t, tasks[1].Type, TaskTypeHTTP)
 
 	var httpTask *HTTPTask = tasks[0].HTTP
 	assert.Equal(t, httpTask.URI, "http://mender-inventory:8080/api/0.1.0/devices/${workflow.input.device_id}")
@@ -89,6 +103,14 @@ func TestParseWorkflowFromJSON(t *testing.T) {
 	assert.Equal(t, httpTask.Headers["Authorization"], "${workflow.input.authorization}")
 	assert.Equal(t, httpTask.ConnectionTimeOut, 1000)
 	assert.Equal(t, httpTask.ReadTimeOut, 1000)
+
+	httpTask = tasks[1].HTTP
+	assert.Equal(t, httpTask.URI, "http://localhost:8080")
+	assert.Equal(t, httpTask.Method, "POST")
+	assert.Equal(t, httpTask.FormData, map[string]string{
+		"key":         "value",
+		"another_key": "another_value",
+	})
 }
 
 func TestParseWorkflowWithCLIFromJSON(t *testing.T) {

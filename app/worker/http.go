@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -39,11 +40,25 @@ var makeHTTPRequest = func(req *http.Request, timeout time.Duration) (*http.Resp
 func processHTTPTask(httpTask *model.HTTPTask, job *model.Job,
 	workflow *model.Workflow, l *log.Logger) (*model.TaskResult, error) {
 	uri := processJobString(httpTask.URI, workflow, job)
-	payloadString := processJobString(httpTask.Body, workflow, job)
-	payloadString = maybeExecuteGoTemplate(
-		payloadString,
-		job.InputParameters.Map(),
-	)
+
+	var payloadString string
+	if len(httpTask.FormData) > 0 {
+		form := url.Values{}
+		for key, value := range httpTask.FormData {
+			key = processJobString(key, workflow, job)
+			key = maybeExecuteGoTemplate(key, job.InputParameters.Map())
+			value = processJobString(value, workflow, job)
+			value = maybeExecuteGoTemplate(value, job.InputParameters.Map())
+			form.Add(key, value)
+		}
+		payloadString = form.Encode()
+	} else {
+		payloadString = processJobString(httpTask.Body, workflow, job)
+		payloadString = maybeExecuteGoTemplate(
+			payloadString,
+			job.InputParameters.Map(),
+		)
+	}
 	payload := strings.NewReader(payloadString)
 
 	req, err := http.NewRequest(httpTask.Method, uri, payload)
