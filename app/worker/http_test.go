@@ -63,6 +63,30 @@ func TestProcessJobHTTP(t *testing.T) {
 		},
 		Error: nil,
 	}, {
+		Name: "POST form data",
+		Workflow: &model.Workflow{
+			Name: "test",
+			Tasks: []model.Task{
+				{
+					Name: "task_1",
+					Type: model.TaskTypeHTTP,
+					HTTP: &model.HTTPTask{
+						URI:    "http://localhost",
+						Method: "POST",
+						FormData: map[string]string{
+							"key": "value to be encoded",
+						},
+					},
+				},
+			},
+		},
+		JobRequest: &model.TaskResultHTTPRequest{
+			URI:    "http://localhost",
+			Method: "POST",
+			Body:   "key=value+to+be+encoded",
+		},
+		Error: nil,
+	}, {
 		Name: "Go-template workflow",
 		Workflow: &model.Workflow{
 			Name: "test",
