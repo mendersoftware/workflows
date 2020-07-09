@@ -10,6 +10,11 @@ host: 'mender-workflows-server:8080'
 schemes:
   - http
 
+consumes:
+  - application/json
+produces:
+  - application/json
+
 responses:
   NotFoundError: # 404
     description: Not Found.
@@ -35,17 +40,16 @@ responses:
 paths:
   /status:
     get:
+      operationId: Check Health
       summary: Get health status of service
       description: |
         Returns status of the running service.
-      produces:
-        - application/json
       responses:
         200:
           description: Successful response.
           examples:
             application/json:
-              - status: ok
+              status: ok
           schema:
             type: object
             properties:
@@ -60,6 +64,7 @@ paths:
 
   /api/v1/workflow/{name}:
     post:
+      operationId: Start Workflow
       summary: Start a new workflow
       description: |
         Starts a new workflow given by the name path-parameter.
@@ -77,8 +82,6 @@ paths:
             type: array
             items:
               $ref: "#/definitions/InputParameter"
-      produces:
-        - application/json
       responses:
         201:
           description: Workflow created successfully
@@ -96,6 +99,7 @@ paths:
 
   /api/v1/workflow/{name}/{id}:
     get:
+      operationId: Workflow Status
       summary: Gets the workflow status for the given id.
       description: |
         Gets the workflow status for the given workflow name and id provided
@@ -111,8 +115,6 @@ paths:
           description: Job identifier
           required: true
           type: string
-      produces:
-        - application/json
       responses:
         200:
           description: Successful query
@@ -123,9 +125,8 @@ paths:
 
   /api/v1/metadata/workflows:
     get:
+      operationId: List Workflows
       summary: Get all workflow definitions
-      produces:
-        - application/json
       responses:
         200:
           description: Successful response
@@ -135,6 +136,7 @@ paths:
               $ref: "#/definitions/Workflow"
 
     post:
+      operationId: Register Workflow
       summary: Register a new workflow
       parameters:
         - name: workflowDefinition
@@ -143,8 +145,6 @@ paths:
           required: true
           schema:
             $ref: "#/definitions/Workflow"
-      produces:
-        - application/json
       responses:
         201:
           description: Successful response.
@@ -162,8 +162,7 @@ definitions:
         description: Description of the error.
         type: string
     example:
-      application/json:
-          error: "failed: JSON payload is empty"
+      error: "failed: JSON payload is empty"
 
   CLIParams:
     description: CLI parameters
@@ -250,9 +249,8 @@ definitions:
       - name
       - value
     example:
-      application/json:
-        name: key
-        value: parameter
+      name: key
+      value: parameter
 
   TaskResultCLI:
     type: object
