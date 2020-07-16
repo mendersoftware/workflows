@@ -181,8 +181,6 @@ github.com/mendersoftware/go-lib-micro v0.0.0-20200529072844-ecc6d0b89fa6 h1:vWR
 github.com/mendersoftware/go-lib-micro v0.0.0-20200529072844-ecc6d0b89fa6/go.mod h1:DHK4Anv1GHr/AxFtjfyAyJ92tZaLcJyc0j/0ndpU1SY=
 github.com/mendersoftware/inventory v0.0.0-20200522065057-a25956b1ec7b/go.mod h1:D1QAZ24QhWlZG/l5Hl0ARFQCRTpFyMSqBqGoCpDWfME=
 github.com/mendersoftware/mendertesting v0.0.0-20200528113222-083aca144cb7/go.mod h1:WZyiX1zeljfyFaTjmbR84+wHjzmPDLDvOdRHZnnLM/0=
-github.com/mendersoftware/mendertesting v0.0.0-20200602125439-77581b5b7449 h1:gnpREMgsw482N3r6yElud3vqIzHweLtRrHJiTNWlw3A=
-github.com/mendersoftware/mendertesting v0.0.0-20200602125439-77581b5b7449/go.mod h1:WZyiX1zeljfyFaTjmbR84+wHjzmPDLDvOdRHZnnLM/0=
 github.com/mendersoftware/mendertesting v0.0.1 h1:Uh3yPaHLEC+27y8ZBpDLtwE1LZaPclKuNBCH+A3oRI4=
 github.com/mendersoftware/mendertesting v0.0.1/go.mod h1:WZyiX1zeljfyFaTjmbR84+wHjzmPDLDvOdRHZnnLM/0=
 github.com/miekg/dns v1.0.14/go.mod h1:W1PPwlIAgtquWBMBEV9nkV9Cazfe8ScdGz/Lj7v3Nrg=
@@ -264,8 +262,6 @@ github.com/stretchr/testify v1.2.2/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXf
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
 github.com/stretchr/testify v1.4.0/go.mod h1:j7eGeouHqKxXV5pUuKE4zz7dFj8WfuZ+81PSLYec5m4=
 github.com/stretchr/testify v1.5.1/go.mod h1:5W2xD1RspED5o8YsWQXVCued0rvSQ+mT+I5cxcmMvtA=
-github.com/stretchr/testify v1.6.0 h1:jlIyCplCJFULU/01vCkhKuTyc3OorI3bJFuw6obfgho=
-github.com/stretchr/testify v1.6.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/stretchr/testify v1.6.1 h1:hDPOHmpOpP40lSULcqw7IrRb/u7w6RpDC9399XyoNd0=
 github.com/stretchr/testify v1.6.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/subosito/gotenv v1.2.0 h1:Slr1R9HxAlEKefgq5jn9U+DnETlIUa6HfgEzj0g5d7s=

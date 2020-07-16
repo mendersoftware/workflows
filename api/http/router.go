@@ -15,7 +15,11 @@
 package http
 
 import (
+	"context"
+
 	"github.com/gin-gonic/gin"
+	"github.com/mendersoftware/go-lib-micro/log"
+
 	"github.com/mendersoftware/workflows/store"
 )
 
@@ -32,8 +36,13 @@ const (
 // NewRouter returns the gin router
 func NewRouter(dataStore store.DataStore) *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
+	gin.DisableConsoleColor()
+
 	router := gin.New()
-	router.Use(gin.Logger())
+	ctx := context.Background()
+	l := log.FromContext(ctx)
+
+	router.Use(routerLogger(l))
 	router.Use(gin.Recovery())
 
 	status := NewStatusController()
