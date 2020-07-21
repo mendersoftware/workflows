@@ -1,6 +1,6 @@
 swagger: '2.0'
 info:
-  title: Deployments
+  title: Workflows
   version: '1'
   description: |
     An API for workflow management.
