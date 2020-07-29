@@ -186,6 +186,10 @@ func NewDataStoreWithClient(client *Client, c config.Reader) *DataStoreMongo {
 	}
 }
 
+func (db *DataStoreMongo) Ping(ctx context.Context) error {
+	return db.client.Ping(ctx, nil)
+}
+
 // LoadWorkflows from filesystem if the workflowsPath setting is provided
 func (db *DataStoreMongo) LoadWorkflows(ctx context.Context, l *log.Logger) error {
 	workflowsPath := config.Config.GetString(dconfig.SettingWorkflowsPath)
