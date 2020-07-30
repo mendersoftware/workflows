@@ -32,6 +32,54 @@ import (
 	"github.com/mendersoftware/workflows/store/mock"
 )
 
+func TestHealthCheck(t *testing.T) {
+	testCases := []struct {
+		Name string
+
+		DataStoreErr error
+		HTTPStatus   int
+		HTTPBody     map[string]interface{}
+	}{{
+		Name:       "ok",
+		HTTPStatus: http.StatusOK,
+	}, {
+		Name:         "error, MongoDB not reachable",
+		DataStoreErr: errors.New("connection refused"),
+		HTTPStatus:   http.StatusServiceUnavailable,
+		HTTPBody: map[string]interface{}{
+			"error": "error reaching MongoDB: connection refused",
+		},
+	}}
+
+	for _, tc := range testCases {
+		t.Run(tc.Name, func(t *testing.T) {
+			dataStore := mock.NewDataStore()
+			router := NewRouter(dataStore)
+			dataStore.On("Ping", mocklib.Anything).
+				Return(tc.DataStoreErr)
+
+			req, err := http.NewRequest("GET", "http://localhost"+APIURLHealth, nil)
+			if !assert.NoError(t, err) {
+				t.FailNow()
+			}
+
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, req)
+			assert.Equal(t, tc.HTTPStatus, w.Code)
+			if tc.HTTPStatus >= 400 {
+				var bodyJSON map[string]interface{}
+				decoder := json.NewDecoder(w.Body)
+				err := decoder.Decode(&bodyJSON)
+				if assert.NoError(t, err) {
+					assert.Equal(t, tc.HTTPBody, bodyJSON)
+				}
+			} else {
+				assert.Nil(t, w.Body.Bytes())
+			}
+		})
+	}
+}
+
 func TestWorkflowNotFound(t *testing.T) {
 	dataStore := mock.NewDataStore()
 	router := NewRouter(dataStore)
