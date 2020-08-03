@@ -31,6 +31,7 @@ var (
 
 // DataStore interface for DataStore services
 type DataStore interface {
+	Ping(ctx context.Context) error
 	InsertWorkflows(ctx context.Context, workflow ...model.Workflow) (int, error)
 	GetWorkflowByName(ctx context.Context, workflowName string) (*model.Workflow, error)
 	GetWorkflows(ctx context.Context) []model.Workflow

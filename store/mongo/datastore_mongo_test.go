@@ -899,3 +899,10 @@ func TestGetAllJobs(t *testing.T) {
 	assert.Equal(t, job.InputParameters, jobs[0].InputParameters)
 	assert.Equal(t, model.StatusPending, jobs[0].Status)
 }
+
+func TestPing(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.TODO(), time.Second)
+	defer cancel()
+	err := testDataStore.Ping(ctx)
+	assert.NoError(t, err)
+}

@@ -15,16 +15,23 @@
 package http
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/mendersoftware/go-lib-micro/log"
 	"github.com/mendersoftware/workflows/app/worker"
 	"github.com/mendersoftware/workflows/model"
 	"github.com/mendersoftware/workflows/store"
+)
+
+const (
+	defaultTimeout = time.Second * 5
 )
 
 // WorkflowController container for end-points
@@ -38,6 +45,20 @@ func NewWorkflowController(dataStore store.DataStore) *WorkflowController {
 	return &WorkflowController{
 		dataStore: dataStore,
 	}
+}
+
+func (h WorkflowController) HealthCheck(c *gin.Context) {
+	ctx := c.Request.Context()
+	ctx, cancel := context.WithTimeout(ctx, defaultTimeout)
+	defer cancel()
+	err := h.dataStore.Ping(ctx)
+	if err != nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{
+			"error": "error reaching MongoDB: " + err.Error(),
+		})
+		return
+	}
+	c.Status(http.StatusOK)
 }
 
 // RegisterWorkflow responds to POST /api/v1/metadata/workflows

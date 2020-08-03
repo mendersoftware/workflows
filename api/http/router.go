@@ -27,6 +27,7 @@ import (
 const (
 	APIURLStatus = "/status"
 
+	APIURLHealth     = "/api/v1/health"
 	APIURLWorkflow   = "/api/v1/workflow/:name"
 	APIURLWorkflowID = "/api/v1/workflow/:name/:id"
 
@@ -49,6 +50,8 @@ func NewRouter(dataStore store.DataStore) *gin.Engine {
 	router.GET(APIURLStatus, status.Status)
 
 	workflow := NewWorkflowController(dataStore)
+	router.GET(APIURLHealth, workflow.HealthCheck)
+
 	router.POST(APIURLWorkflow, workflow.StartWorkflow)
 	router.GET(APIURLWorkflowID, workflow.GetWorkflowByNameAndID)
 
