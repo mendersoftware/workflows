@@ -58,7 +58,7 @@ func (h WorkflowController) HealthCheck(c *gin.Context) {
 		})
 		return
 	}
-	c.Status(http.StatusOK)
+	c.Status(http.StatusNoContent)
 }
 
 // RegisterWorkflow responds to POST /api/v1/metadata/workflows

@@ -41,7 +41,7 @@ func TestHealthCheck(t *testing.T) {
 		HTTPBody     map[string]interface{}
 	}{{
 		Name:       "ok",
-		HTTPStatus: http.StatusOK,
+		HTTPStatus: http.StatusNoContent,
 	}, {
 		Name:         "error, MongoDB not reachable",
 		DataStoreErr: errors.New("connection refused"),
