@@ -40,10 +40,8 @@ responses:
 paths:
   /status:
     get:
-      operationId: Check Health
-      summary: Get health status of service
-      description: |
-        Returns status of the running service.
+      operationId: Check Liveliness
+      summary: Check if service API is alive and serving requests
       responses:
         200:
           description: Successful response.
@@ -57,8 +55,20 @@ paths:
                 type: string
               name:
                 type: string
-        400:
-          $ref: "#/responses/InvalidRequestError"
+        500:
+          $ref: "#/responses/InternalServerError"
+
+  /health:
+    get:
+      operationId: Check Health
+      summary: Check if service and all operational dependencies are healthy.
+      responses:
+        204:
+          description: Service is healthy.
+        502:
+          description: Service is temporarily unavailable (currently unhealthy).
+          schema:
+            $ref: "#/definitions/Error"
         500:
           $ref: "#/responses/InternalServerError"
 
