@@ -45,7 +45,7 @@ test:static:
 test:unit:
   image: golang:1.14
   services:
-    - mongo:4.0
+    - mongo:4.4
   variables:
     WORKFLOWS_MONGO_URL: "mongodb://mongo"
 
