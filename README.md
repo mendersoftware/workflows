@@ -1,5 +1,5 @@
 [![Build Status](https://gitlab.com/Northern.tech/Mender/workflows/badges/master/pipeline.svg)](https://gitlab.com/Northern.tech/Mender/workflows/pipelines)
-[![codecov](https://codecov.io/gh/mendersoftware/workflows/branch/master/graph/badge.svg)](https://codecov.io/gh/mendersoftware/workflows)
+[![Coverage Status](https://coveralls.io/repos/github/mendersoftware/workflows/badge.svg?branch=master)](https://coveralls.io/github/mendersoftware/workflows?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/mendersoftware/workflows)](https://goreportcard.com/report/github.com/mendersoftware/workflows)
 [![Docker pulls](https://img.shields.io/docker/pulls/mendersoftware/workflows.svg?maxAge=3600)](https://hub.docker.com/r/mendersoftware/workflows/)
 
