@@ -16,7 +16,7 @@ services:
           - mmock
 
   acceptance-testing:
-    image: acceptance-testing:latest
+    image: mendersoftware/mender-test-containers:acceptance-testing
     command: sh -c "while true; do sleep 5; done;"
     volumes:
       - ".:/testing"
