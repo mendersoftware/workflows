@@ -1,0 +1,42 @@
+{
+    "name": "sync_device_status",
+    "description": "Gets the device status from deviceauth and updates inventory with it",
+    "version": 1,
+    "tasks": [
+        {
+            "name": "devauth_get_device_status",
+            "type": "http",
+            "retries": 3,
+            "http": {
+                "uri": "http://mender-device-auth:8080/api/internal/v1/devauth/tenants/${workflow.input.tenant_id}/devices/${workflow.input.device_id}/status",
+                "method": "GET",
+                "headers": {
+                    "X-MEN-RequestID": "${workflow.input.request_id}"
+                },
+                "connectionTimeOut": 8000,
+                "readTimeOut": 8000
+            }
+        },
+        {
+            "name": "inventory_set_device_status",
+            "type": "http",
+            "retries": 3,
+            "http": {
+                "uri": "http://mender-inventory:8080/api/internal/v1/inventory/tenants/${workflow.input.tenant_id}/devices/${devauth_get_device_status.json.status}",
+                "method": "POST",
+                "contentType": "application/json",
+                "body": "[\"${workflow.input.device_id}\"]",
+                "headers": {
+                    "X-MEN-RequestID": "${workflow.input.request_id}"
+                },
+                "connectionTimeOut": 8000,
+                "readTimeOut": 8000
+            }
+        }
+    ],
+    "inputParameters": [
+        "tenant_id",
+        "device_id",
+        "request_id"
+    ]
+}
