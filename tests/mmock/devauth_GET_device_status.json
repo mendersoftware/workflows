@@ -1,0 +1,14 @@
+{
+	"description": "devauth: GET device status by ID",
+	"request": {
+		"method": "GET",
+        "path": "/api/internal/v1/devauth/tenants/1/devices/2/status"
+	},
+	"response": {
+        "statusCode": 200,
+        "headers": {
+			"Content-Type":["application/json"]
+		},
+        "body": "{\"status\": \"accepted\"}"
+	}
+}
