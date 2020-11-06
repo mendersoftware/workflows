@@ -17,7 +17,8 @@ services:
 
   acceptance-testing:
     image: mendersoftware/mender-test-containers:acceptance-testing
-    command: sh -c "while true; do sleep 5; done;"
+    entrypoint: sh
+    command: -c "while true; do sleep 5; done;"
     volumes:
       - ".:/testing"
     networks:
