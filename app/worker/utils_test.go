@@ -140,3 +140,83 @@ func TestProcessJobStringJSONOutputFromPreviousResult(t *testing.T) {
 		assert.Equal(t, test.expectedValue, res)
 	}
 }
+
+func TestProcessJobJSON(t *testing.T) {
+	var tests = map[string]struct {
+		json   interface{}
+		result interface{}
+	}{
+		"string": {
+			json:   "_${workflow.input.key}_",
+			result: "_test_",
+		},
+		"map": {
+			json: map[string]interface{}{
+				"key":         "_${workflow.input.key}_",
+				"other-key":   "other-value",
+				"numeric-key": 1,
+			},
+			result: map[string]interface{}{
+				"key":         "_test_",
+				"other-key":   "other-value",
+				"numeric-key": 1,
+			},
+		},
+		"nested map": {
+			json: map[string]interface{}{
+				"parent": map[string]interface{}{
+					"key": "_${workflow.input.key}_",
+				},
+				"other-key":   "other-value",
+				"numeric-key": 1,
+			},
+			result: map[string]interface{}{
+				"parent": map[string]interface{}{
+					"key": "_test_",
+				},
+				"other-key":   "other-value",
+				"numeric-key": 1,
+			},
+		},
+		"list": {
+			json: []interface{}{
+				map[string]interface{}{
+					"key": "_${workflow.input.key}_",
+				},
+				map[string]interface{}{
+					"other-key": "other-value",
+				},
+			},
+			result: []interface{}{
+				map[string]interface{}{
+					"key": "_test_",
+				},
+				map[string]interface{}{
+					"other-key": "other-value",
+				},
+			},
+		},
+	}
+
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			workflow := &model.Workflow{
+				Name: "test",
+				InputParameters: []string{
+					"key",
+				},
+			}
+			job := &model.Job{
+				InputParameters: []model.InputParameter{
+					{
+						Name:  "key",
+						Value: "test",
+					},
+				},
+			}
+
+			res := processJobJSON(test.json, workflow, job)
+			assert.Equal(t, test.result, res)
+		})
+	}
+}

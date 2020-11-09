@@ -2,7 +2,7 @@ version: '2.1'
 services:
 
   mongodb:
-    image: 'bitnami/mongodb:4.0'
+    image: 'bitnami/mongodb:4.4'
     ports:
       - "27017:27017"
     networks:

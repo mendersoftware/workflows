@@ -15,6 +15,7 @@
 package worker
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -52,6 +53,13 @@ func processHTTPTask(httpTask *model.HTTPTask, job *model.Job,
 			form.Add(key, value)
 		}
 		payloadString = form.Encode()
+	} else if httpTask.JSON != nil {
+		payloadJSON := processJobJSON(httpTask.JSON, workflow, job)
+		payloadBytes, err := json.Marshal(payloadJSON)
+		if err != nil {
+			return nil, err
+		}
+		payloadString = string(payloadBytes)
 	} else {
 		payloadString = processJobString(httpTask.Body, workflow, job)
 		payloadString = maybeExecuteGoTemplate(

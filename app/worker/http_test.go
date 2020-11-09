@@ -63,6 +63,33 @@ func TestProcessJobHTTP(t *testing.T) {
 		},
 		Error: nil,
 	}, {
+		Name: "POST JSON",
+		Workflow: &model.Workflow{
+			Name: "test",
+			Tasks: []model.Task{
+				{
+					Name: "task_1",
+					Type: model.TaskTypeHTTP,
+					HTTP: &model.HTTPTask{
+						URI:    "http://localhost",
+						Method: "POST",
+						JSON: map[string]interface{}{
+							"foo": "${workflow.input.foo}",
+						},
+					},
+				},
+			},
+		},
+		JobRequest: &model.TaskResultHTTPRequest{
+			URI:    "http://localhost",
+			Method: "POST",
+			Body:   `{"foo":"bar"}`,
+		},
+		InputParameters: model.InputParameters{
+			{Name: "foo", Value: "bar"},
+		},
+		Error: nil,
+	}, {
 		Name: "POST form data",
 		Workflow: &model.Workflow{
 			Name: "test",
@@ -130,7 +157,7 @@ func TestProcessJobHTTP(t *testing.T) {
 					HTTP: &model.HTTPTask{
 						URI:         "http://localhost",
 						Method:      "POST",
-						Body:        "{\"${workfolw.input.param}\": \"{{end}}\"",
+						Body:        "{\"${workflow.input.param}\": \"{{end}}\"}",
 						ContentType: "application/yaml",
 					},
 				},
@@ -200,6 +227,7 @@ func TestProcessJobHTTP(t *testing.T) {
 								taskResult.HTTPRequest.Method,
 							)
 							assert.Equal(t, testCase.JobRequest.Headers, taskResult.HTTPRequest.Headers)
+							assert.Equal(t, testCase.JobRequest.Body, taskResult.HTTPRequest.Body)
 							assert.Equal(t, http.StatusOK, taskResult.HTTPResponse.StatusCode)
 							assert.Equal(t, responseBody, taskResult.HTTPResponse.Body)
 

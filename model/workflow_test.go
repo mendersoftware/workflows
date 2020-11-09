@@ -60,6 +60,18 @@ func TestParseWorkflowFromJSON(t *testing.T) {
 					"another_key": "another_value"
 				}
 			}
+		},
+		{
+			"name": "json",
+			"type": "http",
+			"http": {
+				"uri": "http://localhost:8080",
+				"method": "POST",
+				"json": {
+					"key": "value",
+					"another_key": "another_value"
+				}
+			}
 		}
 	],
 	"inputParameters": [
@@ -85,7 +97,7 @@ func TestParseWorkflowFromJSON(t *testing.T) {
 	assert.Equal(t, inputParameters[2], "authorization")
 
 	var tasks = workflow.Tasks
-	assert.Len(t, tasks, 2)
+	assert.Len(t, tasks, 3)
 	assert.Equal(t, tasks[0].Name, "delete_device_inventory")
 	assert.Equal(t, tasks[0].Type, TaskTypeHTTP)
 	assert.Equal(t, tasks[1].Name, "form_data")
@@ -108,6 +120,14 @@ func TestParseWorkflowFromJSON(t *testing.T) {
 	assert.Equal(t, httpTask.URI, "http://localhost:8080")
 	assert.Equal(t, httpTask.Method, "POST")
 	assert.Equal(t, httpTask.FormData, map[string]string{
+		"key":         "value",
+		"another_key": "another_value",
+	})
+
+	httpTask = tasks[2].HTTP
+	assert.Equal(t, httpTask.URI, "http://localhost:8080")
+	assert.Equal(t, httpTask.Method, "POST")
+	assert.Equal(t, httpTask.JSON, map[string]interface{}{
 		"key":         "value",
 		"another_key": "another_value",
 	})
