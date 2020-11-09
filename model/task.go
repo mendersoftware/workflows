@@ -38,6 +38,7 @@ type HTTPTask struct {
 	ContentType       string            `json:"contentType,omitempty" bson:"contentType"`
 	Body              string            `json:"body,omitempty" bson:"body"`
 	FormData          map[string]string `json:"formdata,omitempty" bson:"formdata"`
+	JSON              interface{}       `json:"json,omittempty" bson:"json"`
 	StatusCodes       []int             `json:"statusCodes,omitempty" bson:"statusCodes"`
 	Headers           map[string]string `json:"headers" bson:"headers"`
 	ConnectionTimeOut int               `json:"connectionTimeOut" bson:"connectionTimeOut"`

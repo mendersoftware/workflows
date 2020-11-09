@@ -118,6 +118,25 @@ func processJobStringOrFile(data string, workflow *model.Workflow, job *model.Jo
 	return data, nil
 }
 
+func processJobJSON(data interface{}, workflow *model.Workflow, job *model.Job) interface{} {
+	if value, ok := data.([]interface{}); ok {
+		result := make([]interface{}, len(value))
+		for i, item := range value {
+			result[i] = processJobJSON(item, workflow, job)
+		}
+		return result
+	} else if value, ok := data.(map[string]interface{}); ok {
+		result := make(map[string]interface{})
+		for key, item := range value {
+			result[key] = processJobJSON(item, workflow, job)
+		}
+		return result
+	} else if value, ok := data.(string); ok {
+		return processJobString(value, workflow, job)
+	}
+	return data
+}
+
 // ConvertAnythingToString returns the string representation of anything
 func ConvertAnythingToString(value interface{}) (string, error) {
 	valueString, ok := value.(string)
