@@ -30,7 +30,7 @@ import (
 const (
 	workflowEnvVariable   = "env."
 	workflowInputVariable = "workflow.input."
-	regexVariable         = `\$\{([^\}]+)\}`
+	regexVariable         = `\$\{([^\}\|]+)(?:\|([^\}]+))?}`
 	regexOutputVariable   = `(.*)\.json\.(.*)`
 )
 
@@ -44,19 +44,29 @@ func processJobString(data string, workflow *model.Workflow, job *model.Job) str
 	for _, submatch := range matches {
 		// content of the ${...} expression, without the brackets
 		match := submatch[1]
+		defaultValue := submatch[2]
 		if strings.HasPrefix(match, workflowInputVariable) && len(match) > len(workflowInputVariable) {
 			// Replace ${workflow.input.KEY} with the KEY input variable
 			paramName := match[len(workflowInputVariable):]
+			found := false
 			for _, param := range job.InputParameters {
 				if param.Name == paramName {
-					data = strings.ReplaceAll(data, submatch[0], param.Value)
+					value := param.Value
+					data = strings.ReplaceAll(data, submatch[0], value)
+					found = true
 					break
 				}
+			}
+			if found == false && defaultValue != "" {
+				data = strings.ReplaceAll(data, submatch[0], defaultValue)
 			}
 		} else if strings.HasPrefix(match, workflowEnvVariable) && len(match) > len(workflowEnvVariable) {
 			// Replace ${env.KEY} with the KEY environment variable
 			envName := match[len(workflowEnvVariable):]
 			envValue := os.Getenv(envName)
+			if envValue == "" {
+				envValue = defaultValue
+			}
 			data = strings.ReplaceAll(data, submatch[0], envValue)
 		} else if output := reExpressionOutput.FindStringSubmatch(match); len(output) > 0 {
 			// Replace ${TASK_NAME.json.JSONPATH} with the value of the JSONPATH expression from the
@@ -79,6 +89,9 @@ func processJobString(data string, workflow *model.Workflow, job *model.Job) str
 					}
 					varValueString, err := ConvertAnythingToString(varValue)
 					if err == nil {
+						if varValueString == "" {
+							varValueString = defaultValue
+						}
 						data = strings.ReplaceAll(data, submatch[0], varValueString)
 					}
 					break

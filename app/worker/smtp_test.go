@@ -117,6 +117,7 @@ func TestProcessJobSMTP(t *testing.T) {
 
 			ctx := context.Background()
 			dataStore := mock.NewDataStore()
+			defer dataStore.AssertExpectations(t)
 
 			workflow := &model.Workflow{
 				Name: "test",
@@ -190,9 +191,6 @@ func TestProcessJobSMTP(t *testing.T) {
 			err := processJob(ctx, job, dataStore)
 
 			assert.Nil(t, err)
-
-			dataStore.AssertExpectations(t)
-			mockedSMTPClient.AssertExpectations(t)
 		})
 	}
 
@@ -201,6 +199,8 @@ func TestProcessJobSMTP(t *testing.T) {
 
 func TestProcessJobSMTPLoadFromFile(t *testing.T) {
 	var mockedSMTPClient = new(SMTPClientMock)
+	defer mockedSMTPClient.AssertExpectations(t)
+
 	var originalSMTPClient = smtpClient
 	smtpClient = mockedSMTPClient
 
@@ -224,9 +224,10 @@ func TestProcessJobSMTPLoadFromFile(t *testing.T) {
 
 	ctx := context.Background()
 	dataStore := mock.NewDataStore()
+	defer dataStore.AssertExpectations(t)
+
 	tmpFile, err := ioutil.TempFile("", "mail.body")
 	assert.Nil(t, err)
-
 	defer os.Remove(tmpFile.Name())
 
 	_, err = tmpFile.Write([]byte("Hello\n\n This is the TestProcessJobSMTPLoadFromFile" +
@@ -304,9 +305,6 @@ func TestProcessJobSMTPLoadFromFile(t *testing.T) {
 
 	assert.Nil(t, err)
 
-	dataStore.AssertExpectations(t)
-	mockedSMTPClient.AssertExpectations(t)
-
 	smtpClient = originalSMTPClient
 }
 
@@ -369,6 +367,7 @@ func TestProcessJobSMTPLoadFromFileFailed(t *testing.T) {
 
 			ctx := context.Background()
 			dataStore := mock.NewDataStore()
+			defer dataStore.AssertExpectations(t)
 
 			dataStore.On("GetWorkflowByName",
 				mocklib.MatchedBy(
@@ -398,10 +397,7 @@ func TestProcessJobSMTPLoadFromFileFailed(t *testing.T) {
 			err := processJob(ctx, job, dataStore)
 
 			assert.NotNil(t, err)
-			assert.Equal(t, err.Error(), "open /this/file/does/not/exits/for/sure: no such file or directory")
-
-			dataStore.AssertExpectations(t)
-			mockedSMTPClient.AssertExpectations(t)
+			assert.Equal(t, "open /this/file/does/not/exits/for/sure: no such file or directory", err.Error())
 		})
 	}
 
@@ -410,6 +406,8 @@ func TestProcessJobSMTPLoadFromFileFailed(t *testing.T) {
 
 func TestProcessJobSMTPFailure(t *testing.T) {
 	var mockedSMTPClient = new(SMTPClientMock)
+	defer mockedSMTPClient.AssertExpectations(t)
+
 	var originalSMTPClient = smtpClient
 	smtpClient = mockedSMTPClient
 
@@ -435,6 +433,7 @@ func TestProcessJobSMTPFailure(t *testing.T) {
 
 	ctx := context.Background()
 	dataStore := mock.NewDataStore()
+	defer dataStore.AssertExpectations(t)
 
 	workflow := &model.Workflow{
 		Name: "test",
@@ -502,9 +501,6 @@ func TestProcessJobSMTPFailure(t *testing.T) {
 	err := processJob(ctx, job, dataStore)
 
 	assert.Nil(t, err)
-
-	dataStore.AssertExpectations(t)
-	mockedSMTPClient.AssertExpectations(t)
 
 	smtpClient = originalSMTPClient
 }

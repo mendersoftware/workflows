@@ -16,6 +16,7 @@ package worker
 
 import (
 	"context"
+	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -28,6 +29,7 @@ import (
 func TestProcessJobCLI(t *testing.T) {
 	ctx := context.Background()
 	dataStore := mock.NewDataStore()
+	defer dataStore.AssertExpectations(t)
 
 	workflow := &model.Workflow{
 		Name: "test",
@@ -96,13 +98,12 @@ func TestProcessJobCLI(t *testing.T) {
 	err := processJob(ctx, job, dataStore)
 
 	assert.Nil(t, err)
-
-	dataStore.AssertExpectations(t)
 }
 
 func TestProcessJobCLIWrongExitCode(t *testing.T) {
 	ctx := context.Background()
 	dataStore := mock.NewDataStore()
+	defer dataStore.AssertExpectations(t)
 
 	workflow := &model.Workflow{
 		Name: "test",
@@ -123,13 +124,13 @@ func TestProcessJobCLIWrongExitCode(t *testing.T) {
 				Type: model.TaskTypeHTTP,
 				HTTP: &model.HTTPTask{
 					URI:    "http://localhost",
-					Method: "GET",
+					Method: http.MethodGet,
 					Headers: map[string]string{
 						"X-Header": "Value",
 					},
 					StatusCodes: []int{
-						200,
-						201,
+						http.StatusOK,
+						http.StatusCreated,
 					},
 				},
 			},
@@ -186,13 +187,12 @@ func TestProcessJobCLIWrongExitCode(t *testing.T) {
 
 	err := processJob(ctx, job, dataStore)
 	assert.Nil(t, err)
-
-	dataStore.AssertExpectations(t)
 }
 
 func TestProcessJobCLTimeOut(t *testing.T) {
 	ctx := context.Background()
 	dataStore := mock.NewDataStore()
+	defer dataStore.AssertExpectations(t)
 
 	workflow := &model.Workflow{
 		Name: "test",
@@ -262,13 +262,12 @@ func TestProcessJobCLTimeOut(t *testing.T) {
 
 	err := processJob(ctx, job, dataStore)
 	assert.Nil(t, err)
-
-	dataStore.AssertExpectations(t)
 }
 
 func TestProcessJobCLIFailedIncompatibleDefinition(t *testing.T) {
 	ctx := context.Background()
 	dataStore := mock.NewDataStore()
+	defer dataStore.AssertExpectations(t)
 
 	workflow := &model.Workflow{
 		Name: "test",
@@ -313,6 +312,4 @@ func TestProcessJobCLIFailedIncompatibleDefinition(t *testing.T) {
 	err := processJob(ctx, job, dataStore)
 	assert.NotNil(t, err)
 	assert.EqualError(t, err, "Error: Task definition incompatible with specified type (cli)")
-
-	dataStore.AssertExpectations(t)
 }

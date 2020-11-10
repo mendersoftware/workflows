@@ -28,7 +28,7 @@ func TestStatus(t *testing.T) {
 	router := NewRouter(nil)
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("GET", "/status", nil)
+	req, _ := http.NewRequest(http.MethodGet, "/status", nil)
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)

@@ -110,6 +110,22 @@ func processTask(task model.Task, job *model.Job,
 	var result *model.TaskResult
 	var err error
 
+	if len(task.Requires) > 0 {
+		for _, require := range task.Requires {
+			require = processJobString(require, workflow, job)
+			require = maybeExecuteGoTemplate(require, job.InputParameters.Map())
+			if require == "" {
+				result := &model.TaskResult{
+					Name:    task.Name,
+					Type:    task.Type,
+					Success: true,
+					Skipped: true,
+				}
+				return result, nil
+			}
+		}
+	}
+
 	switch task.Type {
 	case model.TaskTypeHTTP:
 		var httpTask *model.HTTPTask = task.HTTP

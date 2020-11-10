@@ -17,12 +17,13 @@ package mongo
 import (
 	"context"
 	"flag"
-	"go.mongodb.org/mongo-driver/bson"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
+
+	"go.mongodb.org/mongo-driver/bson"
 
 	"github.com/mendersoftware/go-lib-micro/config"
 	"github.com/mendersoftware/go-lib-micro/log"
