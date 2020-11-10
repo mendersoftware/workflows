@@ -197,6 +197,8 @@ definitions:
         type: string
       body:
         type: string
+      json:
+        type: object
       headers:
         type: object
       statusCodes:
