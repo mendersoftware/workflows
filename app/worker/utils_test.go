@@ -16,6 +16,7 @@ package worker
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"testing"
 
@@ -67,7 +68,7 @@ func TestProcessJobStringJSONOutputFromPreviousResult(t *testing.T) {
 				Type:    model.TaskTypeHTTP,
 				Success: true,
 				HTTPResponse: &model.TaskResultHTTPResponse{
-					StatusCode: 200,
+					StatusCode: http.StatusOK,
 					Body:       "{\"key\": \"value\"}",
 				},
 			},
@@ -80,7 +81,7 @@ func TestProcessJobStringJSONOutputFromPreviousResult(t *testing.T) {
 				Type:    model.TaskTypeHTTP,
 				Success: true,
 				HTTPResponse: &model.TaskResultHTTPResponse{
-					StatusCode: 200,
+					StatusCode: http.StatusOK,
 					Body:       "{\"key\": {\"subkey\": \"value\"}}",
 				},
 			},
@@ -93,7 +94,7 @@ func TestProcessJobStringJSONOutputFromPreviousResult(t *testing.T) {
 				Type:    model.TaskTypeHTTP,
 				Success: true,
 				HTTPResponse: &model.TaskResultHTTPResponse{
-					StatusCode: 200,
+					StatusCode: http.StatusOK,
 					Body:       "{\"key\": {\"subkey\": 1}}",
 				},
 			},
@@ -106,7 +107,7 @@ func TestProcessJobStringJSONOutputFromPreviousResult(t *testing.T) {
 				Type:    model.TaskTypeHTTP,
 				Success: true,
 				HTTPResponse: &model.TaskResultHTTPResponse{
-					StatusCode: 200,
+					StatusCode: http.StatusOK,
 					Body:       "{\"key\": {\"subkey\": [\"value\", \"value2\"]}}",
 				},
 			},

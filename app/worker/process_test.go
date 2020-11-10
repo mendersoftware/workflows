@@ -17,6 +17,7 @@ package worker
 import (
 	"context"
 	"errors"
+	"net/http"
 	"testing"
 
 	"github.com/mendersoftware/workflows/model"
@@ -63,7 +64,7 @@ func TestProcessJobFailedJobIsNotPending(t *testing.T) {
 				Type: model.TaskTypeHTTP,
 				HTTP: &model.HTTPTask{
 					URI:    "http://localhost",
-					Method: "GET",
+					Method: http.MethodGet,
 					Headers: map[string]string{
 						"X-Header": "Value",
 					},

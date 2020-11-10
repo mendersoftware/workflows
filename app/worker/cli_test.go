@@ -16,6 +16,7 @@ package worker
 
 import (
 	"context"
+	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -123,13 +124,13 @@ func TestProcessJobCLIWrongExitCode(t *testing.T) {
 				Type: model.TaskTypeHTTP,
 				HTTP: &model.HTTPTask{
 					URI:    "http://localhost",
-					Method: "GET",
+					Method: http.MethodGet,
 					Headers: map[string]string{
 						"X-Header": "Value",
 					},
 					StatusCodes: []int{
-						200,
-						201,
+						http.StatusOK,
+						http.StatusCreated,
 					},
 				},
 			},

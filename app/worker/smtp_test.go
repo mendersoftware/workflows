@@ -398,7 +398,7 @@ func TestProcessJobSMTPLoadFromFileFailed(t *testing.T) {
 			err := processJob(ctx, job, dataStore)
 
 			assert.NotNil(t, err)
-			assert.Equal(t, err.Error(), "open /this/file/does/not/exits/for/sure: no such file or directory")
+			assert.Equal(t, "open /this/file/does/not/exits/for/sure: no such file or directory", err.Error())
 
 			dataStore.AssertExpectations(t)
 			mockedSMTPClient.AssertExpectations(t)

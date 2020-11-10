@@ -48,7 +48,7 @@ func TestProcessJobHTTP(t *testing.T) {
 					Type: model.TaskTypeHTTP,
 					HTTP: &model.HTTPTask{
 						URI:    "http://localhost",
-						Method: "GET",
+						Method: http.MethodGet,
 						Headers: map[string]string{
 							"X-Header": "Value",
 						},
@@ -58,7 +58,7 @@ func TestProcessJobHTTP(t *testing.T) {
 		},
 		JobRequest: &model.TaskResultHTTPRequest{
 			URI:     "http://localhost",
-			Method:  "GET",
+			Method:  http.MethodGet,
 			Headers: []string{"X-Header: Value"},
 		},
 		Error: nil,
@@ -72,7 +72,7 @@ func TestProcessJobHTTP(t *testing.T) {
 					Type: model.TaskTypeHTTP,
 					HTTP: &model.HTTPTask{
 						URI:    "http://localhost",
-						Method: "POST",
+						Method: http.MethodPost,
 						JSON: map[string]interface{}{
 							"foo": "${workflow.input.foo}",
 						},
@@ -82,7 +82,7 @@ func TestProcessJobHTTP(t *testing.T) {
 		},
 		JobRequest: &model.TaskResultHTTPRequest{
 			URI:    "http://localhost",
-			Method: "POST",
+			Method: http.MethodPost,
 			Body:   `{"foo":"bar"}`,
 		},
 		InputParameters: model.InputParameters{
@@ -99,7 +99,7 @@ func TestProcessJobHTTP(t *testing.T) {
 					Type: model.TaskTypeHTTP,
 					HTTP: &model.HTTPTask{
 						URI:    "http://localhost",
-						Method: "POST",
+						Method: http.MethodPost,
 						FormData: map[string]string{
 							"key": "value to be encoded",
 						},
@@ -109,7 +109,7 @@ func TestProcessJobHTTP(t *testing.T) {
 		},
 		JobRequest: &model.TaskResultHTTPRequest{
 			URI:    "http://localhost",
-			Method: "POST",
+			Method: http.MethodPost,
 			Body:   "key=value+to+be+encoded",
 		},
 		Error: nil,
@@ -123,7 +123,7 @@ func TestProcessJobHTTP(t *testing.T) {
 					Type: model.TaskTypeHTTP,
 					HTTP: &model.HTTPTask{
 						URI:    "http://localhost",
-						Method: "POST",
+						Method: http.MethodPost,
 						Body: "{{/* This is ignored */}}" +
 							"{{range $k, $v := .}}" +
 							"{{$k}}: {{$v}}\n{{end}}",
@@ -135,7 +135,7 @@ func TestProcessJobHTTP(t *testing.T) {
 		},
 		JobRequest: &model.TaskResultHTTPRequest{
 			URI:    "http://localhost",
-			Method: "POST",
+			Method: http.MethodPost,
 			Headers: []string{
 				"foo: bar",
 			},
@@ -156,7 +156,7 @@ func TestProcessJobHTTP(t *testing.T) {
 					Type: model.TaskTypeHTTP,
 					HTTP: &model.HTTPTask{
 						URI:         "http://localhost",
-						Method:      "POST",
+						Method:      http.MethodPost,
 						Body:        "{\"${workflow.input.param}\": \"{{end}}\"}",
 						ContentType: "application/yaml",
 					},
@@ -165,7 +165,7 @@ func TestProcessJobHTTP(t *testing.T) {
 		},
 		JobRequest: &model.TaskResultHTTPRequest{
 			URI:    "http://localhost",
-			Method: "POST",
+			Method: http.MethodPost,
 			Body:   "{\"foobar\": \"{{end}}\"}",
 		},
 		InputParameters: model.InputParameters{
@@ -277,12 +277,12 @@ func TestProcessJobHTTPValidStatusCode(t *testing.T) {
 				Type: model.TaskTypeHTTP,
 				HTTP: &model.HTTPTask{
 					URI:    "http://localhost",
-					Method: "GET",
+					Method: http.MethodGet,
 					Headers: map[string]string{
 						"X-Header": "Value",
 					},
 					StatusCodes: []int{
-						200,
+						http.StatusOK,
 					},
 				},
 			},
@@ -370,13 +370,13 @@ func TestProcessJobHTTPWrongStatusCode(t *testing.T) {
 				Type: model.TaskTypeHTTP,
 				HTTP: &model.HTTPTask{
 					URI:    "http://localhost",
-					Method: "GET",
+					Method: http.MethodGet,
 					Headers: map[string]string{
 						"X-Header": "Value",
 					},
 					StatusCodes: []int{
-						200,
-						201,
+						http.StatusOK,
+						http.StatusCreated,
 					},
 				},
 			},
@@ -385,13 +385,13 @@ func TestProcessJobHTTPWrongStatusCode(t *testing.T) {
 				Type: model.TaskTypeHTTP,
 				HTTP: &model.HTTPTask{
 					URI:    "http://localhost",
-					Method: "GET",
+					Method: http.MethodGet,
 					Headers: map[string]string{
 						"X-Header": "Value",
 					},
 					StatusCodes: []int{
-						200,
-						201,
+						http.StatusOK,
+						http.StatusCreated,
 					},
 				},
 			},
