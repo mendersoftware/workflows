@@ -25,13 +25,14 @@ import (
 
 	"github.com/mendersoftware/go-lib-micro/log"
 	"github.com/mendersoftware/workflows/model"
-	"github.com/mendersoftware/workflows/store/mock"
+	storemock "github.com/mendersoftware/workflows/store/mock"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 func TestProcessJobFailedWorkflowDoesNotExist(t *testing.T) {
 	ctx := context.Background()
-	dataStore := mock.NewDataStore()
+	dataStore := storemock.NewDataStore()
 	defer dataStore.AssertExpectations(t)
 
 	job := &model.Job{
@@ -57,7 +58,7 @@ func TestProcessJobFailedWorkflowDoesNotExist(t *testing.T) {
 
 func TestProcessJobFailedJobIsNotPending(t *testing.T) {
 	ctx := context.Background()
-	dataStore := mock.NewDataStore()
+	dataStore := storemock.NewDataStore()
 	defer dataStore.AssertExpectations(t)
 
 	workflow := &model.Workflow{
@@ -234,6 +235,103 @@ func TestProcessTaskSkipped(t *testing.T) {
 			result, err := processTask(*tc.task, tc.job, tc.workflow, l)
 			assert.NoError(t, err)
 			assert.Equal(t, tc.skipped, result.Skipped)
+
+			makeHTTPRequest = makeHTTPRequestOriginal
+		})
+	}
+}
+
+func TestProcessTaskRetries(t *testing.T) {
+	testCases := map[string]struct {
+		workflow *model.Workflow
+		job      *model.Job
+	}{
+		"retries": {
+			workflow: &model.Workflow{
+				Name: "test",
+				Tasks: []model.Task{
+					{
+						Name:    "task_1",
+						Type:    model.TaskTypeHTTP,
+						Retries: 1,
+						HTTP: &model.HTTPTask{
+							URI:    "http://localhost",
+							Method: http.MethodGet,
+						},
+					},
+				},
+			},
+			job: &model.Job{
+				WorkflowName: "test",
+			},
+		},
+		"retries with delay": {
+			workflow: &model.Workflow{
+				Name: "test",
+				Tasks: []model.Task{
+					{
+						Name:              "task_1",
+						Type:              model.TaskTypeHTTP,
+						Retries:           1,
+						RetryDelaySeconds: 1,
+						HTTP: &model.HTTPTask{
+							URI:    "http://localhost",
+							Method: http.MethodGet,
+						},
+					},
+				},
+			},
+			job: &model.Job{
+				WorkflowName: "test",
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			makeHTTPRequestOriginal := makeHTTPRequest
+			firstCallHappened := false
+			makeHTTPRequest = func(req *http.Request, timeout time.Duration) (*http.Response, error) {
+				status := http.StatusOK
+				if !firstCallHappened {
+					firstCallHappened = true
+					status = http.StatusBadGateway
+				}
+				return &http.Response{
+					StatusCode: status,
+					Body:       ioutil.NopCloser(bytes.NewReader([]byte(""))),
+				}, nil
+			}
+
+			ctx := context.Background()
+			dataStore := storemock.NewDataStore()
+			defer dataStore.AssertExpectations(t)
+
+			dataStore.On("GetWorkflowByName",
+				ctx,
+				tc.job.WorkflowName,
+			).Return(tc.workflow, nil)
+
+			dataStore.On("AcquireJob",
+				ctx,
+				tc.job,
+			).Return(tc.job, nil)
+
+			dataStore.On("UpdateJobStatus",
+				ctx,
+				tc.job,
+				model.StatusDone,
+			).Return(nil)
+
+			dataStore.On("UpdateJobAddResult",
+				ctx,
+				tc.job,
+				mock.AnythingOfType("*model.TaskResult"),
+			).Return(nil)
+
+			err := processJob(ctx, tc.job, dataStore)
+			assert.NoError(t, err)
+			assert.Equal(t, true, firstCallHappened)
 
 			makeHTTPRequest = makeHTTPRequestOriginal
 		})
