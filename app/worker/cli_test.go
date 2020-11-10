@@ -29,6 +29,7 @@ import (
 func TestProcessJobCLI(t *testing.T) {
 	ctx := context.Background()
 	dataStore := mock.NewDataStore()
+	defer dataStore.AssertExpectations(t)
 
 	workflow := &model.Workflow{
 		Name: "test",
@@ -97,13 +98,12 @@ func TestProcessJobCLI(t *testing.T) {
 	err := processJob(ctx, job, dataStore)
 
 	assert.Nil(t, err)
-
-	dataStore.AssertExpectations(t)
 }
 
 func TestProcessJobCLIWrongExitCode(t *testing.T) {
 	ctx := context.Background()
 	dataStore := mock.NewDataStore()
+	defer dataStore.AssertExpectations(t)
 
 	workflow := &model.Workflow{
 		Name: "test",
@@ -187,13 +187,12 @@ func TestProcessJobCLIWrongExitCode(t *testing.T) {
 
 	err := processJob(ctx, job, dataStore)
 	assert.Nil(t, err)
-
-	dataStore.AssertExpectations(t)
 }
 
 func TestProcessJobCLTimeOut(t *testing.T) {
 	ctx := context.Background()
 	dataStore := mock.NewDataStore()
+	defer dataStore.AssertExpectations(t)
 
 	workflow := &model.Workflow{
 		Name: "test",
@@ -263,13 +262,12 @@ func TestProcessJobCLTimeOut(t *testing.T) {
 
 	err := processJob(ctx, job, dataStore)
 	assert.Nil(t, err)
-
-	dataStore.AssertExpectations(t)
 }
 
 func TestProcessJobCLIFailedIncompatibleDefinition(t *testing.T) {
 	ctx := context.Background()
 	dataStore := mock.NewDataStore()
+	defer dataStore.AssertExpectations(t)
 
 	workflow := &model.Workflow{
 		Name: "test",
@@ -314,6 +312,4 @@ func TestProcessJobCLIFailedIncompatibleDefinition(t *testing.T) {
 	err := processJob(ctx, job, dataStore)
 	assert.NotNil(t, err)
 	assert.EqualError(t, err, "Error: Task definition incompatible with specified type (cli)")
-
-	dataStore.AssertExpectations(t)
 }

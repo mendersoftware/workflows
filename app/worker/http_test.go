@@ -177,6 +177,8 @@ func TestProcessJobHTTP(t *testing.T) {
 		t.Run(testCase.Name, func(t *testing.T) {
 			ctx := context.Background()
 			dataStore := mock.NewDataStore()
+			defer dataStore.AssertExpectations(t)
+
 			job := &model.Job{
 				WorkflowName:    testCase.Workflow.Name,
 				Status:          model.StatusPending,
@@ -259,8 +261,6 @@ func TestProcessJobHTTP(t *testing.T) {
 			default:
 				assert.NoError(t, err)
 			}
-
-			dataStore.AssertExpectations(t)
 		})
 	}
 }
@@ -268,6 +268,7 @@ func TestProcessJobHTTP(t *testing.T) {
 func TestProcessJobHTTPValidStatusCode(t *testing.T) {
 	ctx := context.Background()
 	dataStore := mock.NewDataStore()
+	defer dataStore.AssertExpectations(t)
 
 	workflow := &model.Workflow{
 		Name: "test",
@@ -354,13 +355,12 @@ func TestProcessJobHTTPValidStatusCode(t *testing.T) {
 	makeHTTPRequest = makeHTTPRequestOriginal
 
 	assert.Nil(t, err)
-
-	dataStore.AssertExpectations(t)
 }
 
 func TestProcessJobHTTPWrongStatusCode(t *testing.T) {
 	ctx := context.Background()
 	dataStore := mock.NewDataStore()
+	defer dataStore.AssertExpectations(t)
 
 	workflow := &model.Workflow{
 		Name: "test",
@@ -463,13 +463,12 @@ func TestProcessJobHTTPWrongStatusCode(t *testing.T) {
 	makeHTTPRequest = makeHTTPRequestOriginal
 
 	assert.Nil(t, err)
-
-	dataStore.AssertExpectations(t)
 }
 
 func TestProcessJobHTTPFailedIncompatibleDefinition(t *testing.T) {
 	ctx := context.Background()
 	dataStore := mock.NewDataStore()
+	defer dataStore.AssertExpectations(t)
 
 	workflow := &model.Workflow{
 		Name: "test",
@@ -514,6 +513,4 @@ func TestProcessJobHTTPFailedIncompatibleDefinition(t *testing.T) {
 	err := processJob(ctx, job, dataStore)
 	assert.NotNil(t, err)
 	assert.EqualError(t, err, "Error: Task definition incompatible with specified type (http)")
-
-	dataStore.AssertExpectations(t)
 }

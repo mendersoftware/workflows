@@ -28,6 +28,7 @@ import (
 func TestProcessJobFailedWorkflowDoesNotExist(t *testing.T) {
 	ctx := context.Background()
 	dataStore := mock.NewDataStore()
+	defer dataStore.AssertExpectations(t)
 
 	job := &model.Job{
 		ID:           "job",
@@ -48,13 +49,12 @@ func TestProcessJobFailedWorkflowDoesNotExist(t *testing.T) {
 
 	err := processJob(ctx, job, dataStore)
 	assert.Nil(t, err)
-
-	dataStore.AssertExpectations(t)
 }
 
 func TestProcessJobFailedJobIsNotPending(t *testing.T) {
 	ctx := context.Background()
 	dataStore := mock.NewDataStore()
+	defer dataStore.AssertExpectations(t)
 
 	workflow := &model.Workflow{
 		Name: "test",
@@ -96,6 +96,4 @@ func TestProcessJobFailedJobIsNotPending(t *testing.T) {
 
 	err := processJob(ctx, job, dataStore)
 	assert.Nil(t, err)
-
-	dataStore.AssertExpectations(t)
 }
