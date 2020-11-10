@@ -218,6 +218,10 @@ definitions:
         type: string
       type:
         type: string
+      retries:
+        type: integer
+      retryDelaySeconds:
+        type: integer
       requires:
         type: array
         items:
