@@ -218,6 +218,10 @@ definitions:
         type: string
       type:
         type: string
+      requires:
+        type: array
+        items:
+          type: string
       cli:
         $ref: "#/definitions/CLIParams"
       http:

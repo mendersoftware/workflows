@@ -50,9 +50,9 @@ func TestProcessJobStringEnvVariable(t *testing.T) {
 	}
 	job := &model.Job{}
 
-	res := processJobString("_${env.SHELL}_", workflow, job)
-	shell := os.Getenv("SHELL")
-	expected := fmt.Sprintf("_%s_", shell)
+	res := processJobString("_${env.PWD}_", workflow, job)
+	pwd := os.Getenv("PWD")
+	expected := fmt.Sprintf("_%s_", pwd)
 	assert.Equal(t, expected, res)
 }
 

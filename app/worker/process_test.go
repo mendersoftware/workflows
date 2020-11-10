@@ -15,11 +15,15 @@
 package worker
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"io/ioutil"
 	"net/http"
 	"testing"
+	"time"
 
+	"github.com/mendersoftware/go-lib-micro/log"
 	"github.com/mendersoftware/workflows/model"
 	"github.com/mendersoftware/workflows/store/mock"
 	"github.com/stretchr/testify/assert"
@@ -96,4 +100,142 @@ func TestProcessJobFailedJobIsNotPending(t *testing.T) {
 
 	err := processJob(ctx, job, dataStore)
 	assert.Nil(t, err)
+}
+
+func TestProcessTaskSkipped(t *testing.T) {
+	testCases := map[string]struct {
+		workflow *model.Workflow
+		job      *model.Job
+		task     *model.Task
+		skipped  bool
+	}{
+		"skipped, missing parameter": {
+			workflow: &model.Workflow{
+				Name: "test",
+				InputParameters: []string{
+					"request_id",
+				},
+			},
+			job: &model.Job{
+				InputParameters: []model.InputParameter{
+					{
+						Name:  "request_id",
+						Value: "",
+					},
+				},
+			},
+			task: &model.Task{
+				Name: "task_1",
+				Type: model.TaskTypeHTTP,
+				Requires: []string{
+					"${workflow.input.request_id}",
+				},
+				HTTP: &model.HTTPTask{
+					URI:    "http://localhost",
+					Method: http.MethodGet,
+					Headers: map[string]string{
+						"X-Header": "Value",
+					},
+				},
+			},
+			skipped: true,
+		},
+		"executed, requires parameter": {
+			workflow: &model.Workflow{
+				Name: "test",
+			},
+			job: &model.Job{
+				InputParameters: []model.InputParameter{
+					{
+						Name:  "request_id",
+						Value: "value",
+					},
+				},
+			},
+			task: &model.Task{
+				Name: "task_1",
+				Type: model.TaskTypeHTTP,
+				Requires: []string{
+					"${workflow.input.request_id}",
+				},
+				HTTP: &model.HTTPTask{
+					URI:    "http://localhost",
+					Method: http.MethodGet,
+					Headers: map[string]string{
+						"X-Header": "Value",
+					},
+				},
+			},
+			skipped: false,
+		},
+		"executed, requires parameter but empty": {
+			workflow: &model.Workflow{
+				Name: "test",
+			},
+			job: &model.Job{
+				InputParameters: []model.InputParameter{
+					{
+						Name:  "request_id",
+						Value: "",
+					},
+				},
+			},
+			task: &model.Task{
+				Name: "task_1",
+				Type: model.TaskTypeHTTP,
+				Requires: []string{
+					"${workflow.input.request_id}",
+				},
+				HTTP: &model.HTTPTask{
+					URI:    "http://localhost",
+					Method: http.MethodGet,
+					Headers: map[string]string{
+						"X-Header": "Value",
+					},
+				},
+			},
+			skipped: true,
+		},
+		"executed, requires env": {
+			workflow: &model.Workflow{
+				Name: "test",
+			},
+			job: &model.Job{},
+			task: &model.Task{
+				Name: "task_1",
+				Type: model.TaskTypeHTTP,
+				Requires: []string{
+					"${env.PWD}",
+				},
+				HTTP: &model.HTTPTask{
+					URI:    "http://localhost",
+					Method: http.MethodGet,
+					Headers: map[string]string{
+						"X-Header": "Value",
+					},
+				},
+			},
+			skipped: false,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			makeHTTPRequestOriginal := makeHTTPRequest
+			makeHTTPRequest = func(req *http.Request, timeout time.Duration) (*http.Response, error) {
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       ioutil.NopCloser(bytes.NewReader([]byte(""))),
+				}, nil
+			}
+
+			ctx := context.Background()
+			l := log.FromContext(ctx)
+			result, err := processTask(*tc.task, tc.job, tc.workflow, l)
+			assert.NoError(t, err)
+			assert.Equal(t, tc.skipped, result.Skipped)
+
+			makeHTTPRequest = makeHTTPRequestOriginal
+		})
+	}
 }

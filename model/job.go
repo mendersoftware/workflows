@@ -15,8 +15,9 @@
 package model
 
 import (
-	"github.com/pkg/errors"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 // Status
@@ -82,6 +83,7 @@ type TaskResult struct {
 	Name         string                  `json:"name" bson:"name"`
 	Type         string                  `json:"type" bson:"type"`
 	Success      bool                    `json:"success" bson:"success"`
+	Skipped      bool                    `json:"skipped" bson:"skipped"`
 	CLI          *TaskResultCLI          `json:"cli" bson:"cli,omitempty"`
 	HTTPRequest  *TaskResultHTTPRequest  `json:"httpRequest" bson:"httpRequest,omitempty"`
 	HTTPResponse *TaskResultHTTPResponse `json:"httpResponse" bson:"httpResponse,omitempty"`

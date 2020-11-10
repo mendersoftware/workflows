@@ -48,7 +48,10 @@ func TestParseWorkflowFromJSON(t *testing.T) {
 				],
 				"connectionTimeOut": 1000,
 				"readTimeOut": 1000
-			}
+			},
+			"requires": [
+				"${workflow.input.request_id}"
+			]
 		},
 		{
 			"name": "form_data",
@@ -101,6 +104,7 @@ func TestParseWorkflowFromJSON(t *testing.T) {
 	assert.Len(t, tasks, 3)
 	assert.Equal(t, "delete_device_inventory", tasks[0].Name)
 	assert.Equal(t, TaskTypeHTTP, tasks[0].Type)
+	assert.Equal(t, []string{"${workflow.input.request_id}"}, tasks[0].Requires)
 	assert.Equal(t, "form_data", tasks[1].Name)
 	assert.Equal(t, TaskTypeHTTP, tasks[1].Type)
 
