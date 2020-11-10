@@ -42,6 +42,9 @@ func TestProcessJobString(t *testing.T) {
 
 	res := processJobString("_${workflow.input.key}_", workflow, job)
 	assert.Equal(t, "_test_", res)
+
+	res = processJobString("_${workflow.input.another_key|default}_", workflow, job)
+	assert.Equal(t, "_default_", res)
 }
 
 func TestProcessJobStringEnvVariable(t *testing.T) {
@@ -53,6 +56,10 @@ func TestProcessJobStringEnvVariable(t *testing.T) {
 	res := processJobString("_${env.PWD}_", workflow, job)
 	pwd := os.Getenv("PWD")
 	expected := fmt.Sprintf("_%s_", pwd)
+	assert.Equal(t, expected, res)
+
+	res = processJobString("_${env.ENV_VARIABLE_WHICH_DOES_NOT_EXIST|default}_", workflow, job)
+	expected = fmt.Sprintf("_default_")
 	assert.Equal(t, expected, res)
 }
 
@@ -126,6 +133,19 @@ func TestProcessJobStringJSONOutputFromPreviousResult(t *testing.T) {
 			},
 			expression:    "_${task_1.json.key}_",
 			expectedValue: "__",
+		},
+		{
+			taskResult: model.TaskResult{
+				Name:    "task_1",
+				Type:    model.TaskTypeCLI,
+				Success: true,
+				CLI: &model.TaskResultCLI{
+					ExitCode: 0,
+					Output:   "dummy",
+				},
+			},
+			expression:    "_${task_1.json.key|default}_",
+			expectedValue: "_default_",
 		},
 	}
 
