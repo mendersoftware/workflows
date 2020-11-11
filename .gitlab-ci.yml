@@ -28,16 +28,13 @@ test:prepare_acceptance:
   script:
     - docker build -f Dockerfile.acceptance-testing -t $DOCKER_REPOSITORY:prtest .
     - docker build -f Dockerfile.acceptance-testing.worker -t $WORKER_DOCKER_REPOSITORY:prtest .
-    - docker build -f tests/Dockerfile tests -t acceptance-testing:latest
     - docker save $DOCKER_REPOSITORY:prtest > prtest_image.tar
     - docker save $WORKER_DOCKER_REPOSITORY:prtest > prtest_worker_image.tar
-    - docker save acceptance-testing:latest > acceptance_testing_image.tar
   artifacts:
     expire_in: 2w
     paths:
       - prtest_image.tar
       - prtest_worker_image.tar
-      - acceptance_testing_image.tar
 
 test:static:
   image: golang:1.14
@@ -61,7 +58,6 @@ test:acceptance_tests:
   before_script:
     - docker load -i prtest_image.tar
     - docker load -i prtest_worker_image.tar
-    - docker load -i acceptance_testing_image.tar
   script:
     - make acceptance-testing-up
     - sh -c "sleep 30"
