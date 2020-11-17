@@ -17,6 +17,7 @@ package worker
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/mendersoftware/go-lib-micro/log"
 	"github.com/mendersoftware/workflows/model"
@@ -74,6 +75,9 @@ func processJob(ctx context.Context, job *model.Job,
 			attempt++
 			if result.Success {
 				break
+			}
+			if task.RetryDelaySeconds > 0 {
+				time.Sleep(time.Duration(task.RetryDelaySeconds) * time.Second)
 			}
 		}
 		job.Results = append(job.Results, *result)

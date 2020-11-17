@@ -21,6 +21,8 @@ services:
       acceptance-tests:
         aliases:
           - workflows-worker
+    depends_on:
+      - mongodb
 
   workflows-server:
     image: mendersoftware/workflows:prtest
@@ -32,6 +34,8 @@ services:
       acceptance-tests:
         aliases:
           - workflows-server
+    depends_on:
+      - mongodb
 
 networks:
     acceptance-tests:
