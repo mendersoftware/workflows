@@ -15,13 +15,16 @@
 package worker
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
 	"testing"
 
-	"github.com/mendersoftware/workflows/model"
 	"github.com/stretchr/testify/assert"
+	"go.mongodb.org/mongo-driver/bson"
+
+	"github.com/mendersoftware/workflows/model"
 )
 
 func TestProcessJobString(t *testing.T) {
@@ -164,12 +167,14 @@ func TestProcessJobStringJSONOutputFromPreviousResult(t *testing.T) {
 
 func TestProcessJobJSON(t *testing.T) {
 	var tests = map[string]struct {
-		json   interface{}
-		result interface{}
+		json       interface{}
+		result     interface{}
+		resultJSON string
 	}{
 		"string": {
-			json:   "_${workflow.input.key}_",
-			result: "_test_",
+			json:       "_${workflow.input.key}_",
+			result:     "_test_",
+			resultJSON: `"_test_"`,
 		},
 		"map": {
 			json: map[string]interface{}{
@@ -182,6 +187,7 @@ func TestProcessJobJSON(t *testing.T) {
 				"other-key":   "other-value",
 				"numeric-key": 1,
 			},
+			resultJSON: `{"key":"_test_","numeric-key":1,"other-key":"other-value"}`,
 		},
 		"nested map": {
 			json: map[string]interface{}{
@@ -198,6 +204,7 @@ func TestProcessJobJSON(t *testing.T) {
 				"other-key":   "other-value",
 				"numeric-key": 1,
 			},
+			resultJSON: `{"numeric-key":1,"other-key":"other-value","parent":{"key":"_test_"}}`,
 		},
 		"list": {
 			json: []interface{}{
@@ -216,6 +223,33 @@ func TestProcessJobJSON(t *testing.T) {
 					"other-key": "other-value",
 				},
 			},
+			resultJSON: `[{"key":"_test_"},{"other-key":"other-value"}]`,
+		},
+		"bson.D": {
+			json: bson.D{
+				{Key: "key", Value: "_${workflow.input.key}_"},
+				{Key: "other-key", Value: "other-value"},
+			},
+			result: map[string]interface{}{
+				"key":       "_test_",
+				"other-key": "other-value",
+			},
+			resultJSON: `{"key":"_test_","other-key":"other-value"}`,
+		},
+		"list of bson.D": {
+			json: []bson.D{
+				{
+					{Key: "key", Value: "_${workflow.input.key}_"},
+					{Key: "other-key", Value: "other-value"},
+				},
+			},
+			result: []interface{}{
+				map[string]interface{}{
+					"key":       "_test_",
+					"other-key": "other-value",
+				},
+			},
+			resultJSON: `[{"key":"_test_","other-key":"other-value"}]`,
 		},
 	}
 
@@ -238,6 +272,10 @@ func TestProcessJobJSON(t *testing.T) {
 
 			res := processJobJSON(test.json, workflow, job)
 			assert.Equal(t, test.result, res)
+
+			jsonString, err := json.Marshal(res)
+			assert.NoError(t, err)
+			assert.Equal(t, test.resultJSON, string(jsonString))
 		})
 	}
 }
