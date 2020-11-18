@@ -11,7 +11,7 @@
                 "uri": "http://${env.INVENTORY_ADDR|mender-inventory:8080}/api/internal/v1/inventory/tenants/${workflow.input.tenant_id}/devices/${workflow.input.device_status}",
                 "method": "POST",
                 "contentType": "application/json",
-                "body": "${workflow.input.device_ids}",
+                "body": "${workflow.input.devices}",
                 "headers": {
                     "X-MEN-RequestID": "${workflow.input.request_id}"
                 },
@@ -22,7 +22,7 @@
     ],
     "inputParameters": [
         "request_id",
-        "device_ids",
+        "devices",
         "device_status",
         "tenant_id"
     ]
