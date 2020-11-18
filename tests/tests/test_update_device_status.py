@@ -6,13 +6,15 @@ def test_update_device_status(mmock_url, workflows_url):
     # start the provision_device workflow
     request_id = "1234567890"
     device_status = "accepted"
-    device_ids = '["1","2","3"]'
+    devices = (
+        '[{"id":"1", "revision":1}, {"id":"2", "revision":1}, {"id":"3", "revision":1}]'
+    )
     tenant_id = "1"
     res = requests.post(
         workflows_url + "/api/v1/workflow/update_device_status",
         json={
             "request_id": request_id,
-            "device_ids": device_ids,
+            "devices": devices,
             "device_status": device_status,
             "tenant_id": tenant_id,
         },
@@ -39,7 +41,7 @@ def test_update_device_status(mmock_url, workflows_url):
             break
     # verify the status
     assert {"name": "request_id", "value": request_id} in response["inputParameters"]
-    assert {"name": "device_ids", "value": device_ids} in response["inputParameters"]
+    assert {"name": "devices", "value": devices} in response["inputParameters"]
     assert response["status"] == "done"
     assert len(response["results"]) == 1
     assert response["results"][0]["success"] == True
@@ -64,12 +66,12 @@ def test_update_device_status(mmock_url, workflows_url):
             "headers": {
                 "Content-Type": ["application/json"],
                 "Accept-Encoding": ["gzip"],
-                "Content-Length": ["13"],
+                "Content-Length": ["78"],
                 "User-Agent": ["Go-http-client/1.1"],
                 "X-Men-Requestid": [request_id],
             },
             "cookies": {},
-            "body": device_ids,
+            "body": devices,
         },
     }
     assert expected["request"] == response[0]["request"]
