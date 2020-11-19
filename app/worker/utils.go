@@ -25,6 +25,7 @@ import (
 
 	"github.com/mendersoftware/workflows/model"
 	"github.com/thedevsaddam/gojsonq"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 const (
@@ -132,20 +133,33 @@ func processJobStringOrFile(data string, workflow *model.Workflow, job *model.Jo
 }
 
 func processJobJSON(data interface{}, workflow *model.Workflow, job *model.Job) interface{} {
-	if value, ok := data.([]interface{}); ok {
+	switch value := data.(type) {
+	case []interface{}:
 		result := make([]interface{}, len(value))
 		for i, item := range value {
 			result[i] = processJobJSON(item, workflow, job)
 		}
 		return result
-	} else if value, ok := data.(map[string]interface{}); ok {
+	case map[string]interface{}:
 		result := make(map[string]interface{})
 		for key, item := range value {
 			result[key] = processJobJSON(item, workflow, job)
 		}
 		return result
-	} else if value, ok := data.(string); ok {
+	case string:
 		return processJobString(value, workflow, job)
+	case primitive.D:
+		result := make(map[string]interface{})
+		for key, item := range value.Map() {
+			result[key] = processJobJSON(item, workflow, job)
+		}
+		return result
+	case []primitive.D:
+		result := make([]interface{}, len(value))
+		for i, item := range value {
+			result[i] = processJobJSON(item, workflow, job)
+		}
+		return result
 	}
 	return data
 }
