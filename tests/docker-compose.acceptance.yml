@@ -13,6 +13,8 @@ services:
         aliases:
           - mender-inventory
           - mender-deployments
+          - mender-device-auth
+          - mender-deviceconnect
           - mmock
 
   acceptance-testing:
