@@ -2,7 +2,15 @@ import requests
 import time
 
 
-def test_decommission_device(mmock_url, workflows_url):
+def test_provision_device(mmock_url, workflows_url):
+    do_decommission_device(mmock_url, workflows_url, "")
+
+
+def test_provision_device_with_tenant_id(mmock_url, workflows_url):
+    do_decommission_device(mmock_url, workflows_url, "123456789012345678901234")
+
+
+def do_decommission_device(mmock_url, workflows_url, tenant_id):
     # start the decommission device workflow
     device_id = "1"
     request_id = "1234567890"
@@ -12,7 +20,7 @@ def test_decommission_device(mmock_url, workflows_url):
             "request_id": request_id,
             "authorization": "Bearer TEST",
             "device_id": device_id,
-            "tenant_id": "123456789012345678901234",
+            "tenant_id": tenant_id,
         },
     )
     assert res.status_code == 201
@@ -96,7 +104,9 @@ def test_decommission_device(mmock_url, workflows_url):
                 "host": "mender-deviceconnect",
                 "port": "8080",
                 "method": "DELETE",
-                "path": "/api/internal/v1/deviceconnect/tenants/123456789012345678901234/devices/"
+                "path": "/api/internal/v1/deviceconnect/tenants/"
+                + tenant_id
+                + "/devices/"
                 + device_id,
                 "queryStringParameters": {},
                 "fragment": "",
