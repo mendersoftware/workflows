@@ -24,9 +24,11 @@
       "name": "provision_deviceconnect",
       "type": "http",
       "retries": 3,
-      "requires": ["${env.DEVICECONNECT_ADDR}"],
+      "requires": [
+        "${env.HAVE_DEVICECONNECT}"
+      ],
       "http": {
-        "uri": "http://${env.DEVICECONNECT_ADDR}/api/internal/v1/deviceconnect/tenants/${workflow.input.tenant_id}/devices",
+        "uri": "http://${env.DEVICECONNECT_ADDR|mender-deviceconnect:8080}/api/internal/v1/deviceconnect/tenants/${workflow.input.tenant_id}/devices",
         "method": "POST",
         "contentType": "application/json",
         "json": {"device_id": "${workflow.input.device_id}"},
