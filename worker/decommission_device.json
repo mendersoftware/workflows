@@ -52,8 +52,9 @@
         }
     ],
     "inputParameters": [
-        "device_id",
         "request_id",
-        "authorization"
+        "authorization",
+        "device_id",
+        "tenant_id"
     ]
 }
