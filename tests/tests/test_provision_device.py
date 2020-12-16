@@ -2,7 +2,16 @@ import requests
 import time
 import json
 
+
 def test_provision_device(mmock_url, workflows_url):
+    do_provision_device(mmock_url, workflows_url, "")
+
+
+def test_provision_device_with_tenant_id(mmock_url, workflows_url):
+    do_provision_device(mmock_url, workflows_url, "123456789012345678901234")
+
+
+def do_provision_device(mmock_url, workflows_url, tenant_id):
     # start the provision_device workflow
     res = requests.post(
         workflows_url + "/api/v1/workflow/provision_device",
@@ -10,7 +19,7 @@ def test_provision_device(mmock_url, workflows_url):
             "request_id": "1234567890",
             "authorization": "Bearer TEST",
             "device_id": "1",
-            "tenant_id": "123456789012345678901234",
+            "tenant_id": tenant_id,
         },
     )
     assert res.status_code == 201
@@ -40,9 +49,8 @@ def test_provision_device(mmock_url, workflows_url):
         "inputParameters"
     ]
     assert {"name": "device_id", "value": "1"} in response["inputParameters"]
-    assert {"name": "tenant_id", "value": "123456789012345678901234"} in response[
-        "inputParameters"
-    ]
+    if tenant_id != "":
+        assert {"name": "tenant_id", "value": tenant_id} in response["inputParameters"]
     assert len(response["results"]) == 2
     assert response["results"][0]["success"] == True
     assert response["results"][0]["httpResponse"]["statusCode"] == 200
@@ -81,7 +89,8 @@ def test_provision_device(mmock_url, workflows_url):
                 "port": "8080",
                 "method": "POST",
                 "path": "/api/internal/v1/deviceconnect/tenants/"
-                + "123456789012345678901234/devices",
+                + tenant_id
+                + "/devices",
                 "queryStringParameters": {},
                 "fragment": "",
                 "headers": {

@@ -17,6 +17,10 @@ services:
           - mender-deviceconnect
           - mmock
 
+  workflows-worker:
+    environment:
+      HAVE_DEVICECONNECT: 1
+
   acceptance-testing:
     image: mendersoftware/mender-test-containers:acceptance-testing
     entrypoint: sh

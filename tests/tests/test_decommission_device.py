@@ -2,7 +2,15 @@ import requests
 import time
 
 
-def test_decommission_device(mmock_url, workflows_url):
+def test_provision_device(mmock_url, workflows_url):
+    do_decommission_device(mmock_url, workflows_url, "")
+
+
+def test_provision_device_with_tenant_id(mmock_url, workflows_url):
+    do_decommission_device(mmock_url, workflows_url, "123456789012345678901234")
+
+
+def do_decommission_device(mmock_url, workflows_url, tenant_id):
     # start the decommission device workflow
     device_id = "1"
     request_id = "1234567890"
@@ -12,6 +20,7 @@ def test_decommission_device(mmock_url, workflows_url):
             "request_id": request_id,
             "authorization": "Bearer TEST",
             "device_id": device_id,
+            "tenant_id": tenant_id,
         },
     )
     assert res.status_code == 201
@@ -41,14 +50,14 @@ def test_decommission_device(mmock_url, workflows_url):
     ]
     assert {"name": "device_id", "value": device_id} in response["inputParameters"]
     assert response["status"] == "done"
-    assert len(response["results"]) == 2
+    assert len(response["results"]) == 3
     assert response["results"][0]["success"] == True
     assert response["results"][0]["httpResponse"]["statusCode"] == 204
     #  verify the mock server has been correctly called
     res = requests.get(mmock_url + "/api/request/all")
     assert res.status_code == 200
     response = res.json()
-    assert len(response) == 2
+    assert len(response) == 3
     expected = [
         {
             "request": {
@@ -89,6 +98,28 @@ def test_decommission_device(mmock_url, workflows_url):
                 "body": "",
             },
         },
+        {
+            "request": {
+                "scheme": "http",
+                "host": "mender-deviceconnect",
+                "port": "8080",
+                "method": "DELETE",
+                "path": "/api/internal/v1/deviceconnect/tenants/"
+                + tenant_id
+                + "/devices/"
+                + device_id,
+                "queryStringParameters": {},
+                "fragment": "",
+                "headers": {
+                    "Accept-Encoding": ["gzip"],
+                    "User-Agent": ["Go-http-client/1.1"],
+                    "X-Men-Requestid": [request_id],
+                },
+                "cookies": {},
+                "body": "",
+            },
+        },
     ]
     assert expected[0]["request"] == response[0]["request"]
     assert expected[1]["request"] == response[1]["request"]
+    assert expected[2]["request"] == response[2]["request"]
