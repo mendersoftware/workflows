@@ -35,7 +35,6 @@
                 "headers": {
                     "X-MEN-RequestID": "${workflow.input.request_id}"
                 },
-                "statusCodes": [201, 404],
                 "connectionTimeOut": 8000,
                 "readTimeOut": 8000
             }
