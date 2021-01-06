@@ -1,4 +1,4 @@
-// Copyright 2020 Northern.tech AS
+// Copyright 2021 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -252,16 +252,16 @@ func (db *DataStore) GetAllJobs(ctx context.Context, page int64, perPage int64) 
 
 	var r1 int64
 	if rf, ok := ret.Get(1).(func(
-		context.Context,int64,int64) int64); ok {
-		r1 = rf(ctx,page,perPage)
+		context.Context, int64, int64) int64); ok {
+		r1 = rf(ctx, page, perPage)
 	} else {
 		r1 = ret.Get(1).(int64)
 	}
 
 	var r2 error
 	if rf, ok := ret.Get(2).(func(
-		context.Context,int64,int64) error); ok {
-		r2 = rf(ctx,page,perPage)
+		context.Context, int64, int64) error); ok {
+		r2 = rf(ctx, page, perPage)
 	} else {
 		r2 = ret.Error(2)
 	}
