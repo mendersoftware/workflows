@@ -98,6 +98,8 @@ publish:acceptance:
   except:
     - /^saas-[a-zA-Z0-9.]+$/
   image: golang:1.14-alpine3.11
+  variables:
+    GO111MODULE: "off"
   dependencies:
     - test:acceptance_tests
   before_script:
@@ -113,6 +115,10 @@ publish:acceptance:
     #  See also https://docs.coveralls.io/api-reference
     - export CI_BRANCH=${CI_COMMIT_BRANCH}
     - export CI_PR_NUMBER=${CI_COMMIT_BRANCH#pr_}
+    # Run goveralls in the GOPATH
+    - mkdir -p ${GOPATH}/src/github.com/mendersoftware
+    - ln -s /builds/Northern.tech/Mender/${CI_PROJECT_NAME} ${GOPATH}/src/github.com/mendersoftware
+    - cd ${GOPATH}/src/github.com/mendersoftware/${CI_PROJECT_NAME}
   script:
     - goveralls
       -repotoken ${COVERALLS_TOKEN}
