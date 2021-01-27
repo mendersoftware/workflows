@@ -15,11 +15,13 @@ services:
           - mender-deployments
           - mender-device-auth
           - mender-deviceconnect
+          - mender-deviceconfig
           - mmock
 
   workflows-worker:
     environment:
       HAVE_DEVICECONNECT: 1
+      HAVE_DEVICECONFIG: 1
 
   acceptance-testing:
     image: mendersoftware/mender-test-containers:acceptance-testing

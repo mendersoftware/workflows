@@ -64,7 +64,7 @@ def do_provision_device(mmock_url, workflows_url, tenant_id):
     assert {"name": "device_id", "value": "1"} in response["inputParameters"]
     if tenant_id != "":
         assert {"name": "tenant_id", "value": tenant_id} in response["inputParameters"]
-    assert len(response["results"]) == 2
+    assert len(response["results"]) == 3
     assert response["results"][0]["success"] == True
     assert response["results"][0]["httpResponse"]["statusCode"] == 200
     assert response["results"][1]["success"] == True
@@ -117,6 +117,29 @@ def do_provision_device(mmock_url, workflows_url, tenant_id):
                 "body": '{"device_id":"1"}',
             },
         },
+        {
+            "request": {
+                "scheme": "http",
+                "host": "mender-deviceconfig",
+                "port": "8080",
+                "method": "POST",
+                "path": "/api/internal/v1/deviceconfig/tenants/"
+                + tenant_id
+                + "/devices",
+                "queryStringParameters": {},
+                "fragment": "",
+                "headers": {
+                    "Accept-Encoding": ["gzip"],
+                    "Content-Length": ["17"],
+                    "Content-Type": ["application/json"],
+                    "User-Agent": ["Go-http-client/1.1"],
+                    "X-Men-Requestid": ["1234567890"],
+                },
+                "cookies": {},
+                "body": '{"device_id":"1"}',
+            },
+        },
     ]
     assert expected[0]["request"] == response[0]["request"]
     assert expected[1]["request"] == response[1]["request"]
+    assert expected[2]["request"] == response[2]["request"]
