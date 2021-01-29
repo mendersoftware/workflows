@@ -15,11 +15,11 @@ import requests
 import time
 
 
-def test_provision_device(mmock_url, workflows_url):
+def test_decommission_device(mmock_url, workflows_url):
     do_decommission_device(mmock_url, workflows_url, "")
 
 
-def test_provision_device_with_tenant_id(mmock_url, workflows_url):
+def test_decommission_device_with_tenant_id(mmock_url, workflows_url):
     do_decommission_device(mmock_url, workflows_url, "123456789012345678901234")
 
 
@@ -63,14 +63,14 @@ def do_decommission_device(mmock_url, workflows_url, tenant_id):
     ]
     assert {"name": "device_id", "value": device_id} in response["inputParameters"]
     assert response["status"] == "done"
-    assert len(response["results"]) == 3
+    assert len(response["results"]) == 4
     assert response["results"][0]["success"] == True
     assert response["results"][0]["httpResponse"]["statusCode"] == 204
     #  verify the mock server has been correctly called
     res = requests.get(mmock_url + "/api/request/all")
     assert res.status_code == 200
     response = res.json()
-    assert len(response) == 3
+    assert len(response) == 4
     expected = [
         {
             "request": {
@@ -132,7 +132,29 @@ def do_decommission_device(mmock_url, workflows_url, tenant_id):
                 "body": "",
             },
         },
+        {
+            "request": {
+                "scheme": "http",
+                "host": "mender-deviceconfig",
+                "port": "8080",
+                "method": "DELETE",
+                "path": "/api/internal/v1/deviceconfig/tenants/"
+                + tenant_id
+                + "/devices/"
+                + device_id,
+                "queryStringParameters": {},
+                "fragment": "",
+                "headers": {
+                    "Accept-Encoding": ["gzip"],
+                    "User-Agent": ["Go-http-client/1.1"],
+                    "X-Men-Requestid": [request_id],
+                },
+                "cookies": {},
+                "body": "",
+            },
+        },
     ]
     assert expected[0]["request"] == response[0]["request"]
     assert expected[1]["request"] == response[1]["request"]
     assert expected[2]["request"] == response[2]["request"]
+    assert expected[3]["request"] == response[3]["request"]
