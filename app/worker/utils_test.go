@@ -1,4 +1,4 @@
-// Copyright 2020 Northern.tech AS
+// Copyright 2021 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -176,6 +176,11 @@ func TestProcessJobJSON(t *testing.T) {
 			result:     "_test_",
 			resultJSON: `"_test_"`,
 		},
+		"number": {
+			json:       "${workflow.input.num}",
+			result:     1,
+			resultJSON: "1",
+		},
 		"map": {
 			json: map[string]interface{}{
 				"key":         "_${workflow.input.key}_",
@@ -259,6 +264,7 @@ func TestProcessJobJSON(t *testing.T) {
 				Name: "test",
 				InputParameters: []string{
 					"key",
+					"num",
 				},
 			}
 			job := &model.Job{
@@ -266,6 +272,11 @@ func TestProcessJobJSON(t *testing.T) {
 					{
 						Name:  "key",
 						Value: "test",
+					},
+					{
+						Name:  "num",
+						Value: "1",
+						Raw:   1,
 					},
 				},
 			}

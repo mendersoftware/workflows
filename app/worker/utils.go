@@ -1,4 +1,4 @@
-// Copyright 2020 Northern.tech AS
+// Copyright 2021 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -58,7 +58,7 @@ func processJobString(data string, workflow *model.Workflow, job *model.Job) str
 					break
 				}
 			}
-			if found == false && defaultValue != "" {
+			if !found && defaultValue != "" {
 				data = strings.ReplaceAll(data, submatch[0], defaultValue)
 			}
 		} else if strings.HasPrefix(match, workflowEnvVariable) && len(match) > len(workflowEnvVariable) {
@@ -147,6 +147,17 @@ func processJobJSON(data interface{}, workflow *model.Workflow, job *model.Job) 
 		}
 		return result
 	case string:
+		if value[0:2] == "${" && value[len(value)-1:] == "}" {
+			key := value[2 : len(value)-1]
+			if strings.HasPrefix(key, workflowInputVariable) && len(key) > len(workflowInputVariable) {
+				key = key[len(workflowInputVariable):]
+			}
+			for _, param := range job.InputParameters {
+				if param.Name == key && param.Raw != nil {
+					return param.Raw
+				}
+			}
+		}
 		return processJobString(value, workflow, job)
 	case primitive.D:
 		result := make(map[string]interface{})
