@@ -92,14 +92,14 @@ def test_deploy_device_configuration(mmock_url, workflows_url):
             "headers": {
                 "Content-Type": ["application/json"],
                 "Accept-Encoding": ["gzip"],
-                "Content-Length": ["90"],
+                "Content-Length": ["88"],
                 "User-Agent": ["Go-http-client/1.1"],
                 "X-Men-Requestid": [request_id],
             },
             "cookies": {},
             "body": '{"configuration":"{\\"key\\":\\"value\\"}","name":"configuration-'
             + deployment_id
-            + '","retries":"0"}',
+            + '","retries":0}',
         },
     }
     assert expected["request"] == response[0]["request"]
