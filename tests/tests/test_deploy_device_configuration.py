@@ -67,39 +67,67 @@ def test_deploy_device_configuration(mmock_url, workflows_url):
     ]
     assert {"name": "retries", "value": "0"} in response["inputParameters"]
     assert response["status"] == "done"
-    assert len(response["results"]) == 1
+    assert len(response["results"]) == 2
     assert response["results"][0]["success"] == True
     assert response["results"][0]["httpResponse"]["statusCode"] == 201
+    assert response["results"][1]["success"] == True
+    assert response["results"][1]["httpResponse"]["statusCode"] == 202
     #  verify the mock server has been correctly called
     res = requests.get(mmock_url + "/api/request/all")
     assert res.status_code == 200
     response = res.json()
-    assert len(response) == 1
-    expected = {
-        "request": {
-            "scheme": "http",
-            "host": "mender-deployments",
-            "port": "8080",
-            "method": "POST",
-            "path": "/api/internal/v1/deployments/tenants/"
-            + tenant_id
-            + "/configuration/deployments/"
-            + deployment_id
-            + "/devices/"
-            + device_id,
-            "queryStringParameters": {},
-            "fragment": "",
-            "headers": {
-                "Content-Type": ["application/json"],
-                "Accept-Encoding": ["gzip"],
-                "Content-Length": ["88"],
-                "User-Agent": ["Go-http-client/1.1"],
-                "X-Men-Requestid": [request_id],
-            },
-            "cookies": {},
-            "body": '{"configuration":"{\\"key\\":\\"value\\"}","name":"configuration-'
-            + deployment_id
-            + '","retries":0}',
+    assert len(response) == 2
+    expected = [
+        {
+            "request": {
+                "scheme": "http",
+                "host": "mender-deployments",
+                "port": "8080",
+                "method": "POST",
+                "path": "/api/internal/v1/deployments/tenants/"
+                + tenant_id
+                + "/configuration/deployments/"
+                + deployment_id
+                + "/devices/"
+                + device_id,
+                "queryStringParameters": {},
+                "fragment": "",
+                "headers": {
+                    "Content-Type": ["application/json"],
+                    "Accept-Encoding": ["gzip"],
+                    "Content-Length": ["88"],
+                    "User-Agent": ["Go-http-client/1.1"],
+                    "X-Men-Requestid": [request_id],
+                },
+                "cookies": {},
+                "body": '{"configuration":"{\\"key\\":\\"value\\"}","name":"configuration-'
+                + deployment_id
+                + '","retries":0}',
+            }
         },
-    }
-    assert expected["request"] == response[0]["request"]
+        {
+            "request": {
+                "scheme": "http",
+                "host": "mender-deviceconnect",
+                "port": "8080",
+                "method": "POST",
+                "path": "/api/internal/v1/deviceconnect/tenants/"
+                + tenant_id
+                + "/devices/"
+                + device_id
+                + "/check-update",
+                "queryStringParameters": {},
+                "fragment": "",
+                "headers": {
+                    "Accept-Encoding": ["gzip"],
+                    "Content-Length": ["0"],
+                    "User-Agent": ["Go-http-client/1.1"],
+                    "X-Men-Requestid": [request_id],
+                },
+                "cookies": {},
+                "body": "",
+            }
+        },
+    ]
+    assert expected[0]["request"] == response[0]["request"]
+    assert expected[1]["request"] == response[1]["request"]
