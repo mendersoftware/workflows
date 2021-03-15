@@ -54,6 +54,7 @@ a55959c4e3e8917bfa857359bb641115336276a6cc97408fd8197e079fb18470  vendor/github.
 a1a5ca382f9e8c646fa05240a74a6554bbc3084b5675f84c9eaafd3d95686612  vendor/github.com/go-playground/locales/LICENSE
 9e321f6a1db81616a6c344d3aefddf9834fef23bdd913eae0db283dfa6753dff  vendor/github.com/go-playground/validator/v10/LICENSE
 a55d0c6e1a35ee6cf13afb4bbc3c8801cc570d7ac8edcd5e4503892f1c7ff4f7  vendor/github.com/go-playground/universal-translator/LICENSE
+6d13d89b6c33df37f92553cc95cec278d8770ddc78c9de84620cc16dfb48cef6  vendor/github.com/youmark/pkcs8/LICENSE
 #
 # LGPL3 with static linking exception.
 b40930bbcf80744c86c46a12bc9da056641d722716c378f5659b9e555ef833e1  vendor/gopkg.in/yaml.v2/LICENSE
