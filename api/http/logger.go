@@ -1,4 +1,4 @@
-// Copyright 2020 Northern.tech AS
+// Copyright 2021 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ func routerLogger(logger logrus.FieldLogger) gin.HandlerFunc {
 		start := time.Now()
 		c.Next()
 		stop := time.Since(start)
-		latency := math.Ceil(float64(stop.Nanoseconds())) / 1000000.0
+		latency := math.Ceil(float64(stop.Nanoseconds())/1000000.0) / 1000.0
 		statusCode := c.Writer.Status()
 		method := c.Request.Method
 		clientIP := c.ClientIP()
