@@ -85,17 +85,15 @@ build:docker:worker:
 
 publish:image:worker:
   extends: publish:image
-  needs:
-    - job: build:docker:worker
-      artifacts: true
+  dependencies:
+    - build:docker:worker
   variables:
     DOCKER_REPOSITORY: mendersoftware/workflows-worker
 
 publish:image:mender:worker:
   extends: publish:image:mender
-  needs:
-    - job: build:docker:worker
-      artifacts: true
+  dependencies:
+    - build:docker:worker
   variables:
     DOCKER_REPOSITORY: mendersoftware/workflows-worker
 
