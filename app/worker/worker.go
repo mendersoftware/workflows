@@ -1,4 +1,4 @@
-// Copyright 2020 Northern.tech AS
+// Copyright 2021 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -81,8 +81,11 @@ func InitAndRun(conf config.Reader, workflows Workflows, dataStore store.DataSto
 			go func(ctx context.Context,
 				job *model.Job, dataStore store.DataStore) {
 				defer func() { <-sem }()
-				l.Infof("Worker: processing job %s workflow %s: ", job.ID, job.WorkflowName)
-				processJob(ctx, job, dataStore)
+				l.Infof("Worker: processing job %s workflow %s", job.ID, job.WorkflowName)
+				err := processJob(ctx, job, dataStore)
+				if err != nil {
+					l.Errorf("error: %v", err)
+				}
 			}(ctx, job, dataStore)
 
 		case error:

@@ -1,4 +1,4 @@
-// Copyright 2020 Northern.tech AS
+// Copyright 2021 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ package worker
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/mendersoftware/go-lib-micro/log"
@@ -69,7 +70,7 @@ func processJob(ctx context.Context, job *model.Job,
 		for attempt <= task.Retries {
 			result, err = processTask(task, job, workflow, l)
 			if err != nil {
-				dataStore.UpdateJobStatus(ctx, job, model.StatusFailure)
+				_ = dataStore.UpdateJobStatus(ctx, job, model.StatusFailure)
 				return err
 			}
 			attempt++
@@ -138,7 +139,8 @@ func processTask(task model.Task, job *model.Job,
 				"Error: Task definition incompatible " +
 					"with specified type (http)")
 		}
-		l.Infof("processTask: calling http task: %s %s", httpTask.Method, httpTask.URI)
+		l.Infof("processTask: calling http task: %s %s", httpTask.Method,
+			processJobString(httpTask.URI, workflow, job))
 		result, err = processHTTPTask(httpTask, job, workflow, l)
 	case model.TaskTypeCLI:
 		var cliTask *model.CLITask = task.CLI
@@ -156,7 +158,10 @@ func processTask(task model.Task, job *model.Job,
 					"with specified type (smtp)")
 		}
 		l.Infof("processTask: calling smtp task: From: %s To: %s Subject: %s",
-			smtpTask.From, smtpTask.To, smtpTask.Subject)
+			processJobString(smtpTask.From, workflow, job),
+			processJobString(strings.Join(smtpTask.To, ","), workflow, job),
+			processJobString(smtpTask.Subject, workflow, job),
+		)
 		result, err = processSMTPTask(smtpTask, job, workflow, l)
 	default:
 		result = nil
