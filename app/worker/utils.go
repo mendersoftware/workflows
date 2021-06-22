@@ -147,15 +147,16 @@ func processJobJSON(data interface{}, workflow *model.Workflow, job *model.Job) 
 		}
 		return result
 	case string:
-		if value[0:2] == "${" && value[len(value)-1:] == "}" {
+		if len(value) > 3 && value[0:2] == "${" && value[len(value)-1:] == "}" {
 			key := value[2 : len(value)-1]
 			if strings.HasPrefix(key, workflowInputVariable) && len(key) > len(workflowInputVariable) {
 				key = key[len(workflowInputVariable):]
-			}
-			for _, param := range job.InputParameters {
-				if param.Name == key && param.Raw != nil {
-					return param.Raw
+				for _, param := range job.InputParameters {
+					if param.Name == key && param.Raw != nil {
+						return processJobJSON(param.Raw, workflow, job)
+					}
 				}
+				return nil
 			}
 		}
 		return processJobString(value, workflow, job)
