@@ -72,7 +72,7 @@ def test_update_device_status(mmock_url, workflows_url):
             "method": "POST",
             "path": "/api/internal/v1/inventory/tenants/"
             + tenant_id
-            + "/devices/"
+            + "/devices/status/"
             + device_status,
             "queryStringParameters": {},
             "fragment": "",
@@ -85,6 +85,6 @@ def test_update_device_status(mmock_url, workflows_url):
             },
             "cookies": {},
             "body": devices,
-        },
+        }
     }
     assert expected["request"] == response[0]["request"]
