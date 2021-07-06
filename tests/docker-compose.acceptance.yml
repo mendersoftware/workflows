@@ -16,6 +16,7 @@ services:
           - mender-device-auth
           - mender-deviceconnect
           - mender-deviceconfig
+          - mender-reporting
           - mmock
 
   workflows-worker:
