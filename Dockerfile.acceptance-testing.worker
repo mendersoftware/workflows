@@ -20,11 +20,12 @@ COPY ./worker/deploy_device_configuration.json .
 COPY ./worker/provision_device.json .
 COPY ./worker/update_device_status.json .
 COPY ./worker/update_device_inventory.json .
+COPY ./worker/reindex_reporting.json .
 
 ENTRYPOINT [ \
     "/usr/bin/workflows-test", \
     "-test.coverprofile=/testing/coverage-acceptance-worker.txt", \
     "-acceptance-tests", \
     "-test.run=TestRunMain", \
-    "-cli-args=--config=/etc/workflows/config.yaml worker --automigrate --workflows=decommission_device,deploy_device_configuration,provision_device,update_device_status,update_device_inventory --excluded-workflows=generate_artifact" \
+    "-cli-args=--config=/etc/workflows/config.yaml worker --automigrate --workflows=decommission_device,deploy_device_configuration,provision_device,update_device_status,update_device_inventory,reindex_reporting --excluded-workflows=generate_artifact" \
 ]

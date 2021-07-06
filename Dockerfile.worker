@@ -19,5 +19,6 @@ COPY ./worker/deploy_device_configuration.json .
 COPY ./worker/provision_device.json .
 COPY ./worker/update_device_status.json .
 COPY ./worker/update_device_inventory.json .
+COPY ./worker/reindex_reporting.json .
 
 ENTRYPOINT ["/usr/bin/workflows", "--config", "/etc/workflows/config.yaml", "worker"]
