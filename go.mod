@@ -10,7 +10,8 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/thedevsaddam/gojsonq v2.3.0+incompatible
 	github.com/urfave/cli v1.22.4
-	go.mongodb.org/mongo-driver v1.5.4
+	go.mongodb.org/mongo-driver v1.6.0
+	golang.org/x/net v0.0.0-20200202094626-16171245cfb2 // indirect
 	golang.org/x/sys v0.0.0-20200602100848-8d3cce7afc34
 	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776
 )
