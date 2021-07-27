@@ -49,11 +49,7 @@ func processJob(ctx context.Context, job *model.Job,
 		}
 		return nil
 	} else if acquiredJob == nil {
-		l.Warnf("The job with given ID (%s) does not exist", job.ID)
-		err := dataStore.UpdateJobStatus(ctx, job, model.StatusFailure)
-		if err != nil {
-			return err
-		}
+		l.Debugf("The job with given ID (%s) does not exist or was already taken", job.ID)
 		return nil
 	}
 	job = acquiredJob
