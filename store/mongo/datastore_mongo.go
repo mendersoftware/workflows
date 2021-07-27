@@ -1,4 +1,4 @@
-// Copyright 2020 Northern.tech AS
+// Copyright 2021 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -410,11 +410,9 @@ func (db *DataStoreMongo) AcquireJob(ctx context.Context,
 		"$set": bson.M{"status": model.StatusProcessing},
 	}
 
-	upsert := true
 	after := mopts.After
 	opt := mopts.FindOneAndUpdateOptions{
 		ReturnDocument: &after,
-		Upsert:         &upsert,
 	}
 
 	err := collQueue.FindOneAndUpdate(ctx, query, update, &opt).Decode(acquiredJob)
@@ -424,10 +422,10 @@ func (db *DataStoreMongo) AcquireJob(ctx context.Context,
 		return nil, err
 	}
 
-	updateOpts := mopts.Update()
-	updateOpts.SetUpsert(true)
-	_, err = collJobs.UpdateOne(ctx, query, update, updateOpts)
-	if err != nil {
+	_, err = collJobs.UpdateOne(ctx, query, update)
+	if err == mongo.ErrNoDocuments {
+		return nil, nil
+	} else if err != nil {
 		return nil, err
 	}
 
