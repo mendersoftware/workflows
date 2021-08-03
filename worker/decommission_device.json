@@ -47,7 +47,8 @@
                     "X-MEN-RequestID": "${workflow.input.request_id}"
                 },
                 "connectionTimeOut": 8000,
-                "readTimeOut": 8000
+                "readTimeOut": 8000,
+                "statusCodes": [202, 404]
             }
         },
         {
@@ -64,7 +65,8 @@
                     "X-MEN-RequestID": "${workflow.input.request_id}"
                 },
                 "connectionTimeOut": 8000,
-                "readTimeOut": 8000
+                "readTimeOut": 8000,
+                "statusCodes": [204, 404]
             }
         }
     ],
