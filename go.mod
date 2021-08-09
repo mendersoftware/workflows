@@ -3,7 +3,7 @@ module github.com/mendersoftware/workflows
 go 1.14
 
 require (
-	github.com/gin-gonic/gin v1.7.2
+	github.com/gin-gonic/gin v1.7.3
 	github.com/mendersoftware/go-lib-micro v0.0.0-20200529072844-ecc6d0b89fa6
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.8.1
