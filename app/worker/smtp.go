@@ -1,4 +1,4 @@
-// Copyright 2020 Northern.tech AS
+// Copyright 2021 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -50,12 +50,14 @@ func processSMTPTask(smtpTask *model.SMTPTask, job *model.Job,
 	for _, address := range smtpTask.Cc {
 		address := processJobString(address, workflow, job)
 		recipients = append(recipients, address)
-		cc = append(to, address)
+		cc = append(cc, address)
 	}
 
+	bcc := make([]string, 0, 10)
 	for _, address := range smtpTask.Bcc {
 		address := processJobString(address, workflow, job)
 		recipients = append(recipients, address)
+		bcc = append(bcc, address)
 	}
 
 	from := processJobString(smtpTask.From, workflow, job)
@@ -95,6 +97,7 @@ func processSMTPTask(smtpTask *model.SMTPTask, job *model.Job,
 	msgBuffer.WriteString("From: " + from + "\r\n" +
 		"To: " + strings.Join(to, ", ") + "\r\n" +
 		"Cc: " + strings.Join(cc, ", ") + "\r\n" +
+		"Bcc: " + strings.Join(bcc, ", ") + "\r\n" +
 		"Subject: " + subject + "\r\n" +
 		"MIME-Version: 1.0\r\n" +
 		"Content-Type: multipart/alternative; boundary=" + altWriter.Boundary() + "\r\n" +

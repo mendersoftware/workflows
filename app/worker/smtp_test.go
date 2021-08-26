@@ -1,4 +1,4 @@
-// Copyright 2020 Northern.tech AS
+// Copyright 2021 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -45,7 +45,8 @@ func TestProcessJobSMTP(t *testing.T) {
 			HTML: "<html><body>HTML</body></html>",
 			Expected: "From: no-reply@mender.io\r\n" +
 				"To: user@mender.io\r\n" +
-				"Cc: user@mender.io, support@mender.io\r\n" +
+				"Cc: support@mender.io\r\n" +
+				"Bcc: archive@mender.io\r\n" +
 				"Subject: Subject\r\n" +
 				"MIME-Version: 1.0\r\n" +
 				"Content-Type: multipart/alternative; boundary=ID\r\n" +
@@ -64,7 +65,8 @@ func TestProcessJobSMTP(t *testing.T) {
 			Body: "Body",
 			Expected: "From: no-reply@mender.io\r\n" +
 				"To: user@mender.io\r\n" +
-				"Cc: user@mender.io, support@mender.io\r\n" +
+				"Cc: support@mender.io\r\n" +
+				"Bcc: archive@mender.io\r\n" +
 				"Subject: Subject\r\n" +
 				"MIME-Version: 1.0\r\n" +
 				"Content-Type: multipart/alternative; boundary=ID\r\n" +
@@ -79,7 +81,8 @@ func TestProcessJobSMTP(t *testing.T) {
 			HTML: "<html><body>HTML</body></html>",
 			Expected: "From: no-reply@mender.io\r\n" +
 				"To: user@mender.io\r\n" +
-				"Cc: user@mender.io, support@mender.io\r\n" +
+				"Cc: support@mender.io\r\n" +
+				"Bcc: archive@mender.io\r\n" +
 				"Subject: Subject\r\n" +
 				"MIME-Version: 1.0\r\n" +
 				"Content-Type: multipart/alternative; boundary=ID\r\n" +
