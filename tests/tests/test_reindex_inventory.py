@@ -15,14 +15,14 @@ import requests
 import time
 
 
-def test_reindex_reporting(mmock_url, workflows_url):
+def test_reindex_inventory(mmock_url, workflows_url):
     request_id = "1234567890"
     tenant_id = "1"
     device_id = "2"
-    service = "inventory"
+    service = "monitoring"
 
     res = requests.post(
-        workflows_url + "/api/v1/workflow/reindex_reporting",
+        workflows_url + "/api/v1/workflow/reindex_inventory",
         json={
             "request_id": request_id,
             "tenant_id": tenant_id,
@@ -36,13 +36,13 @@ def test_reindex_reporting(mmock_url, workflows_url):
     response = res.json()
     assert response is not None
     assert type(response) is dict
-    assert response["name"] == "reindex_reporting"
+    assert response["name"] == "reindex_inventory"
     assert response["id"] is not None
 
     for i in range(10):
         time.sleep(1)
         res = requests.get(
-            workflows_url + "/api/v1/workflow/reindex_reporting/" + response["id"]
+            workflows_url + "/api/v1/workflow/reindex_inventory/" + response["id"]
         )
         assert res.status_code == 200
         # if status is done, break
