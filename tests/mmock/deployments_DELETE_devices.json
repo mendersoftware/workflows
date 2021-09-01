@@ -3,7 +3,7 @@
 	"description": "deployments: DELETE device",
 	"request": {
 		"method": "DELETE",
-		"path": "/api/management/v1/deployments/deployments/devices/*"
+		"path": "/api/internal/v1/deployments/tenants/*/deployments/devices/*"
 	},
 	"response": {
 		"statusCode": 204
