@@ -52,13 +52,15 @@ func TestProcessJobSMTP(t *testing.T) {
 				"Content-Type: multipart/alternative; boundary=ID\r\n" +
 				"\r\n" +
 				"--ID\r\n" +
-				"Content-Type: text/html\r\n" +
-				"\r\n" +
-				"<html><body>HTML</body></html>\r\n" +
-				"--ID\r\n" +
-				"Content-Type: text/plain\r\n" +
+				"Content-Transfer-Encoding: 8bit\r\n" +
+				"Content-Type: text/plain; charset=utf-8\r\n" +
 				"\r\n" +
 				"Body\r\n" +
+				"--ID\r\n" +
+				"Content-Transfer-Encoding: 8bit\r\n" +
+				"Content-Type: text/html; charset=utf-8\r\n" +
+				"\r\n" +
+				"<html><body>HTML</body></html>\r\n" +
 				"--ID--\r\n",
 		},
 		"text only": {
@@ -72,7 +74,8 @@ func TestProcessJobSMTP(t *testing.T) {
 				"Content-Type: multipart/alternative; boundary=ID\r\n" +
 				"\r\n" +
 				"--ID\r\n" +
-				"Content-Type: text/plain\r\n" +
+				"Content-Transfer-Encoding: 8bit\r\n" +
+				"Content-Type: text/plain; charset=utf-8\r\n" +
 				"\r\n" +
 				"Body\r\n" +
 				"--ID--\r\n",
@@ -88,7 +91,8 @@ func TestProcessJobSMTP(t *testing.T) {
 				"Content-Type: multipart/alternative; boundary=ID\r\n" +
 				"\r\n" +
 				"--ID\r\n" +
-				"Content-Type: text/html\r\n" +
+				"Content-Transfer-Encoding: 8bit\r\n" +
+				"Content-Type: text/html; charset=utf-8\r\n" +
 				"\r\n" +
 				"<html><body>HTML</body></html>\r\n" +
 				"--ID--\r\n",

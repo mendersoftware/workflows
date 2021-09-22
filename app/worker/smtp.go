@@ -83,13 +83,19 @@ func processSMTPTask(smtpTask *model.SMTPTask, job *model.Job,
 
 	altContent := &bytes.Buffer{}
 	altWriter := multipart.NewWriter(altContent)
-	if HTML != "" {
-		childContent, _ := altWriter.CreatePart(textproto.MIMEHeader{"Content-Type": {"text/html"}})
-		childContent.Write([]byte(HTML))
-	}
 	if body != "" {
-		childContent, _ := altWriter.CreatePart(textproto.MIMEHeader{"Content-Type": {"text/plain"}})
+		childContent, _ := altWriter.CreatePart(textproto.MIMEHeader{
+			"Content-Type":              {"text/plain; charset=utf-8"},
+			"Content-Transfer-Encoding": {"8bit"},
+		})
 		childContent.Write([]byte(body))
+	}
+	if HTML != "" {
+		childContent, _ := altWriter.CreatePart(textproto.MIMEHeader{
+			"Content-Type":              {"text/html; charset=utf-8"},
+			"Content-Transfer-Encoding": {"8bit"},
+		})
+		childContent.Write([]byte(HTML))
 	}
 	altWriter.Close()
 
