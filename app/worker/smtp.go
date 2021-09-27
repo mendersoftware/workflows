@@ -41,23 +41,23 @@ func processSMTPTask(smtpTask *model.SMTPTask, job *model.Job,
 
 	to := make([]string, 0, 10)
 	for _, address := range smtpTask.To {
-		address := processJobString(address, workflow, job)
-		recipients = append(recipients, address)
+		addresses := strings.Split(processJobString(address, workflow, job), ",")
+		recipients = append(recipients, addresses...)
 		to = append(to, address)
 	}
 
 	cc := make([]string, 0, 10)
 	for _, address := range smtpTask.Cc {
-		address := processJobString(address, workflow, job)
-		recipients = append(recipients, address)
-		cc = append(cc, address)
+		addresses := strings.Split(processJobString(address, workflow, job), ",")
+		recipients = append(recipients, addresses...)
+		cc = append(cc, addresses...)
 	}
 
 	bcc := make([]string, 0, 10)
 	for _, address := range smtpTask.Bcc {
-		address := processJobString(address, workflow, job)
-		recipients = append(recipients, address)
-		bcc = append(bcc, address)
+		addresses := strings.Split(processJobString(address, workflow, job), ",")
+		recipients = append(recipients, addresses...)
+		bcc = append(bcc, addresses...)
 	}
 
 	from := processJobString(smtpTask.From, workflow, job)

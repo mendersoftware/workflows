@@ -46,7 +46,7 @@ func TestProcessJobSMTP(t *testing.T) {
 			Expected: "From: no-reply@mender.io\r\n" +
 				"To: user@mender.io\r\n" +
 				"Cc: support@mender.io\r\n" +
-				"Bcc: archive@mender.io\r\n" +
+				"Bcc: archive@mender.io, monitor@mender.io\r\n" +
 				"Subject: Subject\r\n" +
 				"MIME-Version: 1.0\r\n" +
 				"Content-Type: multipart/alternative; boundary=ID\r\n" +
@@ -68,7 +68,7 @@ func TestProcessJobSMTP(t *testing.T) {
 			Expected: "From: no-reply@mender.io\r\n" +
 				"To: user@mender.io\r\n" +
 				"Cc: support@mender.io\r\n" +
-				"Bcc: archive@mender.io\r\n" +
+				"Bcc: archive@mender.io, monitor@mender.io\r\n" +
 				"Subject: Subject\r\n" +
 				"MIME-Version: 1.0\r\n" +
 				"Content-Type: multipart/alternative; boundary=ID\r\n" +
@@ -85,7 +85,7 @@ func TestProcessJobSMTP(t *testing.T) {
 			Expected: "From: no-reply@mender.io\r\n" +
 				"To: user@mender.io\r\n" +
 				"Cc: support@mender.io\r\n" +
-				"Bcc: archive@mender.io\r\n" +
+				"Bcc: archive@mender.io, monitor@mender.io\r\n" +
 				"Subject: Subject\r\n" +
 				"MIME-Version: 1.0\r\n" +
 				"Content-Type: multipart/alternative; boundary=ID\r\n" +
@@ -113,6 +113,7 @@ func TestProcessJobSMTP(t *testing.T) {
 					"user@mender.io",
 					"support@mender.io",
 					"archive@mender.io",
+					"monitor@mender.io",
 				},
 				mocklib.MatchedBy(
 					func(msg []byte) bool {
@@ -136,7 +137,7 @@ func TestProcessJobSMTP(t *testing.T) {
 							From:    "no-reply@mender.io",
 							To:      []string{"user@mender.io"},
 							Cc:      []string{"support@mender.io"},
-							Bcc:     []string{"archive@mender.io"},
+							Bcc:     []string{"archive@mender.io,monitor@mender.io"},
 							Subject: "Subject",
 							Body:    tc.Body,
 							HTML:    tc.HTML,
@@ -222,6 +223,7 @@ func TestProcessJobSMTPLoadFromFile(t *testing.T) {
 			"user@mender.io",
 			"support@mender.io",
 			"archive@mender.io",
+			"monitor@mender.io",
 		},
 		mocklib.MatchedBy(
 			func(_ []byte) bool {
@@ -254,7 +256,7 @@ func TestProcessJobSMTPLoadFromFile(t *testing.T) {
 					From:    "no-reply@mender.io",
 					To:      []string{"user@mender.io"},
 					Cc:      []string{"support@mender.io"},
-					Bcc:     []string{"archive@mender.io"},
+					Bcc:     []string{"archive@mender.io,monitor@mender.io"},
 					Subject: "Subject",
 					Body:    "@" + tmpFile.Name(),
 				},
@@ -334,7 +336,7 @@ func TestProcessJobSMTPLoadFromFileFailed(t *testing.T) {
 							From:    "no-reply@mender.io",
 							To:      []string{"user@mender.io"},
 							Cc:      []string{"support@mender.io"},
-							Bcc:     []string{"archive@mender.io"},
+							Bcc:     []string{"archive@mender.io,monitor@mender.io"},
 							Subject: "Subject",
 							Body:    "@/this/file/does/not/exits/for/sure",
 						},
@@ -353,7 +355,7 @@ func TestProcessJobSMTPLoadFromFileFailed(t *testing.T) {
 							From:    "no-reply@mender.io",
 							To:      []string{"user@mender.io"},
 							Cc:      []string{"support@mender.io"},
-							Bcc:     []string{"archive@mender.io"},
+							Bcc:     []string{"archive@mender.io,monitor@mender.io"},
 							Subject: "Subject",
 							HTML:    "@/this/file/does/not/exits/for/sure",
 						},
@@ -431,6 +433,7 @@ func TestProcessJobSMTPFailure(t *testing.T) {
 			"user@mender.io",
 			"support@mender.io",
 			"archive@mender.io",
+			"monitor@mender.io",
 		},
 		mocklib.MatchedBy(
 			func(_ []byte) bool {
@@ -452,7 +455,7 @@ func TestProcessJobSMTPFailure(t *testing.T) {
 					From:    "no-reply@mender.io",
 					To:      []string{"user@mender.io"},
 					Cc:      []string{"support@mender.io"},
-					Bcc:     []string{"archive@mender.io"},
+					Bcc:     []string{"archive@mender.io,monitor@mender.io"},
 					Subject: "Subject",
 					Body:    "Body",
 				},
