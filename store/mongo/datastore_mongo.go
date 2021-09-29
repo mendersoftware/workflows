@@ -18,6 +18,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -47,6 +48,10 @@ const (
 
 	// WorkflowCollectionName refers to the collection of stored workflows
 	WorkflowCollectionName = "workflows"
+)
+
+var (
+	ErrNoSuchWorkflowByVersion = errors.New("Workflow of the given version not found")
 )
 
 // SetupDataStore returns the mongo data store and optionally runs migrations
@@ -172,7 +177,7 @@ func NewDataStoreWithClient(client *Client, c config.Reader) *DataStoreMongo {
 	if err == nil {
 		if err = cur.All(ctx, &findResults); err == nil {
 			for _, workflow := range findResults {
-				workflows[workflow.Name] = workflow
+				workflows[workflow.Name+"."+strconv.Itoa(workflow.Version)] = workflow
 			}
 		}
 	}
@@ -223,7 +228,7 @@ func (db *DataStoreMongo) InsertWorkflows(ctx context.Context, workflows ...mode
 		if workflow.Name == "" {
 			return i, store.ErrWorkflowMissingName
 		}
-		workflowDb, _ := db.GetWorkflowByName(ctx, workflow.Name)
+		workflowDb, _ := db.GetWorkflowByName(ctx, workflow.Name, strconv.Itoa(workflow.Version))
 		if workflowDb != nil && workflowDb.Version >= workflow.Version {
 			return i + 1, store.ErrWorkflowAlreadyExists
 		}
@@ -245,9 +250,16 @@ func (db *DataStoreMongo) InsertWorkflows(ctx context.Context, workflows ...mode
 
 // GetWorkflowByName gets the workflow with the given name - either from the
 // cache, or searches the database if the workflow is not cached.
-func (db *DataStoreMongo) GetWorkflowByName(ctx context.Context, workflowName string) (*model.Workflow, error) {
+func (db *DataStoreMongo) GetWorkflowByName(ctx context.Context, workflowName string, version string) (*model.Workflow, error) {
 	workflow, ok := db.workflows[workflowName]
-	if !ok {
+	l := log.FromContext(ctx)
+
+	versionNumber, e := strconv.Atoi(version)
+	if e != nil {
+		versionNumber = 0
+	}
+
+	if !ok || workflow.Version < versionNumber {
 		var result model.Workflow
 		database := db.client.Database(db.dbName)
 		collWflows := database.Collection(WorkflowCollectionName)
@@ -256,8 +268,14 @@ func (db *DataStoreMongo) GetWorkflowByName(ctx context.Context, workflowName st
 		if err != nil {
 			return nil, err
 		}
+		if result.Version < versionNumber {
+			l.Errorf("workflow found but with version too low: %s v%s", workflowName, version)
+			return nil, ErrNoSuchWorkflowByVersion
+		}
 		db.workflows[result.Name] = &result
 		return &result, err
+	} else {
+		l.Debugf("cache hit: %s v%s", workflowName, version)
 	}
 	return workflow, nil
 }
@@ -279,7 +297,7 @@ func (db *DataStoreMongo) GetWorkflows(ctx context.Context) []model.Workflow {
 func (db *DataStoreMongo) InsertJob(
 	ctx context.Context, job *model.Job) (*model.Job, error) {
 
-	if workflow, err := db.GetWorkflowByName(ctx, job.WorkflowName); err == nil {
+	if workflow, err := db.GetWorkflowByName(ctx, job.WorkflowName, job.WorkflowVersion); err == nil {
 		if err := job.Validate(workflow); err != nil {
 			return nil, err
 		}

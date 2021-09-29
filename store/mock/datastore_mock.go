@@ -1,4 +1,4 @@
-// Copyright 2020 Northern.tech AS
+// Copyright 2021 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -83,13 +83,13 @@ func (db *DataStore) InsertWorkflows(ctx context.Context,
 
 // GetWorkflowByName returns a workflow by name
 func (db *DataStore) GetWorkflowByName(ctx context.Context,
-	workflowName string) (*model.Workflow, error) {
-	ret := db.Called(ctx, workflowName)
+	workflowName string, version string) (*model.Workflow, error) {
+	ret := db.Called(ctx, workflowName, version)
 
 	var r0 *model.Workflow
 	if rf, ok := ret.
-		Get(0).(func(context.Context, string) *model.Workflow); ok {
-		r0 = rf(ctx, workflowName)
+		Get(0).(func(context.Context, string, string) *model.Workflow); ok {
+		r0 = rf(ctx, workflowName, version)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*model.Workflow)
@@ -97,8 +97,8 @@ func (db *DataStore) GetWorkflowByName(ctx context.Context,
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = rf(ctx, workflowName)
+	if rf, ok := ret.Get(1).(func(context.Context, string, string) error); ok {
+		r1 = rf(ctx, workflowName, version)
 	} else {
 		r1 = ret.Error(1)
 	}

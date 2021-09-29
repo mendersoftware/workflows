@@ -34,6 +34,10 @@ const (
 	defaultTimeout = time.Second * 5
 )
 
+var (
+	HeaderWorkflowMinVersion = "X-Workflows-Min-Version"
+)
+
 // WorkflowController container for end-points
 type WorkflowController struct {
 	// dataStore provides an interface to the database
@@ -120,6 +124,10 @@ func (h WorkflowController) StartWorkflow(c *gin.Context) {
 		return
 	}
 
+	workflowVersion := ""
+	if values, _ := c.Request.Header[HeaderWorkflowMinVersion]; len(values) > 0 {
+		workflowVersion = values[0]
+	}
 	for key, value := range inputParameters {
 		valueSlice, ok := value.([]interface{})
 		if ok {
@@ -149,6 +157,7 @@ func (h WorkflowController) StartWorkflow(c *gin.Context) {
 
 	job := &model.Job{
 		WorkflowName:    name,
+		WorkflowVersion: workflowVersion,
 		InputParameters: jobInputParameters,
 	}
 

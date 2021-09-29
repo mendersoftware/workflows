@@ -1,4 +1,4 @@
-// Copyright 2020 Northern.tech AS
+// Copyright 2021 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -58,6 +58,7 @@ func TestProcessJobCLI(t *testing.T) {
 				return true
 			}),
 		workflow.Name,
+		mocklib.AnythingOfType("string"),
 	).Return(workflow, nil)
 
 	dataStore.On("AcquireJob",
@@ -148,6 +149,7 @@ func TestProcessJobCLIWrongExitCode(t *testing.T) {
 				return true
 			}),
 		workflow.Name,
+		mocklib.AnythingOfType("string"),
 	).Return(workflow, nil)
 
 	dataStore.On("AcquireJob",
@@ -223,6 +225,7 @@ func TestProcessJobCLTimeOut(t *testing.T) {
 				return true
 			}),
 		workflow.Name,
+		mocklib.AnythingOfType("string"),
 	).Return(workflow, nil)
 
 	dataStore.On("AcquireJob",
@@ -290,6 +293,7 @@ func TestProcessJobCLIFailedIncompatibleDefinition(t *testing.T) {
 				return true
 			}),
 		workflow.Name,
+		mocklib.AnythingOfType("string"),
 	).Return(workflow, nil)
 
 	dataStore.On("AcquireJob",

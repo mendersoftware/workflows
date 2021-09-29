@@ -1,4 +1,4 @@
-// Copyright 2020 Northern.tech AS
+// Copyright 2021 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -247,6 +247,78 @@ func TestWorkflowFoundAndStartedWithParameters(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, mockedJob.WorkflowName, job.WorkflowName)
 	assert.Equal(t, 0, job.Status)
+}
+
+func TestWorkflowFoundAndStartedWithVersion(t *testing.T) {
+	dataStore := mock.NewDataStore()
+	defer dataStore.AssertExpectations(t)
+
+	workflowVersion := "16"
+	mockedJob := &model.Job{
+		ID:              "1234567890",
+		WorkflowName:    "test",
+		WorkflowVersion: workflowVersion,
+	}
+
+	dataStore.On("InsertJob",
+		mocklib.MatchedBy(
+			func(_ context.Context) bool {
+				return true
+			}),
+		mocklib.MatchedBy(
+			func(job *model.Job) bool {
+				assert.Len(t, job.InputParameters, 1)
+				assert.Equal(t, "key", job.InputParameters[0].Name)
+				assert.Equal(t, "value", job.InputParameters[0].Value)
+
+				return true
+			}),
+	).Return(mockedJob, nil)
+
+	dataStore.On("GetJobByNameAndID",
+		mocklib.MatchedBy(
+			func(_ context.Context) bool {
+				return true
+			}),
+		mockedJob.WorkflowName,
+		mockedJob.ID,
+	).Return(mockedJob, nil)
+
+	payload := `{
+      "key": "value"
+	}`
+
+	url := strings.Replace(APIURLWorkflow, ":name", mockedJob.WorkflowName, 1)
+	req, err := http.NewRequest(http.MethodPost, url, strings.NewReader(payload))
+	req.Header.Add(HeaderWorkflowMinVersion, workflowVersion)
+	assert.NoError(t, err)
+
+	w := httptest.NewRecorder()
+	router := NewRouter(dataStore)
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusCreated, w.Code)
+
+	var response map[string]string
+	body := w.Body.Bytes()
+	err = json.Unmarshal(body, &response)
+	value, ok := response["id"]
+	assert.True(t, ok)
+
+	w = httptest.NewRecorder()
+	url = strings.Replace(strings.Replace(APIURLWorkflowID, ":name", mockedJob.WorkflowName, 1), ":id", value, 1)
+	req, _ = http.NewRequest(http.MethodGet, url, nil)
+	router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var job model.Job
+	body = w.Body.Bytes()
+	err = json.Unmarshal(body, &job)
+
+	assert.Nil(t, err)
+	assert.Equal(t, mockedJob.WorkflowName, job.WorkflowName)
+	assert.Equal(t, 0, job.Status)
+	assert.Equal(t, workflowVersion, job.WorkflowVersion)
 }
 
 func TestWorkflowFoundAndStartedWithNonStringParameter(t *testing.T) {

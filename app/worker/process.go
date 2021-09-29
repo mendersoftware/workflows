@@ -29,7 +29,7 @@ func processJob(ctx context.Context, job *model.Job,
 	dataStore store.DataStore) error {
 	l := log.FromContext(ctx)
 
-	workflow, err := dataStore.GetWorkflowByName(ctx, job.WorkflowName)
+	workflow, err := dataStore.GetWorkflowByName(ctx, job.WorkflowName, job.WorkflowVersion)
 	if err != nil {
 		l.Warnf("The workflow %q of job %s does not exist",
 			job.WorkflowName, job.ID)
