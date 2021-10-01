@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"mime/multipart"
 	"net"
+	"net/mail"
 	"net/smtp"
 	"net/textproto"
 	"strings"
@@ -129,8 +130,12 @@ func processSMTPTask(smtpTask *model.SMTPTask, job *model.Job,
 		}
 	}
 
-	err = smtpClient.SendMail(smtpHostname, auth, from, recipients, msgBuffer.Bytes())
-	l.Debugf("processSMTPTask: smtpClient.SendMail returned %v", err)
+	fromAddress := getEmailAddress(from)
+	recipientAddresses := make([]string, len(recipients))
+	for i, recipient := range recipients {
+		recipientAddresses[i] = getEmailAddress(recipient)
+	}
+	err = smtpClient.SendMail(smtpHostname, auth, fromAddress, recipientAddresses, msgBuffer.Bytes())
 	if err != nil {
 		l.Errorf("processSMTPTask: smtpClient.SendMail returned %v", err)
 		result.Success = false
@@ -141,4 +146,12 @@ func processSMTPTask(smtpTask *model.SMTPTask, job *model.Job,
 	}
 
 	return result, nil
+}
+
+func getEmailAddress(from string) string {
+	emailAddress, err := mail.ParseAddressList(from)
+	if err != nil || len(emailAddress) < 1 {
+		return from
+	}
+	return emailAddress[0].Address
 }
