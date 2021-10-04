@@ -129,15 +129,20 @@ func TestProcessJobSMTP(t *testing.T) {
 
 			workflow := &model.Workflow{
 				Name: "test",
+				InputParameters: []string{
+					"to",
+					"cc",
+					"bcc",
+				},
 				Tasks: []model.Task{
 					{
 						Name: "task_1",
 						Type: model.TaskTypeSMTP,
 						SMTP: &model.SMTPTask{
 							From:    "no-reply@hosted.mender.io",
-							To:      []string{"user@mender.io"},
-							Cc:      []string{"support@mender.io"},
-							Bcc:     []string{"archive@mender.io,monitor@mender.io"},
+							To:      []string{"${workflow.input.to}"},
+							Cc:      []string{"${workflow.input.cc}"},
+							Bcc:     []string{"${workflow.input.bcc}"},
 							Subject: "Subject",
 							Body:    tc.Body,
 							HTML:    tc.HTML,
@@ -148,7 +153,21 @@ func TestProcessJobSMTP(t *testing.T) {
 
 			job := &model.Job{
 				WorkflowName: workflow.Name,
-				Status:       model.StatusPending,
+				InputParameters: model.InputParameters{
+					{
+						Name:  "to",
+						Value: "user@mender.io",
+					},
+					{
+						Name:  "cc",
+						Value: "support@mender.io",
+					},
+					{
+						Name:  "bcc",
+						Value: "archive@mender.io,monitor@mender.io",
+					},
+				},
+				Status: model.StatusPending,
 			}
 
 			dataStore.On("GetWorkflowByName",
