@@ -131,18 +131,24 @@ func processSMTPTask(smtpTask *model.SMTPTask, job *model.Job,
 	}
 
 	fromAddress := getEmailAddress(from)
-	recipientAddresses := make([]string, len(recipients))
-	for i, recipient := range recipients {
-		recipientAddresses[i] = getEmailAddress(recipient)
+	recipientAddresses := make([]string, 0, len(recipients))
+	for _, recipient := range recipients {
+		email := getEmailAddress(recipient)
+		if email != "" {
+			recipientAddresses = append(recipientAddresses, email)
+		}
 	}
-	err = smtpClient.SendMail(smtpHostname, auth, fromAddress, recipientAddresses, msgBuffer.Bytes())
-	if err != nil {
-		l.Errorf("processSMTPTask: smtpClient.SendMail returned %v", err)
-		result.Success = false
-		result.SMTP.Error = err.Error()
-	} else {
-		l.Infof("processSMTPTask: email successfully sent to %v", recipients)
-		result.Success = true
+	result.Success = true
+	if len(recipientAddresses) > 0 {
+		err = smtpClient.SendMail(smtpHostname, auth, fromAddress, recipientAddresses, msgBuffer.Bytes())
+		l.Debugf("processSMTPTask: smtpClient.SendMail returned %v", err)
+		if err != nil {
+			l.Errorf("processSMTPTask: smtpClient.SendMail returned %v", err)
+			result.Success = false
+			result.SMTP.Error = err.Error()
+		} else {
+			l.Infof("processSMTPTask: email successfully sent to %v", recipients)
+		}
 	}
 
 	return result, nil
