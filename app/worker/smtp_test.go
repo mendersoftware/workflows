@@ -43,7 +43,7 @@ func TestProcessJobSMTP(t *testing.T) {
 		"text and html": {
 			Body: "Body",
 			HTML: "<html><body>HTML</body></html>",
-			Expected: "From: no-reply@mender.io\r\n" +
+			Expected: "From: no-reply@hosted.mender.io\r\n" +
 				"To: user@mender.io\r\n" +
 				"Cc: support@mender.io\r\n" +
 				"Bcc: archive@mender.io, monitor@mender.io\r\n" +
@@ -65,7 +65,7 @@ func TestProcessJobSMTP(t *testing.T) {
 		},
 		"text only": {
 			Body: "Body",
-			Expected: "From: no-reply@mender.io\r\n" +
+			Expected: "From: no-reply@hosted.mender.io\r\n" +
 				"To: user@mender.io\r\n" +
 				"Cc: support@mender.io\r\n" +
 				"Bcc: archive@mender.io, monitor@mender.io\r\n" +
@@ -82,7 +82,7 @@ func TestProcessJobSMTP(t *testing.T) {
 		},
 		"html only": {
 			HTML: "<html><body>HTML</body></html>",
-			Expected: "From: no-reply@mender.io\r\n" +
+			Expected: "From: no-reply@hosted.mender.io\r\n" +
 				"To: user@mender.io\r\n" +
 				"Cc: support@mender.io\r\n" +
 				"Bcc: archive@mender.io, monitor@mender.io\r\n" +
@@ -108,7 +108,7 @@ func TestProcessJobSMTP(t *testing.T) {
 					func(_ smtp.Auth) bool {
 						return true
 					}),
-				"no-reply@mender.io",
+				"no-reply@hosted.mender.io",
 				[]string{
 					"user@mender.io",
 					"support@mender.io",
@@ -134,7 +134,7 @@ func TestProcessJobSMTP(t *testing.T) {
 						Name: "task_1",
 						Type: model.TaskTypeSMTP,
 						SMTP: &model.SMTPTask{
-							From:    "no-reply@mender.io",
+							From:    "no-reply@hosted.mender.io",
 							To:      []string{"user@mender.io"},
 							Cc:      []string{"support@mender.io"},
 							Bcc:     []string{"archive@mender.io,monitor@mender.io"},
@@ -218,7 +218,7 @@ func TestProcessJobSMTPLoadFromFile(t *testing.T) {
 			func(_ smtp.Auth) bool {
 				return true
 			}),
-		"no-reply@mender.io",
+		"no-reply@hosted.mender.io",
 		[]string{
 			"user@mender.io",
 			"support@mender.io",
@@ -253,7 +253,7 @@ func TestProcessJobSMTPLoadFromFile(t *testing.T) {
 				Name: "task_1",
 				Type: model.TaskTypeSMTP,
 				SMTP: &model.SMTPTask{
-					From:    "no-reply@mender.io",
+					From:    "no-reply@hosted.mender.io",
 					To:      []string{"user@mender.io"},
 					Cc:      []string{"support@mender.io"},
 					Bcc:     []string{"archive@mender.io,monitor@mender.io"},
@@ -333,7 +333,7 @@ func TestProcessJobSMTPLoadFromFileFailed(t *testing.T) {
 						Name: "task_1",
 						Type: model.TaskTypeSMTP,
 						SMTP: &model.SMTPTask{
-							From:    "no-reply@mender.io",
+							From:    "no-reply@hosted.mender.io",
 							To:      []string{"user@mender.io"},
 							Cc:      []string{"support@mender.io"},
 							Bcc:     []string{"archive@mender.io,monitor@mender.io"},
@@ -352,7 +352,7 @@ func TestProcessJobSMTPLoadFromFileFailed(t *testing.T) {
 						Name: "task_1",
 						Type: model.TaskTypeSMTP,
 						SMTP: &model.SMTPTask{
-							From:    "no-reply@mender.io",
+							From:    "no-reply@hosted.mender.io",
 							To:      []string{"user@mender.io"},
 							Cc:      []string{"support@mender.io"},
 							Bcc:     []string{"archive@mender.io,monitor@mender.io"},
@@ -428,7 +428,7 @@ func TestProcessJobSMTPFailure(t *testing.T) {
 			func(_ smtp.Auth) bool {
 				return true
 			}),
-		"no-reply@mender.io",
+		"no-reply@hosted.mender.io",
 		[]string{
 			"user@mender.io",
 			"support@mender.io",
@@ -452,7 +452,7 @@ func TestProcessJobSMTPFailure(t *testing.T) {
 				Name: "task_1",
 				Type: model.TaskTypeSMTP,
 				SMTP: &model.SMTPTask{
-					From:    "no-reply@mender.io",
+					From:    "no-reply@hosted.mender.io",
 					To:      []string{"user@mender.io"},
 					Cc:      []string{"support@mender.io"},
 					Bcc:     []string{"archive@mender.io,monitor@mender.io"},
@@ -513,4 +513,30 @@ func TestProcessJobSMTPFailure(t *testing.T) {
 	assert.Nil(t, err)
 
 	smtpClient = originalSMTPClient
+}
+
+func TestGetEmailAddress(t *testing.T) {
+	testCases := map[string]struct {
+		In  string
+		Out string
+	}{
+		"ok, email": {
+			In:  "test@mender.io",
+			Out: "test@mender.io",
+		},
+		"ok, name and email": {
+			In:  "Mender <test@mender.io>",
+			Out: "test@mender.io",
+		},
+		"ko": {
+			In:  "Mender <test@mender.io",
+			Out: "Mender <test@mender.io",
+		},
+	}
+	for i, tc := range testCases {
+		t.Run(i, func(t *testing.T) {
+			result := getEmailAddress(tc.In)
+			assert.Equal(t, tc.Out, result)
+		})
+	}
 }

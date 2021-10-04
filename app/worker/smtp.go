@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"mime/multipart"
 	"net"
+	"net/mail"
 	"net/smtp"
 	"net/textproto"
 	"strings"
@@ -129,16 +130,34 @@ func processSMTPTask(smtpTask *model.SMTPTask, job *model.Job,
 		}
 	}
 
-	err = smtpClient.SendMail(smtpHostname, auth, from, recipients, msgBuffer.Bytes())
-	l.Debugf("processSMTPTask: smtpClient.SendMail returned %v", err)
-	if err != nil {
-		l.Errorf("processSMTPTask: smtpClient.SendMail returned %v", err)
-		result.Success = false
-		result.SMTP.Error = err.Error()
-	} else {
-		l.Infof("processSMTPTask: email successfully sent to %v", recipients)
-		result.Success = true
+	fromAddress := getEmailAddress(from)
+	recipientAddresses := make([]string, 0, len(recipients))
+	for _, recipient := range recipients {
+		email := getEmailAddress(recipient)
+		if email != "" {
+			recipientAddresses = append(recipientAddresses, email)
+		}
+	}
+	result.Success = true
+	if len(recipientAddresses) > 0 {
+		err = smtpClient.SendMail(smtpHostname, auth, fromAddress, recipientAddresses, msgBuffer.Bytes())
+		l.Debugf("processSMTPTask: smtpClient.SendMail returned %v", err)
+		if err != nil {
+			l.Errorf("processSMTPTask: smtpClient.SendMail returned %v", err)
+			result.Success = false
+			result.SMTP.Error = err.Error()
+		} else {
+			l.Infof("processSMTPTask: email successfully sent to %v", recipients)
+		}
 	}
 
 	return result, nil
+}
+
+func getEmailAddress(from string) string {
+	emailAddress, err := mail.ParseAddressList(from)
+	if err != nil || len(emailAddress) < 1 {
+		return from
+	}
+	return emailAddress[0].Address
 }
