@@ -1,4 +1,4 @@
-// Copyright 2020 Northern.tech AS
+// Copyright 2021 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 	"time"
 
@@ -59,7 +60,7 @@ func TestInsertWorkflows(t *testing.T) {
 	count, _ := testDataStore.InsertWorkflows(ctx, workflow, workflow)
 	assert.Equal(t, 2, count)
 
-	workflowFromDb, err := testDataStore.GetWorkflowByName(ctx, workflow.Name)
+	workflowFromDb, err := testDataStore.GetWorkflowByName(ctx, workflow.Name, strconv.Itoa(workflow.Version))
 	assert.Nil(t, err)
 	assert.Equal(t, workflow.Name, workflowFromDb.Name)
 	assert.Equal(t, workflow.Description, workflowFromDb.Description)
@@ -84,7 +85,7 @@ func TestInsertWorkflows(t *testing.T) {
 	assert.NotNil(t, err)
 	assert.Equal(t, 1, count)
 
-	workflowFromDb, err = testDataStore.GetWorkflowByName(ctx, workflow.Name)
+	workflowFromDb, err = testDataStore.GetWorkflowByName(ctx, workflow.Name, strconv.Itoa(workflow.Version))
 	assert.Nil(t, err)
 	assert.Equal(t, workflow.Name, workflowFromDb.Name)
 	assert.Equal(t, workflow.Description, workflowFromDb.Description)
@@ -141,7 +142,7 @@ func TestLoadWorkflows(t *testing.T) {
 	err := testDataStore.LoadWorkflows(ctx, log.FromContext(ctx))
 	assert.Nil(t, err)
 
-	workflowFromDb, err := testDataStore.GetWorkflowByName(ctx, "decommission_device_from_filesystem")
+	workflowFromDb, err := testDataStore.GetWorkflowByName(ctx, "decommission_device_from_filesystem", "4")
 	assert.Nil(t, err)
 	assert.Equal(t, "decommission_device_from_filesystem", workflowFromDb.Name)
 	assert.Equal(t, "Removes device info from all services.", workflowFromDb.Description)
@@ -185,9 +186,38 @@ func TestGetWorkflowByName(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	workflowFromDb, err := testDataStore.GetWorkflowByName(ctx, "TestGetWorkflowByName")
+	workflowFromDb, err := testDataStore.GetWorkflowByName(ctx, "TestGetWorkflowByName", "1")
 	assert.NotNil(t, err)
 	assert.Nil(t, workflowFromDb)
+
+	testWorkflowname := "TestGetWorkflowByName1"
+	testWorkflow := &model.Workflow{
+		Name:        testWorkflowname,
+		Description: "The workflows especially for TestGetWorkflowByName",
+		Version:     2,
+	}
+
+	testDataStore.workflows[testWorkflowname] = testWorkflow
+	workflowFromDb, err = testDataStore.GetWorkflowByName(ctx, testWorkflowname, "10")
+	assert.NotNil(t, err)
+	assert.Nil(t, workflowFromDb)
+
+	testDataStore.workflows[testWorkflowname] = testWorkflow
+	workflowFromDb, err = testDataStore.GetWorkflowByName(ctx, testWorkflowname, "2")
+	assert.Nil(t, err)
+	assert.NotNil(t, workflowFromDb)
+	assert.Equal(t, workflowFromDb, testWorkflow)
+
+	testWorkflowname = testWorkflowname + "2"
+	testWorkflow.Name = testWorkflowname
+	testWorkflow.Version = 10
+	c, err := testDataStore.InsertWorkflows(ctx, []model.Workflow{*testWorkflow}...)
+	assert.Equal(t, c, 1)
+	assert.Nil(t, err)
+	testDataStore.workflows[testWorkflowname] = testWorkflow
+	workflowFromDb, err = testDataStore.GetWorkflowByName(ctx, testWorkflowname, "10")
+	assert.Nil(t, err)
+	assert.Equal(t, workflowFromDb, testWorkflow)
 }
 
 func TestInsertJob(t *testing.T) {

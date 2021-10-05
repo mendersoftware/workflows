@@ -57,6 +57,9 @@ type Job struct {
 
 	// insert time
 	InsertTime time.Time `json:"insert_time" bson:"insert_time,omitempty"`
+
+	//workflow version
+	WorkflowVersion string `json:"version" bson:"version,omitempty"`
 }
 
 // InputParameter defines the input parameter of a job

@@ -1,4 +1,4 @@
-// Copyright 2020 Northern.tech AS
+// Copyright 2021 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -44,6 +44,7 @@ func TestProcessJobFailedWorkflowDoesNotExist(t *testing.T) {
 	dataStore.On("GetWorkflowByName",
 		ctx,
 		job.WorkflowName,
+		job.WorkflowVersion,
 	).Return(nil, errors.New("workflow not found"))
 
 	dataStore.On("UpdateJobStatus",
@@ -86,6 +87,7 @@ func TestProcessJobFailedJobIsNotPending(t *testing.T) {
 	dataStore.On("GetWorkflowByName",
 		ctx,
 		job.WorkflowName,
+		job.WorkflowVersion,
 	).Return(workflow, nil)
 
 	dataStore.On("AcquireJob",
@@ -310,6 +312,7 @@ func TestProcessTaskRetries(t *testing.T) {
 			dataStore.On("GetWorkflowByName",
 				ctx,
 				tc.job.WorkflowName,
+				tc.job.WorkflowVersion,
 			).Return(tc.workflow, nil)
 
 			dataStore.On("AcquireJob",

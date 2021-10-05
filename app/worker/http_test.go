@@ -190,6 +190,7 @@ func TestProcessJobHTTP(t *testing.T) {
 						return true
 					}),
 				testCase.Workflow.Name,
+				mocklib.AnythingOfType("string"),
 			).Return(testCase.Workflow, nil)
 
 			dataStore.On("AcquireJob",
@@ -303,6 +304,7 @@ func TestProcessJobHTTPValidStatusCode(t *testing.T) {
 				return true
 			}),
 		workflow.Name,
+		mocklib.AnythingOfType("string"),
 	).Return(workflow, nil)
 
 	dataStore.On("AcquireJob",
@@ -411,6 +413,7 @@ func TestProcessJobHTTPWrongStatusCode(t *testing.T) {
 				return true
 			}),
 		workflow.Name,
+		mocklib.AnythingOfType("string"),
 	).Return(workflow, nil)
 
 	dataStore.On("AcquireJob",
@@ -491,6 +494,7 @@ func TestProcessJobHTTPFailedIncompatibleDefinition(t *testing.T) {
 				return true
 			}),
 		workflow.Name,
+		mocklib.AnythingOfType("string"),
 	).Return(workflow, nil)
 
 	dataStore.On("AcquireJob",

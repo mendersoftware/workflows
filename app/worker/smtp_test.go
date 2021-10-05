@@ -176,6 +176,7 @@ func TestProcessJobSMTP(t *testing.T) {
 						return true
 					}),
 				workflow.Name,
+				mocklib.AnythingOfType("string"),
 			).Return(workflow, nil)
 
 			dataStore.On("AcquireJob",
@@ -294,6 +295,7 @@ func TestProcessJobSMTPLoadFromFile(t *testing.T) {
 				return true
 			}),
 		workflow.Name,
+		mocklib.AnythingOfType("string"),
 	).Return(workflow, nil)
 
 	dataStore.On("AcquireJob",
@@ -403,6 +405,7 @@ func TestProcessJobSMTPLoadFromFileFailed(t *testing.T) {
 						return true
 					}),
 				workflow.Name,
+				mocklib.AnythingOfType("string"),
 			).Return(workflow, nil)
 
 			dataStore.On("AcquireJob",
@@ -493,6 +496,7 @@ func TestProcessJobSMTPFailure(t *testing.T) {
 				return true
 			}),
 		workflow.Name,
+		mocklib.AnythingOfType("string"),
 	).Return(workflow, nil)
 
 	dataStore.On("AcquireJob",
