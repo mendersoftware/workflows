@@ -89,27 +89,35 @@ func processSMTPTask(smtpTask *model.SMTPTask, job *model.Job,
 			"Content-Type":              {"text/plain; charset=utf-8"},
 			"Content-Transfer-Encoding": {"8bit"},
 		})
-		childContent.Write([]byte(body))
+		_, _ = childContent.Write([]byte(body))
 	}
 	if HTML != "" {
 		childContent, _ := altWriter.CreatePart(textproto.MIMEHeader{
 			"Content-Type":              {"text/html; charset=utf-8"},
 			"Content-Transfer-Encoding": {"8bit"},
 		})
-		childContent.Write([]byte(HTML))
+		_, _ = childContent.Write([]byte(HTML))
 	}
 	altWriter.Close()
 
-	msgBuffer := &bytes.Buffer{}
-	msgBuffer.WriteString("From: " + from + "\r\n" +
-		"To: " + strings.Join(to, ", ") + "\r\n" +
-		"Cc: " + strings.Join(cc, ", ") + "\r\n" +
-		"Bcc: " + strings.Join(bcc, ", ") + "\r\n" +
-		"Subject: " + subject + "\r\n" +
+	msgContent := "From: " + from + "\r\n"
+	if len(to) > 0 {
+		msgContent += "To: " + strings.Join(to, ", ") + "\r\n"
+	}
+	if len(cc) > 0 {
+		msgContent += "Cc: " + strings.Join(cc, ", ") + "\r\n"
+	}
+	if len(bcc) > 0 {
+		msgContent += "Bcc: " + strings.Join(bcc, ", ") + "\r\n"
+	}
+	msgContent += "Subject: " + subject + "\r\n" +
 		"MIME-Version: 1.0\r\n" +
 		"Content-Type: multipart/alternative; boundary=" + altWriter.Boundary() + "\r\n" +
 		"\r\n" +
-		altContent.String())
+		altContent.String()
+
+	msgBuffer := &bytes.Buffer{}
+	msgBuffer.WriteString(msgContent)
 
 	result.SMTP.Sender = from
 	result.SMTP.Recipients = recipients

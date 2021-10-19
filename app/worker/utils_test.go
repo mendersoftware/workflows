@@ -62,7 +62,7 @@ func TestProcessJobStringEnvVariable(t *testing.T) {
 	assert.Equal(t, expected, res)
 
 	res = processJobString("_${env.ENV_VARIABLE_WHICH_DOES_NOT_EXIST|default}_", workflow, job)
-	expected = fmt.Sprintf("_default_")
+	expected = "_default_"
 	assert.Equal(t, expected, res)
 }
 
