@@ -50,7 +50,10 @@ func InitAndRun(conf config.Reader, workflows Workflows, dataStore store.DataSto
 	}
 	l := log.FromContext(ctx)
 
-	dataStore.LoadWorkflows(ctx, l)
+	err := dataStore.LoadWorkflows(ctx, l)
+	if err != nil {
+		return errors.Wrap(err, "failed to load workflows")
+	}
 
 	channel, err := dataStore.GetJobs(ctx, workflows.Included, workflows.Excluded)
 	if err != nil {
@@ -60,7 +63,7 @@ func InitAndRun(conf config.Reader, workflows Workflows, dataStore store.DataSto
 	var msg interface{}
 	concurrency := conf.GetInt(dconfig.SettingConcurrency)
 	sem := make(chan bool, concurrency)
-	quit := make(chan os.Signal)
+	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, unix.SIGINT, unix.SIGTERM)
 	for {
 		select {
@@ -74,9 +77,9 @@ func InitAndRun(conf config.Reader, workflows Workflows, dataStore store.DataSto
 		if msg == nil {
 			break
 		}
-		switch msg.(type) {
+		switch msg := msg.(type) {
 		case *model.Job:
-			job := msg.(*model.Job)
+			job := msg
 			sem <- true
 			go func(ctx context.Context,
 				job *model.Job, dataStore store.DataStore) {
@@ -89,7 +92,7 @@ func InitAndRun(conf config.Reader, workflows Workflows, dataStore store.DataSto
 			}(ctx, job, dataStore)
 
 		case error:
-			return msg.(error)
+			return msg
 		}
 	}
 
