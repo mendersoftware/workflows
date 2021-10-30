@@ -1,4 +1,4 @@
-// Copyright 2020 Northern.tech AS
+// Copyright 2021 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -17,12 +17,13 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/mendersoftware/go-lib-micro/config"
-	"github.com/mendersoftware/workflows/model"
-	"github.com/urfave/cli"
 	"log"
 	"os"
 	"strings"
+
+	"github.com/mendersoftware/go-lib-micro/config"
+	"github.com/mendersoftware/workflows/model"
+	"github.com/urfave/cli"
 
 	"github.com/mendersoftware/workflows/app/server"
 	"github.com/mendersoftware/workflows/app/worker"
@@ -100,7 +101,6 @@ func doMain(args []string) {
 		},
 	}
 	app.Usage = "Workflows"
-	app.Version = "1.0.0"
 	app.Action = cmdServer
 
 	app.Before = func(args *cli.Context) error {
