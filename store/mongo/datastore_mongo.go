@@ -466,7 +466,7 @@ func (db *DataStoreMongo) UpdateJobAddResult(ctx context.Context,
 
 // UpdateJobStatus set the task execution status for a job status
 func (db *DataStoreMongo) UpdateJobStatus(
-	ctx context.Context, job *model.Job, status int) error {
+	ctx context.Context, job *model.Job, status int32) error {
 
 	if model.StatusToString(status) == "unknown" {
 		return model.ErrInvalidStatus

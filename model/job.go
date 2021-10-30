@@ -22,7 +22,7 @@ import (
 
 // Status
 const (
-	StatusDone = iota
+	StatusDone = int32(iota)
 	StatusPending
 	StatusProcessing
 	StatusFailure
@@ -48,7 +48,7 @@ type Job struct {
 	InputParameters InputParameters `json:"inputParameters" bson:"input_parameters"`
 
 	// Enumerated status of the Job and string field used for unmarshalling
-	Status       int    `json:"-" bson:"status"`
+	Status       int32  `json:"-" bson:"status"`
 	StatusString string `json:"status" bson:"-"`
 
 	// Results produced by a finished job. If status is not "done" this
@@ -145,7 +145,7 @@ func (job *Job) Validate(workflow *Workflow) error {
 }
 
 // StatusToString returns the job's status as a string
-func StatusToString(status int) string {
+func StatusToString(status int32) string {
 	var ret string
 	switch status {
 	case StatusPending:

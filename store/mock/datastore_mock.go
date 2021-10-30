@@ -210,12 +210,12 @@ func (db *DataStore) UpdateJobAddResult(ctx context.Context,
 
 // UpdateJobStatus set the task execution status for a job status
 func (db *DataStore) UpdateJobStatus(ctx context.Context, job *model.Job,
-	status int) error {
+	status int32) error {
 	ret := db.Called(ctx, job, status)
 
 	var r0 error
 	if rf, ok := ret.Get(0).(func(
-		context.Context, *model.Job, int) error); ok {
+		context.Context, *model.Job, int32) error); ok {
 		r0 = rf(ctx, job, status)
 	} else {
 		r0 = ret.Error(0)
