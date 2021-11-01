@@ -43,11 +43,6 @@ func InitAndRun(conf config.Reader, dataStore store.DataStore, nats nats.Client)
 		return err
 	}
 
-	err = nats.JetStreamCreateStream(nats.StreamName())
-	if err != nil {
-		return err
-	}
-
 	var listen = conf.GetString(dconfig.SettingListen)
 	var router = api.NewRouter(dataStore, nats)
 	srv := &http.Server{

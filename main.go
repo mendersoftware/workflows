@@ -127,6 +127,22 @@ func doMain(args []string) {
 	}
 }
 
+func getNatsClient() (nats.Client, error) {
+	natsURI := config.Config.GetString(dconfig.SettingNatsURI)
+	nats, err := nats.NewClientWithDefaults(natsURI)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to connect to nats")
+	}
+
+	streamName := config.Config.GetString(dconfig.SettingNatsStreamName)
+	nats = nats.WithStreamName(streamName)
+	err = nats.JetStreamCreateStream(nats.StreamName())
+	if err != nil {
+		return nil, err
+	}
+	return nats, nil
+}
+
 func cmdServer(args *cli.Context) error {
 	dataStore, err := store.SetupDataStore(args.Bool("automigrate"))
 	if err != nil {
@@ -134,14 +150,11 @@ func cmdServer(args *cli.Context) error {
 	}
 	defer dataStore.Close()
 
-	natsURI := config.Config.GetString(dconfig.SettingNatsURI)
-	nats, err := nats.NewClientWithDefaults(natsURI)
+	nats, err := getNatsClient()
 	if err != nil {
 		return err
 	}
-
-	streamName := config.Config.GetString(dconfig.SettingNatsStreamName)
-	nats = nats.WithStreamName(streamName)
+	defer nats.Close()
 
 	return server.InitAndRun(config.Config, dataStore, nats)
 }
@@ -153,14 +166,11 @@ func cmdWorker(args *cli.Context) error {
 	}
 	defer dataStore.Close()
 
-	natsURI := config.Config.GetString(dconfig.SettingNatsURI)
-	nats, err := nats.NewClientWithDefaults(natsURI)
+	nats, err := getNatsClient()
 	if err != nil {
-		return errors.Wrap(err, "failed to connect to nats")
+		return err
 	}
-
-	streamName := config.Config.GetString(dconfig.SettingNatsStreamName)
-	nats = nats.WithStreamName(streamName)
+	defer nats.Close()
 
 	var included, excluded []string
 

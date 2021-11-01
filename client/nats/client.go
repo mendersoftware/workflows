@@ -36,6 +36,7 @@ const (
 // Client is the nats client
 //go:generate ../../utils/mockgen.sh
 type Client interface {
+	Close()
 	WithStreamName(streamName string) Client
 	StreamName() string
 	IsConnected() bool
@@ -87,6 +88,11 @@ func (c *client) WithStreamName(streamName string) Client {
 // IsConnected returns true if the client is connected to nats
 func (c *client) StreamName() string {
 	return c.streamName
+}
+
+// Close closes the connection to nats
+func (c *client) Close() {
+	c.nats.Close()
 }
 
 // IsConnected returns true if the client is connected to nats

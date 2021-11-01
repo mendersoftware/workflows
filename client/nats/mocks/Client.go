@@ -28,6 +28,11 @@ type Client struct {
 	mock.Mock
 }
 
+// Close provides a mock function with given fields:
+func (_m *Client) Close() {
+	_m.Called()
+}
+
 // IsConnected provides a mock function with given fields:
 func (_m *Client) IsConnected() bool {
 	ret := _m.Called()
