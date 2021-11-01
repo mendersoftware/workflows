@@ -145,53 +145,6 @@ func (db *DataStore) UpsertJob(ctx context.Context, job *model.Job) (*model.Job,
 	return r0, r1
 }
 
-// GetJobs returns a channel of Jobs
-func (db *DataStore) GetJobs(ctx context.Context, included []string, excluded []string) (<-chan interface{}, error) {
-	ret := db.Called(ctx)
-	var r0 <-chan interface{}
-	if rf, ok := ret.Get(0).(func(context.Context) <-chan interface{}); ok {
-		r0 = rf(ctx)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(<-chan interface{})
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context) error); ok {
-		r1 = rf(ctx)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// AcquireJob gets given job and updates it's status to StatusProcessing.
-func (db *DataStore) AcquireJob(ctx context.Context,
-	job *model.Job) (*model.Job, error) {
-	ret := db.Called(ctx, job)
-
-	var r0 *model.Job
-	if rf, ok := ret.Get(0).(func(
-		context.Context, *model.Job) *model.Job); ok {
-		r0 = rf(ctx, job)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*model.Job)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, *model.Job) error); ok {
-		r1 = rf(ctx, job)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
 // UpdateJobAddResult add a task execution result to a job status
 func (db *DataStore) UpdateJobAddResult(ctx context.Context,
 	job *model.Job, result *model.TaskResult) error {
