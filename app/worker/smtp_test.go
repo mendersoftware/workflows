@@ -179,7 +179,7 @@ func TestProcessJobSMTP(t *testing.T) {
 				mocklib.AnythingOfType("string"),
 			).Return(workflow, nil)
 
-			dataStore.On("AcquireJob",
+			dataStore.On("UpsertJob",
 				mocklib.MatchedBy(
 					func(_ context.Context) bool {
 						return true
@@ -298,7 +298,7 @@ func TestProcessJobSMTPLoadFromFile(t *testing.T) {
 		mocklib.AnythingOfType("string"),
 	).Return(workflow, nil)
 
-	dataStore.On("AcquireJob",
+	dataStore.On("UpsertJob",
 		mocklib.MatchedBy(
 			func(_ context.Context) bool {
 				return true
@@ -408,7 +408,7 @@ func TestProcessJobSMTPLoadFromFileFailed(t *testing.T) {
 				mocklib.AnythingOfType("string"),
 			).Return(workflow, nil)
 
-			dataStore.On("AcquireJob",
+			dataStore.On("UpsertJob",
 				mocklib.MatchedBy(
 					func(_ context.Context) bool {
 						return true
@@ -499,7 +499,7 @@ func TestProcessJobSMTPFailure(t *testing.T) {
 		mocklib.AnythingOfType("string"),
 	).Return(workflow, nil)
 
-	dataStore.On("AcquireJob",
+	dataStore.On("UpsertJob",
 		mocklib.MatchedBy(
 			func(_ context.Context) bool {
 				return true

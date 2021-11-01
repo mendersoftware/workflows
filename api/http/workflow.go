@@ -23,9 +23,12 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/pkg/errors"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"github.com/mendersoftware/go-lib-micro/log"
 	"github.com/mendersoftware/workflows/app/worker"
+	"github.com/mendersoftware/workflows/client/nats"
 	"github.com/mendersoftware/workflows/model"
 	"github.com/mendersoftware/workflows/store"
 )
@@ -42,12 +45,15 @@ var (
 type WorkflowController struct {
 	// dataStore provides an interface to the database
 	dataStore store.DataStore
+	// nats provides an interface to the message bus
+	nats nats.Client
 }
 
 // NewWorkflowController returns a new StatusController
-func NewWorkflowController(dataStore store.DataStore) *WorkflowController {
+func NewWorkflowController(dataStore store.DataStore, nats nats.Client) *WorkflowController {
 	return &WorkflowController{
 		dataStore: dataStore,
+		nats:      nats,
 	}
 }
 
@@ -59,6 +65,12 @@ func (h WorkflowController) HealthCheck(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusServiceUnavailable, gin.H{
 			"error": "error reaching MongoDB: " + err.Error(),
+		})
+		return
+	}
+	if !h.nats.IsConnected() {
+		c.JSON(http.StatusServiceUnavailable, gin.H{
+			"error": "not connected to nats",
 		})
 		return
 	}
@@ -125,7 +137,7 @@ func (h WorkflowController) StartWorkflow(c *gin.Context) {
 	}
 
 	workflowVersion := ""
-	if values, _ := c.Request.Header[HeaderWorkflowMinVersion]; len(values) > 0 {
+	if values := c.Request.Header[HeaderWorkflowMinVersion]; len(values) > 0 {
 		workflowVersion = values[0]
 	}
 	for key, value := range inputParameters {
@@ -155,26 +167,50 @@ func (h WorkflowController) StartWorkflow(c *gin.Context) {
 		}
 	}
 
+	jobID := primitive.NewObjectID().Hex()
 	job := &model.Job{
+		ID:              jobID,
+		InsertTime:      time.Now(),
 		WorkflowName:    name,
 		WorkflowVersion: workflowVersion,
 		InputParameters: jobInputParameters,
 	}
-
-	job, err := h.dataStore.InsertJob(c, job)
-	l.Infof("StartWorkflow db.InsertJob returned %v,%v", job, err)
+	jobJSON, err := json.Marshal(job)
 	if err != nil {
-		switch err {
-		case store.ErrWorkflowNotFound:
-			c.JSON(http.StatusNotFound, gin.H{
-				"error": err.Error(),
-			})
-		default:
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error": err.Error(),
-			})
-		}
+		l.Error(errors.Wrap(err, "failed to marshal the job"))
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": err.Error(),
+		})
+	}
+
+	workflow, err := h.dataStore.GetWorkflowByName(c, job.WorkflowName, job.WorkflowVersion)
+	if err != nil {
+		l.Error(err)
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": err.Error(),
+		})
 		return
+	}
+
+	if err := job.Validate(workflow); err != nil {
+		l.Error(errors.Wrap(err, "validation failed for the job"))
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+
+	topic := workflow.Topic
+	if topic == "" {
+		topic = model.DefaultTopic
+	}
+	subject := h.nats.StreamName() + "." + topic
+	err = h.nats.JetStreamPublish(subject, jobJSON)
+	if err != nil {
+		l.Error(errors.Wrap(err, "JetStreamPublish failed"))
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": err.Error(),
+		})
 	}
 
 	c.JSON(http.StatusCreated, gin.H{

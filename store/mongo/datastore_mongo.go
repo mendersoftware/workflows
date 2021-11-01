@@ -293,48 +293,27 @@ func (db *DataStoreMongo) GetWorkflows(ctx context.Context) []model.Workflow {
 	return workflows
 }
 
-// InsertJob inserts the job in the queue
-func (db *DataStoreMongo) InsertJob(
+// UpsertJob inserts the job in the queue
+func (db *DataStoreMongo) UpsertJob(
 	ctx context.Context, job *model.Job) (*model.Job, error) {
-
-	if workflow, err := db.GetWorkflowByName(ctx, job.WorkflowName, job.WorkflowVersion); err == nil {
-		if err := job.Validate(workflow); err != nil {
-			return nil, err
-		}
-	} else {
-		return nil, store.ErrWorkflowNotFound
+	if job.ID == "" {
+		job.ID = primitive.NewObjectID().Hex()
 	}
-
-	id := primitive.NewObjectID()
-	job.ID = id.Hex()
-	job.Status = model.StatusPending
-	job.InsertTime = time.Now()
+	query := bson.M{
+		"_id": job.ID,
+	}
+	update := bson.M{
+		"$set": job,
+	}
+	findUpdateOptions := &mopts.FindOneAndUpdateOptions{}
+	findUpdateOptions.SetReturnDocument(mopts.After)
+	findUpdateOptions.SetUpsert(true)
 
 	database := db.client.Database(db.dbName)
-	collQueue := database.Collection(JobQueueCollectionName)
 	collJobs := database.Collection(JobsCollectionName)
 
-	var session mongo.Session
-	var err error
-
-	if session, err = db.client.StartSession(); err != nil {
-		return nil, err
-	}
-	defer session.EndSession(ctx)
-
-	if err = mongo.WithSession(ctx, session, func(sc mongo.SessionContext) error {
-		// insert the same pending job into the global collection
-		if _, err := collJobs.InsertOne(ctx, job); err != nil {
-			return errors.Wrap(err,
-				"Error inserting job into jobs collection")
-		}
-		// insert the Job in the capped transaction we use as message queue
-		if _, err := collQueue.InsertOne(ctx, job); err != nil {
-			return errors.Wrap(err,
-				"Error inserting job to message queue")
-		}
-		return nil
-	}); err != nil {
+	err := collJobs.FindOneAndUpdate(ctx, query, update, findUpdateOptions).Decode(job)
+	if err != nil {
 		return nil, err
 	}
 
@@ -400,9 +379,9 @@ func (db *DataStoreMongo) GetJobs(ctx context.Context, included []string, exclud
 	}()
 
 	ret := <-channel
-	switch ret.(type) {
+	switch ret := ret.(type) {
 	case error:
-		return nil, ret.(error)
+		return nil, ret
 	default:
 		return channel, nil
 	}

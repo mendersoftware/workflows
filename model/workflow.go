@@ -1,4 +1,4 @@
-// Copyright 2020 Northern.tech AS
+// Copyright 2021 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -25,9 +25,12 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const DefaultTopic = "default"
+
 // Workflow stores the definition of a workflow
 type Workflow struct {
 	Name               string   `json:"name" bson:"_id"`
+	Topic              string   `json:"topic" bson:"topic"`
 	Description        string   `json:"description" bson:"description"`
 	Version            int      `json:"version" bson:"version"`
 	SchemaVersion      int      `json:"schemaVersion" bson:"schema_version"`

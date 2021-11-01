@@ -22,7 +22,9 @@ import (
 	"strings"
 
 	"github.com/mendersoftware/go-lib-micro/config"
+	"github.com/mendersoftware/workflows/client/nats"
 	"github.com/mendersoftware/workflows/model"
+	"github.com/pkg/errors"
 	"github.com/urfave/cli"
 
 	"github.com/mendersoftware/workflows/app/server"
@@ -131,7 +133,17 @@ func cmdServer(args *cli.Context) error {
 		return err
 	}
 	defer dataStore.Close()
-	return server.InitAndRun(config.Config, dataStore)
+
+	natsURI := config.Config.GetString(dconfig.SettingNatsURI)
+	nats, err := nats.NewClientWithDefaults(natsURI)
+	if err != nil {
+		return err
+	}
+
+	streamName := config.Config.GetString(dconfig.SettingNatsStreamName)
+	nats = nats.WithStreamName(streamName)
+
+	return server.InitAndRun(config.Config, dataStore, nats)
 }
 
 func cmdWorker(args *cli.Context) error {
@@ -140,6 +152,15 @@ func cmdWorker(args *cli.Context) error {
 		return err
 	}
 	defer dataStore.Close()
+
+	natsURI := config.Config.GetString(dconfig.SettingNatsURI)
+	nats, err := nats.NewClientWithDefaults(natsURI)
+	if err != nil {
+		return errors.Wrap(err, "failed to connect to nats")
+	}
+
+	streamName := config.Config.GetString(dconfig.SettingNatsStreamName)
+	nats = nats.WithStreamName(streamName)
 
 	var included, excluded []string
 
@@ -157,7 +178,7 @@ func cmdWorker(args *cli.Context) error {
 		Included: included,
 		Excluded: excluded,
 	}
-	return worker.InitAndRun(config.Config, workflows, dataStore)
+	return worker.InitAndRun(config.Config, workflows, dataStore, nats)
 }
 
 func cmdMigrate(args *cli.Context) error {

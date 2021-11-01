@@ -57,7 +57,7 @@ func TestProcessJobFailedWorkflowDoesNotExist(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func TestProcessJobFailedJobIsNotPending(t *testing.T) {
+func TestProcessJobFailedUpsert(t *testing.T) {
 	ctx := context.Background()
 	dataStore := storemock.NewDataStore()
 	defer dataStore.AssertExpectations(t)
@@ -90,19 +90,13 @@ func TestProcessJobFailedJobIsNotPending(t *testing.T) {
 		job.WorkflowVersion,
 	).Return(workflow, nil)
 
-	dataStore.On("AcquireJob",
+	dataStore.On("UpsertJob",
 		ctx,
 		job,
-	).Return(nil, errors.New("not found"))
-
-	dataStore.On("UpdateJobStatus",
-		ctx,
-		job,
-		model.StatusFailure,
-	).Return(nil)
+	).Return(nil, errors.New("failed"))
 
 	err := processJob(ctx, job, dataStore)
-	assert.Nil(t, err)
+	assert.EqualError(t, err, "insert of the job failed: failed")
 }
 
 func TestProcessTaskSkipped(t *testing.T) {
@@ -315,7 +309,7 @@ func TestProcessTaskRetries(t *testing.T) {
 				tc.job.WorkflowVersion,
 			).Return(tc.workflow, nil)
 
-			dataStore.On("AcquireJob",
+			dataStore.On("UpsertJob",
 				ctx,
 				tc.job,
 			).Return(tc.job, nil)

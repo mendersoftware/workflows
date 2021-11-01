@@ -1,4 +1,4 @@
-// Copyright 2020 Northern.tech AS
+// Copyright 2021 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -23,6 +23,26 @@ const (
 	SettingListen = "listen"
 	// SettingListenDefault is the default value for the listen address
 	SettingListenDefault = ":8080"
+
+	// SettingNatsURI is the config key for the nats uri
+	SettingNatsURI = "nats_uri"
+	// SettingNatsURIDefault is the default value for the nats uri
+	SettingNatsURIDefault = "nats://mender-nats:4222"
+
+	// SettingNatsStreamName is the config key for the nats streaem name
+	SettingNatsStreamName = "nats_stream_name"
+	// SettingNatsStreamNameDefault is the default value for the nats stream name
+	SettingNatsStreamNameDefault = "WORKFLOWS"
+
+	// SettingNatsSubscriberTopic is the config key for the nats subscriber topic name
+	SettingNatsSubscriberTopic = "nats_subscriber_topic"
+	// SettingNatsSubscriberTopicDefault is the default value for the nats subscriber topic name
+	SettingNatsSubscriberTopicDefault = "default"
+
+	// SettingNatsSubscriberDurable is the config key for the nats subscriber durable name
+	SettingNatsSubscriberDurable = "nats_subscriber_durable"
+	// SettingNatsSubscriberDurableDefault is the default value for the nats subscriber durable name
+	SettingNatsSubscriberDurableDefault = "workflows-worker"
 
 	// SettingMongo is the config key for the mongo URL
 	SettingMongo = "mongo-url"
@@ -84,6 +104,10 @@ var (
 	// Defaults are the default configuration settings
 	Defaults = []config.Default{
 		{Key: SettingListen, Value: SettingListenDefault},
+		{Key: SettingNatsURI, Value: SettingNatsURIDefault},
+		{Key: SettingNatsStreamName, Value: SettingNatsStreamNameDefault},
+		{Key: SettingNatsSubscriberTopic, Value: SettingNatsSubscriberTopicDefault},
+		{Key: SettingNatsSubscriberDurable, Value: SettingNatsSubscriberDurableDefault},
 		{Key: SettingMongo, Value: SettingMongoDefault},
 		{Key: SettingDbName, Value: SettingDbNameDefault},
 		{Key: SettingDbSSL, Value: SettingDbSSLDefault},

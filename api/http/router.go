@@ -1,4 +1,4 @@
-// Copyright 2020 Northern.tech AS
+// Copyright 2021 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/mendersoftware/go-lib-micro/log"
 
+	"github.com/mendersoftware/workflows/client/nats"
 	"github.com/mendersoftware/workflows/store"
 )
 
@@ -35,7 +36,7 @@ const (
 )
 
 // NewRouter returns the gin router
-func NewRouter(dataStore store.DataStore) *gin.Engine {
+func NewRouter(dataStore store.DataStore, nats nats.Client) *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 	gin.DisableConsoleColor()
 
@@ -49,7 +50,7 @@ func NewRouter(dataStore store.DataStore) *gin.Engine {
 	status := NewStatusController()
 	router.GET(APIURLStatus, status.Status)
 
-	workflow := NewWorkflowController(dataStore)
+	workflow := NewWorkflowController(dataStore, nats)
 	router.GET(APIURLHealth, workflow.HealthCheck)
 
 	router.POST(APIURLWorkflow, workflow.StartWorkflow)

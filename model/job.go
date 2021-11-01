@@ -49,7 +49,7 @@ type Job struct {
 
 	// Enumerated status of the Job and string field used for unmarshalling
 	Status       int32  `json:"-" bson:"status"`
-	StatusString string `json:"status" bson:"-"`
+	StatusString string `json:"status,omitempty" bson:"-"`
 
 	// Results produced by a finished job. If status is not "done" this
 	// field will always be nil.
@@ -90,10 +90,10 @@ type TaskResult struct {
 	Type         string                  `json:"type" bson:"type"`
 	Success      bool                    `json:"success" bson:"success"`
 	Skipped      bool                    `json:"skipped" bson:"skipped"`
-	CLI          *TaskResultCLI          `json:"cli" bson:"cli,omitempty"`
-	HTTPRequest  *TaskResultHTTPRequest  `json:"httpRequest" bson:"httpRequest,omitempty"`
-	HTTPResponse *TaskResultHTTPResponse `json:"httpResponse" bson:"httpResponse,omitempty"`
-	SMTP         *TaskResultSMTP         `json:"smtp" bson:"smtp,omitempty"`
+	CLI          *TaskResultCLI          `json:"cli,omitempty" bson:"cli,omitempty"`
+	HTTPRequest  *TaskResultHTTPRequest  `json:"httpRequest,omitempty" bson:"httpRequest,omitempty"`
+	HTTPResponse *TaskResultHTTPResponse `json:"httpResponse,omitempty" bson:"httpResponse,omitempty"`
+	SMTP         *TaskResultSMTP         `json:"smtp,omitempty" bson:"smtp,omitempty"`
 }
 
 // TaskResultCLI contains the CLI command, the output and the exit status

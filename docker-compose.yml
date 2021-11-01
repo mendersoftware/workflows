@@ -11,6 +11,18 @@ services:
         aliases:
           - mender-mongo
 
+  nats:
+      image: nats:2.6.2-alpine3.14
+      command: -js -sd /opt/nats
+      ports:
+        - "4222:4222"
+      volumes:
+        - ./data/nats:/opt/nats
+      networks:
+        mender:
+          aliases:
+            - mender-nats
+
   workflows-worker:
     image: mendersoftware/workflows:master
     command: worker --automigrate

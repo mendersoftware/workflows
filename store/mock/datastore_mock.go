@@ -121,8 +121,8 @@ func (db *DataStore) GetWorkflows(ctx context.Context) []model.Workflow {
 	return r0
 }
 
-// InsertJob inserts the job in the queue
-func (db *DataStore) InsertJob(ctx context.Context, job *model.Job) (*model.Job, error) {
+// UpsertJob inserts the job in the queue
+func (db *DataStore) UpsertJob(ctx context.Context, job *model.Job) (*model.Job, error) {
 	ret := db.Called(ctx, job)
 
 	var r0 *model.Job

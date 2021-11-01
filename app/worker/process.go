@@ -20,6 +20,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pkg/errors"
+
 	"github.com/mendersoftware/go-lib-micro/log"
 	"github.com/mendersoftware/workflows/model"
 	"github.com/mendersoftware/workflows/store"
@@ -31,8 +33,8 @@ func processJob(ctx context.Context, job *model.Job,
 
 	workflow, err := dataStore.GetWorkflowByName(ctx, job.WorkflowName, job.WorkflowVersion)
 	if err != nil {
-		l.Warnf("The workflow %q of job %s does not exist",
-			job.WorkflowName, job.ID)
+		l.Warnf("The workflow %q of job %s does not exist: %v",
+			job.WorkflowName, job.ID, err)
 		err := dataStore.UpdateJobStatus(ctx, job, model.StatusFailure)
 		if err != nil {
 			return err
@@ -40,19 +42,11 @@ func processJob(ctx context.Context, job *model.Job,
 		return nil
 	}
 
-	acquiredJob, err := dataStore.AcquireJob(ctx, job)
+	job.Status = model.StatusPending
+	_, err = dataStore.UpsertJob(ctx, job)
 	if err != nil {
-		l.Error(err.Error())
-		err := dataStore.UpdateJobStatus(ctx, job, model.StatusFailure)
-		if err != nil {
-			return err
-		}
-		return nil
-	} else if acquiredJob == nil {
-		l.Debugf("The job with given ID (%s) does not exist or was already taken", job.ID)
-		return nil
+		return errors.Wrap(err, "insert of the job failed")
 	}
-	job = acquiredJob
 
 	l.Infof("%s: started, %s", job.ID, job.WorkflowName)
 
