@@ -1,4 +1,4 @@
-// Copyright 2020 Northern.tech AS
+// Copyright 2021 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -66,4 +66,20 @@ func TestValidateWithErrors(t *testing.T) {
 	err := job.Validate(workflow)
 	assert.NotNil(t, err)
 	assert.EqualError(t, err, "Missing input parameters: [missing_key]")
+}
+
+func TestPrepareForJSONMarshalling(t *testing.T) {
+	job := Job{
+		Status: StatusPending,
+		InputParameters: []InputParameter{
+			{
+				Name:  "key",
+				Value: "test",
+				Raw:   "test",
+			},
+		},
+	}
+	job.PrepareForJSONMarshalling()
+	assert.Equal(t, "pending", job.StatusString)
+	assert.Nil(t, job.InputParameters[0].Raw)
 }

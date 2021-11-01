@@ -71,7 +71,7 @@ type InputParameter struct {
 	Value string `json:"value" bson:"value"`
 
 	// Raw value of the input parameter
-	Raw interface{} `json:"-" bson:"raw"`
+	Raw interface{} `json:"raw,omitempty" bson:"raw"`
 }
 
 type InputParameters []InputParameter
@@ -142,6 +142,13 @@ func (job *Job) Validate(workflow *Workflow) error {
 		return errors.Errorf(ErrMsgMissingParamF, missing)
 	}
 	return nil
+}
+
+func (job *Job) PrepareForJSONMarshalling() {
+	job.StatusString = StatusToString(job.Status)
+	for i, _ := range job.InputParameters {
+		job.InputParameters[i].Raw = nil
+	}
 }
 
 // StatusToString returns the job's status as a string

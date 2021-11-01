@@ -236,6 +236,6 @@ func (h WorkflowController) GetWorkflowByNameAndID(c *gin.Context) {
 		return
 	}
 
-	job.StatusString = model.StatusToString(job.Status)
+	job.PrepareForJSONMarshalling()
 	c.JSON(http.StatusOK, job)
 }
