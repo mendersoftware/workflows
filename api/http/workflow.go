@@ -119,27 +119,14 @@ func (h WorkflowController) GetWorkflows(c *gin.Context) {
 	c.JSON(http.StatusOK, h.dataStore.GetWorkflows(c))
 }
 
-// StartWorkflow responds to POST /api/workflow/:name
-func (h WorkflowController) StartWorkflow(c *gin.Context) {
-	var name string = c.Param("name")
-	var inputParameters map[string]interface{}
-	var jobInputParameters []model.InputParameter
-
-	l := log.FromContext(c.Request.Context())
-
-	l.Infof("StartWorkflow starting workflow %s", name)
-	if err := c.BindJSON(&inputParameters); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": fmt.Sprintf("Unable to parse the input parameters: %s",
-				err.Error()),
-		})
-		return
-	}
-
+func (h WorkflowController) startWorkflowGetJob(c *gin.Context, inputParameters map[string]interface{},
+	name string) ([]byte, string, string, error) {
 	workflowVersion := ""
 	if values := c.Request.Header[HeaderWorkflowMinVersion]; len(values) > 0 {
 		workflowVersion = values[0]
 	}
+
+	var jobInputParameters []model.InputParameter
 	for key, value := range inputParameters {
 		valueSlice, ok := value.([]interface{})
 		if ok {
@@ -175,29 +162,19 @@ func (h WorkflowController) StartWorkflow(c *gin.Context) {
 		WorkflowVersion: workflowVersion,
 		InputParameters: jobInputParameters,
 	}
-	jobJSON, err := json.Marshal(job)
-	if err != nil {
-		l.Error(errors.Wrap(err, "failed to marshal the job"))
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": err.Error(),
-		})
-	}
 
 	workflow, err := h.dataStore.GetWorkflowByName(c, job.WorkflowName, job.WorkflowVersion)
 	if err != nil {
-		l.Error(err)
-		c.JSON(http.StatusNotFound, gin.H{
-			"error": err.Error(),
-		})
-		return
+		return nil, "", "", store.ErrWorkflowNotFound
 	}
 
 	if err := job.Validate(workflow); err != nil {
-		l.Error(errors.Wrap(err, "validation failed for the job"))
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": err.Error(),
-		})
-		return
+		return nil, "", "", err
+	}
+
+	jobJSON, err := json.Marshal(job)
+	if err != nil {
+		return nil, "", "", errors.Wrap(err, "failed to marshal the job")
 	}
 
 	topic := workflow.Topic
@@ -205,6 +182,41 @@ func (h WorkflowController) StartWorkflow(c *gin.Context) {
 		topic = model.DefaultTopic
 	}
 	subject := h.nats.StreamName() + "." + topic
+
+	return jobJSON, job.ID, subject, nil
+}
+
+// StartWorkflow responds to POST /api/workflow/:name
+func (h WorkflowController) StartWorkflow(c *gin.Context) {
+	l := log.FromContext(c.Request.Context())
+
+	var name string = c.Param("name")
+	l.Infof("StartWorkflow starting workflow %s", name)
+
+	var inputParameters map[string]interface{}
+	if err := c.BindJSON(&inputParameters); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": fmt.Sprintf("Unable to parse the input parameters: %s",
+				err.Error()),
+		})
+		return
+	}
+
+	jobJSON, jobID, subject, err := h.startWorkflowGetJob(c, inputParameters, name)
+	if err != nil {
+		l.Error(err)
+		statusCode := http.StatusBadRequest
+		switch err {
+		case store.ErrWorkflowNotFound:
+			statusCode = http.StatusNotFound
+		default:
+		}
+		c.JSON(statusCode, gin.H{
+			"error": err.Error(),
+		})
+		return
+	}
+
 	err = h.nats.JetStreamPublish(subject, jobJSON)
 	if err != nil {
 		l.Error(errors.Wrap(err, "JetStreamPublish failed"))
@@ -214,9 +226,58 @@ func (h WorkflowController) StartWorkflow(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, gin.H{
-		"id":   job.ID,
+		"id":   jobID,
 		"name": name,
 	})
+	l.Infof("StartWorkflow starting workflow %s : StatusCreated", name)
+}
+
+// StartBatchWorkflows responds to POST /api/workflow/:name/batch
+func (h WorkflowController) StartBatchWorkflows(c *gin.Context) {
+	l := log.FromContext(c.Request.Context())
+
+	var name string = c.Param("name")
+	l.Infof("StartWorkflow starting workflow %s", name)
+
+	var inputParametersBatch []map[string]interface{}
+	if err := c.BindJSON(&inputParametersBatch); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": fmt.Sprintf("Unable to parse the input parameters: %s",
+				err.Error()),
+		})
+		return
+	}
+
+	result := make([]map[string]string, 0, len(inputParametersBatch))
+	for _, inputParameters := range inputParametersBatch {
+		jobJSON, jobID, subject, err := h.startWorkflowGetJob(c, inputParameters, name)
+		if err != nil {
+			l.Error(err)
+			statusCode := http.StatusBadRequest
+			switch err {
+			case store.ErrWorkflowNotFound:
+				statusCode = http.StatusNotFound
+			default:
+			}
+			c.JSON(statusCode, gin.H{
+				"error": err.Error(),
+			})
+			return
+		}
+		jobResult := map[string]string{
+			"id":   jobID,
+			"name": name,
+		}
+		err = h.nats.JetStreamPublish(subject, jobJSON)
+		if err != nil {
+			l.Error(errors.Wrap(err, "JetStreamPublish failed"))
+			jobResult["id"] = ""
+			jobResult["error"] = err.Error()
+		}
+		result = append(result, jobResult)
+	}
+
+	c.JSON(http.StatusCreated, result)
 	l.Infof("StartWorkflow starting workflow %s : StatusCreated", name)
 }
 

@@ -579,6 +579,248 @@ func TestWorkflowFoundAndStartedWithListOfStringsParameter(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w.Code)
 }
 
+func TestBatchWorkflowNotFound(t *testing.T) {
+	const workflowName = "test"
+
+	dataStore := mock.NewDataStore()
+	defer dataStore.AssertExpectations(t)
+
+	dataStore.On("GetWorkflowByName",
+		mocklib.MatchedBy(
+			func(_ context.Context) bool {
+				return true
+			}),
+		workflowName,
+		mocklib.AnythingOfType("string"),
+	).Return(nil, store.ErrWorkflowNotFound)
+
+	payload := `[{
+      "key": "value"
+	}]`
+
+	url := strings.Replace(APIURLWorkflowBatch, ":name", workflowName, 1)
+	req, err := http.NewRequest(http.MethodPost, url, strings.NewReader(payload))
+	assert.NoError(t, err)
+
+	w := httptest.NewRecorder()
+	router := NewRouter(dataStore, nil)
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestBatchWorkflowFoundButMissingParameters(t *testing.T) {
+	const workflowName = "test"
+
+	dataStore := mock.NewDataStore()
+	defer dataStore.AssertExpectations(t)
+
+	workflow := &model.Workflow{
+		InputParameters: []string{"param1", "param2", "param3"},
+	}
+
+	dataStore.On("GetWorkflowByName",
+		mocklib.MatchedBy(
+			func(_ context.Context) bool {
+				return true
+			}),
+		workflowName,
+		mocklib.AnythingOfType("string"),
+	).Return(workflow, nil)
+
+	payload := `[{
+      "key": "value"
+	}]`
+
+	url := strings.Replace(APIURLWorkflowBatch, ":name", workflowName, 1)
+	req, err := http.NewRequest(http.MethodPost, url, strings.NewReader(payload))
+	assert.NoError(t, err)
+
+	w := httptest.NewRecorder()
+	router := NewRouter(dataStore, nil)
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	var response map[string]string
+	body := w.Body.Bytes()
+	err = json.Unmarshal(body, &response)
+	value, ok := response["error"]
+
+	assert.Nil(t, err)
+	assert.True(t, ok)
+
+	expectedBody := gin.H{
+		"error": "Missing input parameters: [param1 param2 param3]",
+	}
+	assert.Equal(t, expectedBody["error"], value)
+}
+
+func TestBatchWorkflowFoundAndStartedWithInvalidParameters(t *testing.T) {
+	dataStore := mock.NewDataStore()
+	defer dataStore.AssertExpectations(t)
+
+	payload := ``
+
+	const workflowName = "test"
+	url := strings.Replace(APIURLWorkflowBatch, ":name", workflowName, 1)
+	req, err := http.NewRequest(http.MethodPost, url, strings.NewReader(payload))
+	assert.NoError(t, err)
+
+	w := httptest.NewRecorder()
+	router := NewRouter(dataStore, nil)
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	var response map[string]string
+	body := w.Body.Bytes()
+	err = json.Unmarshal(body, &response)
+	value, ok := response["error"]
+
+	assert.Nil(t, err)
+	assert.True(t, ok)
+
+	expectedBody := gin.H{
+		"error": "Unable to parse the input parameters: EOF",
+	}
+	assert.Equal(t, expectedBody["error"], value)
+}
+
+func TestBatchWorkflowFoundAndStartedWithParameters(t *testing.T) {
+	dataStore := mock.NewDataStore()
+	defer dataStore.AssertExpectations(t)
+
+	nats := &mock_nats.Client{}
+	defer nats.AssertExpectations(t)
+
+	nats.On("StreamName").Return("stream")
+
+	workflow := &model.Workflow{
+		Name: "test",
+	}
+	mockedJob := &model.Job{
+		ID:           "123456",
+		WorkflowName: workflow.Name,
+	}
+
+	dataStore.On("GetWorkflowByName",
+		mocklib.MatchedBy(
+			func(_ context.Context) bool {
+				return true
+			}),
+		workflow.Name,
+		mocklib.AnythingOfType("string"),
+	).Return(workflow, nil)
+
+	nats.On("JetStreamPublish",
+		"stream.default",
+		mocklib.MatchedBy(func(data []byte) bool {
+			job := &model.Job{}
+			err := json.Unmarshal(data, job)
+			assert.NoError(t, err)
+			assert.Equal(t, workflow.Name, job.WorkflowName)
+			assert.Equal(t, "key", job.InputParameters[0].Name)
+			assert.Equal(t, "value", job.InputParameters[0].Value)
+
+			return true
+		}),
+	).Return(nil)
+
+	dataStore.On("GetJobByNameAndID",
+		mocklib.MatchedBy(
+			func(_ context.Context) bool {
+				return true
+			}),
+		workflow.Name,
+		mocklib.AnythingOfType("string"),
+	).Return(mockedJob, nil)
+
+	payload := `[{
+      "key": "value"
+	}]`
+
+	url := strings.Replace(APIURLWorkflowBatch, ":name", workflow.Name, 1)
+	req, err := http.NewRequest(http.MethodPost, url, strings.NewReader(payload))
+	assert.NoError(t, err)
+
+	w := httptest.NewRecorder()
+	router := NewRouter(dataStore, nats)
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusCreated, w.Code)
+
+	var response []map[string]string
+	body := w.Body.Bytes()
+	err = json.Unmarshal(body, &response)
+	assert.Nil(t, err)
+	value, ok := response[0]["id"]
+	assert.True(t, ok)
+
+	w = httptest.NewRecorder()
+	url = strings.Replace(strings.Replace(APIURLWorkflowID, ":name", workflow.Name, 1), ":id", value, 1)
+	req, _ = http.NewRequest(http.MethodGet, url, nil)
+	router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+func TestBatchWorkflowFailToPublish(t *testing.T) {
+	dataStore := mock.NewDataStore()
+	defer dataStore.AssertExpectations(t)
+
+	nats := &mock_nats.Client{}
+	defer nats.AssertExpectations(t)
+
+	nats.On("StreamName").Return("stream")
+
+	workflow := &model.Workflow{
+		Name: "test",
+	}
+
+	dataStore.On("GetWorkflowByName",
+		mocklib.MatchedBy(
+			func(_ context.Context) bool {
+				return true
+			}),
+		workflow.Name,
+		mocklib.AnythingOfType("string"),
+	).Return(workflow, nil)
+
+	nats.On("JetStreamPublish",
+		"stream.default",
+		mocklib.MatchedBy(func(data []byte) bool {
+			job := &model.Job{}
+			err := json.Unmarshal(data, job)
+			assert.NoError(t, err)
+			assert.Equal(t, workflow.Name, job.WorkflowName)
+			assert.Equal(t, "key", job.InputParameters[0].Name)
+			assert.Equal(t, "value", job.InputParameters[0].Value)
+
+			return true
+		}),
+	).Return(errors.New("failure"))
+
+	payload := `[{
+      "key": "value"
+	}]`
+
+	url := strings.Replace(APIURLWorkflowBatch, ":name", workflow.Name, 1)
+	req, err := http.NewRequest(http.MethodPost, url, strings.NewReader(payload))
+	assert.NoError(t, err)
+
+	w := httptest.NewRecorder()
+	router := NewRouter(dataStore, nats)
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusCreated, w.Code)
+
+	var response []map[string]string
+	body := w.Body.Bytes()
+	err = json.Unmarshal(body, &response)
+	assert.Nil(t, err)
+	value, _ := response[0]["error"]
+	assert.NotEmpty(t, value)
+}
+
 func TestWorkflowByNameAndIDNotFound(t *testing.T) {
 	dataStore := mock.NewDataStore()
 	defer dataStore.AssertExpectations(t)
