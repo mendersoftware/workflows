@@ -31,6 +31,7 @@ const DefaultTopic = "default"
 type Workflow struct {
 	Name               string   `json:"name" bson:"_id"`
 	Topic              string   `json:"topic" bson:"topic"`
+	Ephemeral          bool     `json:"ephemeral" bson:"ephemeral"`
 	Description        string   `json:"description" bson:"description"`
 	Version            int      `json:"version" bson:"version"`
 	SchemaVersion      int      `json:"schemaVersion" bson:"schema_version"`

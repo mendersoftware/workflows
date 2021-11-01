@@ -27,6 +27,11 @@ import (
 	"github.com/mendersoftware/workflows/store"
 )
 
+// this variable is set when running acceptance tests to disable ephemeral jobs
+// without it, it is not possible to inspect the jobs collection to assert the
+// values stored in the database
+var NoEphemeralWorkflows = false
+
 func processJob(ctx context.Context, job *model.Job,
 	dataStore store.DataStore) error {
 	l := log.FromContext(ctx)
@@ -42,10 +47,12 @@ func processJob(ctx context.Context, job *model.Job,
 		return nil
 	}
 
-	job.Status = model.StatusPending
-	_, err = dataStore.UpsertJob(ctx, job)
-	if err != nil {
-		return errors.Wrap(err, "insert of the job failed")
+	if !workflow.Ephemeral || NoEphemeralWorkflows {
+		job.Status = model.StatusPending
+		_, err = dataStore.UpsertJob(ctx, job)
+		if err != nil {
+			return errors.Wrap(err, "insert of the job failed")
+		}
 	}
 
 	l.Infof("%s: started, %s", job.ID, job.WorkflowName)
@@ -72,9 +79,11 @@ func processJob(ctx context.Context, job *model.Job,
 			}
 		}
 		job.Results = append(job.Results, *result)
-		err = dataStore.UpdateJobAddResult(ctx, job, result)
-		if err != nil {
-			l.Errorf("Error uploading results: %s", err.Error())
+		if !workflow.Ephemeral || !result.Success || NoEphemeralWorkflows {
+			err = dataStore.UpdateJobAddResult(ctx, job, result)
+			if err != nil {
+				l.Errorf("Error uploading results: %s", err.Error())
+			}
 		}
 		if !result.Success {
 			success = false
@@ -82,17 +91,19 @@ func processJob(ctx context.Context, job *model.Job,
 		}
 	}
 
-	var newStatus string
+	var status int32
 	if success {
-		err = dataStore.UpdateJobStatus(ctx, job, model.StatusDone)
-		newStatus = "done"
+		status = model.StatusDone
 	} else {
-		err = dataStore.UpdateJobStatus(ctx, job, model.StatusFailure)
-		newStatus = "failed"
+		status = model.StatusFailure
 	}
-	if err != nil {
-		l.Warn(fmt.Sprintf("Unable to set job status to %s", newStatus))
-		return err
+	if !workflow.Ephemeral || NoEphemeralWorkflows {
+		newStatus := model.StatusToString(status)
+		err = dataStore.UpdateJobStatus(ctx, job, status)
+		if err != nil {
+			l.Warn(fmt.Sprintf("Unable to set job status to %s", newStatus))
+			return err
+		}
 	}
 
 	l.Infof("%s: done", job.ID)

@@ -1,7 +1,8 @@
 {
     "name": "reindex_reporting",
     "description": "Trigger a reindex of service data in mender-reporting.",
-    "version": 1,
+    "ephemeral": true,
+    "version": 2,
     "tasks": [
         {
             "name": "reindex_reporting",

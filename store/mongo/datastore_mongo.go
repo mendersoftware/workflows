@@ -323,10 +323,25 @@ func (db *DataStoreMongo) UpsertJob(
 // UpdateJobAddResult add a task execution result to a job status
 func (db *DataStoreMongo) UpdateJobAddResult(ctx context.Context,
 	job *model.Job, result *model.TaskResult) error {
+	options := &mopts.UpdateOptions{}
+	options.SetUpsert(true)
+
+	update := bson.M{
+		"$addToSet": bson.M{
+			"results": result,
+		},
+		"$setOnInsert": bson.M{
+			"workflow_name":    job.WorkflowName,
+			"input_parameters": job.InputParameters,
+			"status":           job.Status,
+			"insert_time":      job.InsertTime,
+			"version":          job.WorkflowVersion,
+		},
+	}
+
 	collection := db.client.Database(db.dbName).
 		Collection(JobsCollectionName)
-	update := bson.M{"$addToSet": bson.M{"results": result}}
-	_, err := collection.UpdateOne(ctx, bson.M{"_id": job.ID}, update)
+	_, err := collection.UpdateOne(ctx, bson.M{"_id": job.ID}, update, options)
 	if err != nil {
 		return err
 	}
@@ -337,10 +352,13 @@ func (db *DataStoreMongo) UpdateJobAddResult(ctx context.Context,
 // UpdateJobStatus set the task execution status for a job status
 func (db *DataStoreMongo) UpdateJobStatus(
 	ctx context.Context, job *model.Job, status int32) error {
-
 	if model.StatusToString(status) == "unknown" {
 		return model.ErrInvalidStatus
 	}
+
+	options := &mopts.UpdateOptions{}
+	options.SetUpsert(true)
+
 	collection := db.client.Database(db.dbName).
 		Collection(JobsCollectionName)
 	_, err := collection.UpdateOne(ctx, bson.M{
@@ -349,7 +367,14 @@ func (db *DataStoreMongo) UpdateJobStatus(
 		"$set": bson.M{
 			"status": status,
 		},
-	})
+		"$setOnInsert": bson.M{
+			"workflow_name":    job.WorkflowName,
+			"input_parameters": job.InputParameters,
+			"results":          job.Results,
+			"insert_time":      job.InsertTime,
+			"version":          job.WorkflowVersion,
+		},
+	}, options)
 	if err != nil {
 		return err
 	}
