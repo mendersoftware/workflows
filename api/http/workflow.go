@@ -271,7 +271,8 @@ func (h WorkflowController) StartBatchWorkflows(c *gin.Context) {
 		err = h.nats.JetStreamPublish(subject, jobJSON)
 		if err != nil {
 			l.Error(errors.Wrap(err, "JetStreamPublish failed"))
-			jobResult["id"] = ""
+			delete(jobResult, "id")
+			delete(jobResult, "name")
 			jobResult["error"] = err.Error()
 		}
 		result = append(result, jobResult)

@@ -93,6 +93,7 @@ type TaskResult struct {
 	CLI          *TaskResultCLI          `json:"cli,omitempty" bson:"cli,omitempty"`
 	HTTPRequest  *TaskResultHTTPRequest  `json:"httpRequest,omitempty" bson:"httpRequest,omitempty"`
 	HTTPResponse *TaskResultHTTPResponse `json:"httpResponse,omitempty" bson:"httpResponse,omitempty"`
+	NATS         *TaskResultNATS         `json:"nats,omitempty" bson:"nats,omitempty"`
 	SMTP         *TaskResultSMTP         `json:"smtp,omitempty" bson:"smtp,omitempty"`
 }
 
@@ -102,6 +103,10 @@ type TaskResultCLI struct {
 	Output   string   `json:"output" bson:"output"`
 	Error    string   `json:"error" bson:"error"`
 	ExitCode int      `json:"exitCode" bson:"exitCode"`
+}
+
+type TaskResultNATS struct {
+	Error string `json:"error" bson:"error"`
 }
 
 // TaskResultHTTPRequest contains the request

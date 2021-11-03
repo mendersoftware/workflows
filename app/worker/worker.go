@@ -104,7 +104,7 @@ func InitAndRun(conf config.Reader, workflows Workflows, dataStore store.DataSto
 				job *model.Job, dataStore store.DataStore) {
 				defer func() { <-sem }()
 				l.Infof("Worker: processing job %s workflow %s", job.ID, job.WorkflowName)
-				err := processJob(ctx, job, dataStore)
+				err := processJob(ctx, job, dataStore, nats)
 				if err != nil {
 					l.Errorf("error: %v", err)
 				}

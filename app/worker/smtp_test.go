@@ -216,7 +216,7 @@ func TestProcessJobSMTP(t *testing.T) {
 					}),
 			).Return(nil)
 
-			err := processJob(ctx, job, dataStore)
+			err := processJob(ctx, job, dataStore, nil)
 
 			assert.Nil(t, err)
 		})
@@ -331,7 +331,7 @@ func TestProcessJobSMTPLoadFromFile(t *testing.T) {
 			}),
 	).Return(nil)
 
-	err = processJob(ctx, job, dataStore)
+	err = processJob(ctx, job, dataStore, nil)
 
 	assert.Nil(t, err)
 
@@ -425,7 +425,7 @@ func TestProcessJobSMTPLoadFromFileFailed(t *testing.T) {
 				model.StatusFailure,
 			).Return(nil)
 
-			err := processJob(ctx, job, dataStore)
+			err := processJob(ctx, job, dataStore, nil)
 
 			assert.NotNil(t, err)
 			assert.Equal(t, "open /this/file/does/not/exits/for/sure: no such file or directory", err.Error())
@@ -531,11 +531,62 @@ func TestProcessJobSMTPFailure(t *testing.T) {
 			}),
 	).Return(nil)
 
-	err := processJob(ctx, job, dataStore)
+	err := processJob(ctx, job, dataStore, nil)
 
 	assert.Nil(t, err)
 
 	smtpClient = originalSMTPClient
+}
+
+func TestProcessJobSMTPFailedIncompatibleDefinition(t *testing.T) {
+	ctx := context.Background()
+	dataStore := mock.NewDataStore()
+	defer dataStore.AssertExpectations(t)
+
+	workflow := &model.Workflow{
+		Name: "test",
+		Tasks: []model.Task{
+			{
+				Name: "task_1",
+				Type: model.TaskTypeSMTP,
+			},
+		},
+	}
+
+	job := &model.Job{
+		WorkflowName: workflow.Name,
+		Status:       model.StatusPending,
+	}
+
+	dataStore.On("GetWorkflowByName",
+		mocklib.MatchedBy(
+			func(_ context.Context) bool {
+				return true
+			}),
+		workflow.Name,
+		mocklib.AnythingOfType("string"),
+	).Return(workflow, nil)
+
+	dataStore.On("UpsertJob",
+		mocklib.MatchedBy(
+			func(_ context.Context) bool {
+				return true
+			}),
+		job,
+	).Return(job, nil)
+
+	dataStore.On("UpdateJobStatus",
+		mocklib.MatchedBy(
+			func(_ context.Context) bool {
+				return true
+			}),
+		job,
+		model.StatusFailure,
+	).Return(nil)
+
+	err := processJob(ctx, job, dataStore, nil)
+	assert.NotNil(t, err)
+	assert.EqualError(t, err, "Error: Task definition incompatible with specified type (smtp)")
 }
 
 func TestGetEmailAddress(t *testing.T) {

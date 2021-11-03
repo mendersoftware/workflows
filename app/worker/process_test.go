@@ -23,11 +23,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mendersoftware/go-lib-micro/log"
-	"github.com/mendersoftware/workflows/model"
-	storemock "github.com/mendersoftware/workflows/store/mock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	mocklib "github.com/stretchr/testify/mock"
+
+	"github.com/mendersoftware/go-lib-micro/log"
+
+	"github.com/mendersoftware/workflows/model"
+	storemock "github.com/mendersoftware/workflows/store/mock"
 )
 
 func TestProcessJobFailedWorkflowDoesNotExist(t *testing.T) {
@@ -53,7 +56,7 @@ func TestProcessJobFailedWorkflowDoesNotExist(t *testing.T) {
 		model.StatusFailure,
 	).Return(nil)
 
-	err := processJob(ctx, job, dataStore)
+	err := processJob(ctx, job, dataStore, nil)
 	assert.Nil(t, err)
 }
 
@@ -95,7 +98,7 @@ func TestProcessJobFailedUpsert(t *testing.T) {
 		job,
 	).Return(nil, errors.New("failed"))
 
-	err := processJob(ctx, job, dataStore)
+	err := processJob(ctx, job, dataStore, nil)
 	assert.EqualError(t, err, "insert of the job failed: failed")
 }
 
@@ -228,7 +231,7 @@ func TestProcessTaskSkipped(t *testing.T) {
 
 			ctx := context.Background()
 			l := log.FromContext(ctx)
-			result, err := processTask(*tc.task, tc.job, tc.workflow, l)
+			result, err := processTask(*tc.task, tc.job, tc.workflow, nil, l)
 			assert.NoError(t, err)
 			assert.Equal(t, tc.skipped, result.Skipped)
 
@@ -326,11 +329,62 @@ func TestProcessTaskRetries(t *testing.T) {
 				mock.AnythingOfType("*model.TaskResult"),
 			).Return(nil)
 
-			err := processJob(ctx, tc.job, dataStore)
+			err := processJob(ctx, tc.job, dataStore, nil)
 			assert.NoError(t, err)
 			assert.Equal(t, true, firstCallHappened)
 
 			makeHTTPRequest = makeHTTPRequestOriginal
 		})
 	}
+}
+
+func TestProcessJobUnrecognizedTaskType(t *testing.T) {
+	ctx := context.Background()
+	dataStore := storemock.NewDataStore()
+	defer dataStore.AssertExpectations(t)
+
+	workflow := &model.Workflow{
+		Name: "test",
+		Tasks: []model.Task{
+			{
+				Name: "task_1",
+				Type: "dummy",
+			},
+		},
+	}
+
+	job := &model.Job{
+		WorkflowName: workflow.Name,
+		Status:       model.StatusPending,
+	}
+
+	dataStore.On("GetWorkflowByName",
+		mocklib.MatchedBy(
+			func(_ context.Context) bool {
+				return true
+			}),
+		workflow.Name,
+		mocklib.AnythingOfType("string"),
+	).Return(workflow, nil)
+
+	dataStore.On("UpsertJob",
+		mocklib.MatchedBy(
+			func(_ context.Context) bool {
+				return true
+			}),
+		job,
+	).Return(job, nil)
+
+	dataStore.On("UpdateJobStatus",
+		mocklib.MatchedBy(
+			func(_ context.Context) bool {
+				return true
+			}),
+		job,
+		model.StatusFailure,
+	).Return(nil)
+
+	err := processJob(ctx, job, dataStore, nil)
+	assert.NotNil(t, err)
+	assert.EqualError(t, err, "Unrecognized task type: dummy")
 }

@@ -23,6 +23,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/mendersoftware/go-lib-micro/log"
+	"github.com/mendersoftware/workflows/client/nats"
 	"github.com/mendersoftware/workflows/model"
 	"github.com/mendersoftware/workflows/store"
 )
@@ -33,7 +34,7 @@ import (
 var NoEphemeralWorkflows = false
 
 func processJob(ctx context.Context, job *model.Job,
-	dataStore store.DataStore) error {
+	dataStore store.DataStore, nats nats.Client) error {
 	l := log.FromContext(ctx)
 
 	workflow, err := dataStore.GetWorkflowByName(ctx, job.WorkflowName, job.WorkflowVersion)
@@ -65,7 +66,7 @@ func processJob(ctx context.Context, job *model.Job,
 			attempt uint8 = 0
 		)
 		for attempt <= task.Retries {
-			result, err = processTask(task, job, workflow, l)
+			result, err = processTask(task, job, workflow, nats, l)
 			if err != nil {
 				_ = dataStore.UpdateJobStatus(ctx, job, model.StatusFailure)
 				return err
@@ -111,7 +112,7 @@ func processJob(ctx context.Context, job *model.Job,
 }
 
 func processTask(task model.Task, job *model.Job,
-	workflow *model.Workflow, l *log.Logger) (*model.TaskResult, error) {
+	workflow *model.Workflow, nats nats.Client, l *log.Logger) (*model.TaskResult, error) {
 
 	var result *model.TaskResult
 	var err error
@@ -151,6 +152,14 @@ func processTask(task model.Task, job *model.Job,
 					"with specified type (cli)")
 		}
 		result, err = processCLITask(cliTask, job, workflow)
+	case model.TaskTypeNATS:
+		var natsTask *model.NATSTask = task.NATS
+		if natsTask == nil {
+			return nil, fmt.Errorf(
+				"Error: Task definition incompatible " +
+					"with specified type (nats)")
+		}
+		result, err = processNATSTask(natsTask, job, workflow, nats)
 	case model.TaskTypeSMTP:
 		var smtpTask *model.SMTPTask = task.SMTP
 		if smtpTask == nil {
