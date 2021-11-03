@@ -1,4 +1,4 @@
-// Copyright 2020 Northern.tech AS
+// Copyright 2021 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -40,7 +40,7 @@ type HTTPTask struct {
 	ContentType       string            `json:"contentType,omitempty" bson:"contentType"`
 	Body              string            `json:"body,omitempty" bson:"body"`
 	FormData          map[string]string `json:"formdata,omitempty" bson:"formdata"`
-	JSON              interface{}       `json:"json,omittempty" bson:"json"`
+	JSON              interface{}       `json:"json,omitempty" bson:"json"`
 	StatusCodes       []int             `json:"statusCodes,omitempty" bson:"statusCodes"`
 	Headers           map[string]string `json:"headers" bson:"headers"`
 	ConnectionTimeOut int               `json:"connectionTimeOut" bson:"connectionTimeOut"`
