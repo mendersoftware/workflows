@@ -2,21 +2,21 @@
     "name": "reindex_reporting",
     "description": "Trigger a reindex of service data in mender-reporting.",
     "ephemeral": true,
-    "version": 2,
+    "version": 3,
     "tasks": [
         {
             "name": "reindex_reporting",
-            "type": "http",
+            "type": "nats",
             "retries": 3,
-            "http": {
-                "uri": "http://${env.REPORTING_ADDR|mender-reporting:8080}/api/internal/v1/reporting/tenants/${workflow.input.tenant_id}/devices/${workflow.input.device_id}/reindex?service=${workflow.input.service}",
-                "method": "POST",
-                "contentType": "application/json",
-                "headers": {
-                    "X-MEN-RequestID": "${workflow.input.request_id}"
-                },
-                "connectionTimeOut": 8000,
-                "readTimeOut": 8000
+            "nats": {
+                "subject": "reporting",
+                "data": {
+                    "action": "reindex",
+                    "request_id": "${workflow.input.request_id}",
+                    "tenant_id": "${workflow.input.tenant_id}",
+                    "device_id": "${workflow.input.device_id}",
+                    "service": "${workflow.input.service}"
+                }
             }
         }
     ],
