@@ -19,7 +19,6 @@ import (
 	"time"
 
 	"github.com/nats-io/nats.go"
-	natsio "github.com/nats-io/nats.go"
 )
 
 const (
@@ -33,6 +32,8 @@ const (
 	ackWait = 30 * time.Second
 )
 
+type UnsubscribeFunc func() error
+
 // Client is the nats client
 //go:generate ../../utils/mockgen.sh
 type Client interface {
@@ -41,13 +42,13 @@ type Client interface {
 	StreamName() string
 	IsConnected() bool
 	JetStreamCreateStream(streamName string) error
-	JetStreamSubscribe(ctx context.Context, subj, durable string) (<-chan interface{}, error)
+	JetStreamSubscribe(ctx context.Context, subj, durable string, q chan *nats.Msg) (UnsubscribeFunc, error)
 	JetStreamPublish(string, []byte) error
 }
 
 // NewClient returns a new nats client
-func NewClient(url string, opts ...natsio.Option) (Client, error) {
-	natsClient, err := natsio.Connect(url, opts...)
+func NewClient(url string, opts ...nats.Option) (Client, error) {
+	natsClient, err := nats.Connect(url, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -64,8 +65,8 @@ func NewClient(url string, opts ...natsio.Option) (Client, error) {
 // NewClient returns a new nats client with default options
 func NewClientWithDefaults(url string) (Client, error) {
 	natsClient, err := NewClient(url,
-		natsio.ReconnectBufSize(reconnectBufSize),
-		natsio.ReconnectWait(reconnectWaitTime),
+		nats.ReconnectBufSize(reconnectBufSize),
+		nats.ReconnectWait(reconnectWaitTime),
 	)
 	if err != nil {
 		return nil, err
@@ -74,8 +75,8 @@ func NewClientWithDefaults(url string) (Client, error) {
 }
 
 type client struct {
-	nats       *natsio.Conn
-	js         natsio.JetStreamContext
+	nats       *nats.Conn
+	js         nats.JetStreamContext
 	streamName string
 }
 
@@ -103,7 +104,7 @@ func (c *client) IsConnected() bool {
 // JetStreamCreateStream creates a stream
 func (c *client) JetStreamCreateStream(streamName string) error {
 	stream, err := c.js.StreamInfo(streamName)
-	if err != nil && err != natsio.ErrStreamNotFound {
+	if err != nil && err != nats.ErrStreamNotFound {
 		return err
 	}
 	if stream == nil {
@@ -113,7 +114,7 @@ func (c *client) JetStreamCreateStream(streamName string) error {
 			MaxAge:    24 * time.Hour,
 			Retention: nats.WorkQueuePolicy,
 			Storage:   nats.FileStorage,
-			Subjects:  []string{streamName + ".*"},
+			Subjects:  []string{streamName + ".>"},
 		})
 		if err != nil {
 			return err
@@ -122,39 +123,27 @@ func (c *client) JetStreamCreateStream(streamName string) error {
 	return nil
 }
 
+func noop() error {
+	return nil
+}
+
 // JetStreamSubscribe subscribes to messages from the given subject with a durable subscriber
-func (c *client) JetStreamSubscribe(ctx context.Context, subj, durable string) (<-chan interface{}, error) {
-	var retChan = make(chan interface{})
-	var channel = make(chan interface{})
-
-	go func() {
-		sub, err := c.js.QueueSubscribe(subj, durable, func(msg *natsio.Msg) {
-			channel <- msg
-		},
-			natsio.AckExplicit(),
-			natsio.AckWait(ackWait),
-			natsio.ManualAck(),
-			natsio.MaxDeliver(maxDeliver),
-		)
-		if err != nil {
-			retChan <- err
-			return
-		}
-		defer func() {
-			_ = sub.Unsubscribe()
-		}()
-
-		retChan <- nil
-		<-ctx.Done()
-	}()
-
-	ret := <-retChan
-	switch ret := ret.(type) {
-	case error:
-		return nil, ret
-	default:
-		return channel, nil
+func (c *client) JetStreamSubscribe(
+	ctx context.Context,
+	subj, durable string,
+	q chan *nats.Msg,
+) (UnsubscribeFunc, error) {
+	sub, err := c.js.ChanQueueSubscribe(subj, durable, q,
+		nats.AckExplicit(),
+		nats.AckWait(ackWait),
+		nats.ManualAck(),
+		nats.MaxDeliver(maxDeliver),
+	)
+	if err != nil {
+		return noop, err
 	}
+
+	return sub.Unsubscribe, nil
 }
 
 // JetStreamPublish publishes a message to the given subject
