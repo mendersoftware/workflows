@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"os"
 	"os/signal"
+	"time"
 
 	natsio "github.com/nats-io/nats.go"
 	"github.com/pkg/errors"
@@ -40,7 +41,7 @@ type Workflows struct {
 }
 
 // InitAndRun initializes the worker and runs it
-func InitAndRun(conf config.Reader, workflows Workflows, dataStore store.DataStore, nats nats.Client) error {
+func InitAndRun(conf config.Reader, workflows Workflows, dataStore store.DataStore, natsClient nats.Client) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	// Calling cancel() before returning should shut down
 	// all workers. However, the new driver is not
@@ -65,7 +66,7 @@ func InitAndRun(conf config.Reader, workflows Workflows, dataStore store.DataSto
 	durableName := config.Config.GetString(dconfig.SettingNatsSubscriberDurable)
 
 	channel := make(chan *natsio.Msg)
-	unsubscribe, err := nats.JetStreamSubscribe(ctx, subject, durableName, channel)
+	unsubscribe, err := natsClient.JetStreamSubscribe(ctx, subject, durableName, channel)
 	if err != nil {
 		return errors.Wrap(err, "failed to subscribe to the nats JetStream")
 	}
@@ -103,11 +104,21 @@ func InitAndRun(conf config.Reader, workflows Workflows, dataStore store.DataSto
 			go func(ctx context.Context,
 				job *model.Job, dataStore store.DataStore) {
 				defer func() { <-sem }()
+				// ticker to keep the message in progress
+				ticker := time.NewTicker(nats.AckWait * 8 / 10)
+				go func() {
+					for range ticker.C {
+						_ = msg.InProgress()
+					}
+				}()
+				// process the job
 				l.Infof("Worker: processing job %s workflow %s", job.ID, job.WorkflowName)
-				err := processJob(ctx, job, dataStore, nats)
+				err := processJob(ctx, job, dataStore, natsClient)
 				if err != nil {
 					l.Errorf("error: %v", err)
 				}
+				// stop the in progress ticker and ack the message
+				ticker.Stop()
 				if err := msg.AckSync(); err != nil {
 					l.Error(errors.Wrap(err, "failed to ack the message"))
 				}

@@ -28,8 +28,10 @@ const (
 	reconnectWaitTime = 1 * time.Second
 	// Set the number of redeliveries for a message
 	maxDeliver = 3
+	// Set the number of inflight messages
+	maxAckPending = 1
 	// Set the ACK wait
-	ackWait = 30 * time.Second
+	AckWait = 30 * time.Second
 )
 
 type UnsubscribeFunc func() error
@@ -135,8 +137,9 @@ func (c *client) JetStreamSubscribe(
 ) (UnsubscribeFunc, error) {
 	sub, err := c.js.ChanQueueSubscribe(subj, durable, q,
 		nats.AckExplicit(),
-		nats.AckWait(ackWait),
+		nats.AckWait(AckWait),
 		nats.ManualAck(),
+		nats.MaxAckPending(maxAckPending),
 		nats.MaxDeliver(maxDeliver),
 	)
 	if err != nil {
