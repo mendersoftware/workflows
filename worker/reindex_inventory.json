@@ -1,7 +1,8 @@
 {
     "name": "reindex_inventory",
     "description": "Trigger a reindex of service data in mender-inventory.",
-    "version": 1,
+    "ephemeral": true,
+    "version": 2,
     "tasks": [
         {
             "name": "reindex_inventory",

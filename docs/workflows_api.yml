@@ -32,10 +32,6 @@ responses:
     description: Invalid Request.
     schema:
       $ref: "#/definitions/Error"
-#  UnprocessableEntityError: # 422
-#    description: Unprocessable Entity.
-#    schema:
-#      $ref: "#/definitions/Error"
 
 paths:
   /status:
@@ -102,6 +98,47 @@ paths:
                 type: string
               name:
                 type: string
+        400:
+            $ref: "#/responses/InvalidRequestError"
+        404:
+            $ref: "#/responses/NotFoundError"
+
+  /api/v1/workflow/{name}/batch:
+    post:
+      operationId: Start Batch Workflows
+      summary: Start a batch of workflows
+      description: |
+        Starts a new workflow given by the name path-parameter.
+      parameters:
+        - name: name
+          in: path
+          description: Workflow identifier.
+          required: true
+          type: string
+        - name: JobParameters
+          in: body
+          required: true
+          description: Contains the definition of the job to be started.
+          schema:
+            type: array
+            items:
+              type: array
+              items:
+                $ref: "#/definitions/InputParameter"
+      responses:
+        201:
+          description: Workflows created successfully
+          schema:
+            type: array
+            items:
+              type: object
+              properties:
+                id:
+                  type: string
+                name:
+                  type: string
+                error:
+                  type: string
         400:
             $ref: "#/responses/InvalidRequestError"
         404:

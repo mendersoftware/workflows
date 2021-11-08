@@ -22,7 +22,7 @@ import (
 
 // Status
 const (
-	StatusDone = iota
+	StatusDone = int32(iota)
 	StatusPending
 	StatusProcessing
 	StatusFailure
@@ -48,8 +48,8 @@ type Job struct {
 	InputParameters InputParameters `json:"inputParameters" bson:"input_parameters"`
 
 	// Enumerated status of the Job and string field used for unmarshalling
-	Status       int    `json:"-" bson:"status"`
-	StatusString string `json:"status" bson:"-"`
+	Status       int32  `json:"-" bson:"status"`
+	StatusString string `json:"status,omitempty" bson:"-"`
 
 	// Results produced by a finished job. If status is not "done" this
 	// field will always be nil.
@@ -71,7 +71,7 @@ type InputParameter struct {
 	Value string `json:"value" bson:"value"`
 
 	// Raw value of the input parameter
-	Raw interface{} `json:"-" bson:"raw"`
+	Raw interface{} `json:"raw,omitempty" bson:"raw"`
 }
 
 type InputParameters []InputParameter
@@ -90,10 +90,11 @@ type TaskResult struct {
 	Type         string                  `json:"type" bson:"type"`
 	Success      bool                    `json:"success" bson:"success"`
 	Skipped      bool                    `json:"skipped" bson:"skipped"`
-	CLI          *TaskResultCLI          `json:"cli" bson:"cli,omitempty"`
-	HTTPRequest  *TaskResultHTTPRequest  `json:"httpRequest" bson:"httpRequest,omitempty"`
-	HTTPResponse *TaskResultHTTPResponse `json:"httpResponse" bson:"httpResponse,omitempty"`
-	SMTP         *TaskResultSMTP         `json:"smtp" bson:"smtp,omitempty"`
+	CLI          *TaskResultCLI          `json:"cli,omitempty" bson:"cli,omitempty"`
+	HTTPRequest  *TaskResultHTTPRequest  `json:"httpRequest,omitempty" bson:"httpRequest,omitempty"`
+	HTTPResponse *TaskResultHTTPResponse `json:"httpResponse,omitempty" bson:"httpResponse,omitempty"`
+	NATS         *TaskResultNATS         `json:"nats,omitempty" bson:"nats,omitempty"`
+	SMTP         *TaskResultSMTP         `json:"smtp,omitempty" bson:"smtp,omitempty"`
 }
 
 // TaskResultCLI contains the CLI command, the output and the exit status
@@ -102,6 +103,10 @@ type TaskResultCLI struct {
 	Output   string   `json:"output" bson:"output"`
 	Error    string   `json:"error" bson:"error"`
 	ExitCode int      `json:"exitCode" bson:"exitCode"`
+}
+
+type TaskResultNATS struct {
+	Error string `json:"error" bson:"error"`
 }
 
 // TaskResultHTTPRequest contains the request
@@ -144,8 +149,15 @@ func (job *Job) Validate(workflow *Workflow) error {
 	return nil
 }
 
+func (job *Job) PrepareForJSONMarshalling() {
+	job.StatusString = StatusToString(job.Status)
+	for i, _ := range job.InputParameters {
+		job.InputParameters[i].Raw = nil
+	}
+}
+
 // StatusToString returns the job's status as a string
-func StatusToString(status int) string {
+func StatusToString(status int32) string {
 	var ret string
 	switch status {
 	case StatusPending:

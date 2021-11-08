@@ -1,4 +1,4 @@
-// Copyright 2020 Northern.tech AS
+// Copyright 2021 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -26,21 +26,25 @@ import (
 	"github.com/mendersoftware/go-lib-micro/config"
 	"github.com/mendersoftware/go-lib-micro/log"
 	api "github.com/mendersoftware/workflows/api/http"
+	"github.com/mendersoftware/workflows/client/nats"
 	dconfig "github.com/mendersoftware/workflows/config"
 	"github.com/mendersoftware/workflows/store"
 )
 
 // InitAndRun initializes the server and runs it
-func InitAndRun(conf config.Reader, dataStore store.DataStore) error {
+func InitAndRun(conf config.Reader, dataStore store.DataStore, nats nats.Client) error {
 	ctx := context.Background()
 
 	log.Setup(conf.GetBool(dconfig.SettingDebugLog))
 	l := log.FromContext(ctx)
 
-	dataStore.LoadWorkflows(ctx, l)
+	err := dataStore.LoadWorkflows(ctx, l)
+	if err != nil {
+		return err
+	}
 
 	var listen = conf.GetString(dconfig.SettingListen)
-	var router = api.NewRouter(dataStore)
+	var router = api.NewRouter(dataStore, nats)
 	srv := &http.Server{
 		Addr:    listen,
 		Handler: router,

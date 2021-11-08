@@ -16,14 +16,19 @@ package worker
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"os/signal"
+	"time"
 
+	natsio "github.com/nats-io/nats.go"
 	"github.com/pkg/errors"
 	"golang.org/x/sys/unix"
 
 	"github.com/mendersoftware/go-lib-micro/config"
 	"github.com/mendersoftware/go-lib-micro/log"
+
+	"github.com/mendersoftware/workflows/client/nats"
 	dconfig "github.com/mendersoftware/workflows/config"
 	"github.com/mendersoftware/workflows/model"
 	"github.com/mendersoftware/workflows/store"
@@ -36,7 +41,7 @@ type Workflows struct {
 }
 
 // InitAndRun initializes the worker and runs it
-func InitAndRun(conf config.Reader, workflows Workflows, dataStore store.DataStore) error {
+func InitAndRun(conf config.Reader, workflows Workflows, dataStore store.DataStore, natsClient nats.Client) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	// Calling cancel() before returning should shut down
 	// all workers. However, the new driver is not
@@ -55,10 +60,17 @@ func InitAndRun(conf config.Reader, workflows Workflows, dataStore store.DataSto
 		return errors.Wrap(err, "failed to load workflows")
 	}
 
-	channel, err := dataStore.GetJobs(ctx, workflows.Included, workflows.Excluded)
+	streamName := config.Config.GetString(dconfig.SettingNatsStreamName)
+	topic := config.Config.GetString(dconfig.SettingNatsSubscriberTopic)
+	subject := streamName + "." + topic
+	durableName := config.Config.GetString(dconfig.SettingNatsSubscriberDurable)
+
+	channel := make(chan *natsio.Msg)
+	unsubscribe, err := natsClient.JetStreamSubscribe(ctx, subject, durableName, channel)
 	if err != nil {
-		return errors.Wrap(err, "Failed to start job scheduler")
+		return errors.Wrap(err, "failed to subscribe to the nats JetStream")
 	}
+	defer unsubscribe()
 
 	var msg interface{}
 	concurrency := conf.GetInt(dconfig.SettingConcurrency)
@@ -78,16 +90,37 @@ func InitAndRun(conf config.Reader, workflows Workflows, dataStore store.DataSto
 			break
 		}
 		switch msg := msg.(type) {
-		case *model.Job:
-			job := msg
+		case *natsio.Msg:
+			job := &model.Job{}
+			err := json.Unmarshal(msg.Data, job)
+			if err != nil {
+				l.Error(errors.Wrap(err, "failed to unmarshall message"))
+				if err := msg.Term(); err != nil {
+					l.Error(errors.Wrap(err, "failed to term the message"))
+				}
+				continue
+			}
 			sem <- true
 			go func(ctx context.Context,
 				job *model.Job, dataStore store.DataStore) {
 				defer func() { <-sem }()
+				// ticker to keep the message in progress
+				ticker := time.NewTicker(nats.AckWait * 8 / 10)
+				go func() {
+					for range ticker.C {
+						_ = msg.InProgress()
+					}
+				}()
+				// process the job
 				l.Infof("Worker: processing job %s workflow %s", job.ID, job.WorkflowName)
-				err := processJob(ctx, job, dataStore)
+				err := processJob(ctx, job, dataStore, natsClient)
 				if err != nil {
 					l.Errorf("error: %v", err)
+				}
+				// stop the in progress ticker and ack the message
+				ticker.Stop()
+				if err := msg.AckSync(); err != nil {
+					l.Error(errors.Wrap(err, "failed to ack the message"))
 				}
 			}(ctx, job, dataStore)
 
@@ -96,5 +129,5 @@ func InitAndRun(conf config.Reader, workflows Workflows, dataStore store.DataSto
 		}
 	}
 
-	return err
+	return nil
 }

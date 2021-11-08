@@ -1,4 +1,4 @@
-// Copyright 2020 Northern.tech AS
+// Copyright 2021 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package model
 const (
 	TaskTypeCLI  = "cli"
 	TaskTypeHTTP = "http"
+	TaskTypeNATS = "nats"
 	TaskTypeSMTP = "smtp"
 )
 
@@ -30,6 +31,7 @@ type Task struct {
 	Requires          []string  `json:"requires,omitempty" bson:"requires,omitempty"`
 	HTTP              *HTTPTask `json:"http,omitempty" bson:"http,omitempty"`
 	CLI               *CLITask  `json:"cli,omitempty" bson:"cli,omitempty"`
+	NATS              *NATSTask `json:"nats,omitempty" bson:"nats,omitempty"`
 	SMTP              *SMTPTask `json:"smtp,omitempty" bson:"smtp,omitempty"`
 }
 
@@ -40,7 +42,7 @@ type HTTPTask struct {
 	ContentType       string            `json:"contentType,omitempty" bson:"contentType"`
 	Body              string            `json:"body,omitempty" bson:"body"`
 	FormData          map[string]string `json:"formdata,omitempty" bson:"formdata"`
-	JSON              interface{}       `json:"json,omittempty" bson:"json"`
+	JSON              interface{}       `json:"json,omitempty" bson:"json"`
 	StatusCodes       []int             `json:"statusCodes,omitempty" bson:"statusCodes"`
 	Headers           map[string]string `json:"headers" bson:"headers"`
 	ConnectionTimeOut int               `json:"connectionTimeOut" bson:"connectionTimeOut"`
@@ -51,6 +53,12 @@ type HTTPTask struct {
 type CLITask struct {
 	Command          []string `json:"command" bson:"command"`
 	ExecutionTimeOut int      `json:"executionTimeOut" bson:"executionTimeOut"`
+}
+
+// NATSTask stores the parameters of the NATS parameters for a WorkflowTask
+type NATSTask struct {
+	Subject string      `json:"subject" bson:"subject"`
+	Data    interface{} `json:"data" bson:"data"`
 }
 
 // SMTPTask stores the parameters of the SMTP messages for a WorkflowTask

@@ -293,170 +293,55 @@ func (db *DataStoreMongo) GetWorkflows(ctx context.Context) []model.Workflow {
 	return workflows
 }
 
-// InsertJob inserts the job in the queue
-func (db *DataStoreMongo) InsertJob(
+// UpsertJob inserts the job in the queue
+func (db *DataStoreMongo) UpsertJob(
 	ctx context.Context, job *model.Job) (*model.Job, error) {
-
-	if workflow, err := db.GetWorkflowByName(ctx, job.WorkflowName, job.WorkflowVersion); err == nil {
-		if err := job.Validate(workflow); err != nil {
-			return nil, err
-		}
-	} else {
-		return nil, store.ErrWorkflowNotFound
+	if job.ID == "" {
+		job.ID = primitive.NewObjectID().Hex()
 	}
-
-	id := primitive.NewObjectID()
-	job.ID = id.Hex()
-	job.Status = model.StatusPending
-	job.InsertTime = time.Now()
+	query := bson.M{
+		"_id": job.ID,
+	}
+	update := bson.M{
+		"$set": job,
+	}
+	findUpdateOptions := &mopts.FindOneAndUpdateOptions{}
+	findUpdateOptions.SetReturnDocument(mopts.After)
+	findUpdateOptions.SetUpsert(true)
 
 	database := db.client.Database(db.dbName)
-	collQueue := database.Collection(JobQueueCollectionName)
 	collJobs := database.Collection(JobsCollectionName)
 
-	var session mongo.Session
-	var err error
-
-	if session, err = db.client.StartSession(); err != nil {
-		return nil, err
-	}
-	defer session.EndSession(ctx)
-
-	if err = mongo.WithSession(ctx, session, func(sc mongo.SessionContext) error {
-		// insert the same pending job into the global collection
-		if _, err := collJobs.InsertOne(ctx, job); err != nil {
-			return errors.Wrap(err,
-				"Error inserting job into jobs collection")
-		}
-		// insert the Job in the capped transaction we use as message queue
-		if _, err := collQueue.InsertOne(ctx, job); err != nil {
-			return errors.Wrap(err,
-				"Error inserting job to message queue")
-		}
-		return nil
-	}); err != nil {
+	err := collJobs.FindOneAndUpdate(ctx, query, update, findUpdateOptions).Decode(job)
+	if err != nil {
 		return nil, err
 	}
 
 	return job, nil
 }
 
-// GetJobs initializes the job scheduler and returns a receive channel from
-// the scheduler routine.
-func (db *DataStoreMongo) GetJobs(ctx context.Context, included []string, excluded []string) (<-chan interface{}, error) {
-	var channel = make(chan interface{})
-
-	go func() {
-		l := log.FromContext(ctx)
-
-		findOptions := &mopts.FindOptions{}
-		findOptions.SetCursorType(mopts.TailableAwait)
-		findOptions.SetMaxTime(10 * time.Second)
-		findOptions.SetBatchSize(100)
-
-		query := bson.M{}
-		query["$and"] = []bson.M{}
-		query["$and"] = append(query["$and"].([]bson.M), bson.M{"status": model.StatusPending})
-		if len(included) > 0 {
-			query["$and"] = append(query["$and"].([]bson.M), bson.M{"workflow_name": bson.M{"$in": included}})
-		}
-		if len(excluded) > 0 {
-			query["$and"] = append(query["$and"].([]bson.M), bson.M{"workflow_name": bson.M{"$nin": excluded}})
-		}
-
-		database := db.client.Database(db.dbName)
-		collQueue := database.Collection(JobQueueCollectionName)
-		cur, err := collQueue.Find(ctx, query, findOptions)
-		if err != nil {
-			channel <- err
-			return
-		}
-
-		defer cur.Close(ctx)
-
-		channel <- nil
-
-		l.Info("Job scheduler listening to message bus")
-		for {
-			for cur.TryNext(ctx) {
-				job := new(model.Job)
-				cur.Decode(job)
-				l.Infof("Message bus: New job (%s) with "+
-					"workflow %s", job.ID, job.WorkflowName)
-				if job != nil &&
-					job.Status == model.StatusPending {
-					// NOTE: We should probably create an
-					//       index for the status key, and
-					//       filter the query.
-					channel <- job
-				}
-			}
-			if cur.ID() == 0 || cur.Err() != nil {
-				channel <- errors.New("message bus cursor died")
-				break
-			}
-		}
-		channel <- nil
-	}()
-
-	ret := <-channel
-	switch ret.(type) {
-	case error:
-		return nil, ret.(error)
-	default:
-		return channel, nil
-	}
-}
-
-// AcquireJob gets given job and updates it's status to StatusProcessing.
-// On success, the updated job is returned - if the job does not exist nil
-// is returned, otherwise a mongo error is returned.
-func (db *DataStoreMongo) AcquireJob(ctx context.Context,
-	job *model.Job) (*model.Job, error) {
-
-	var acquiredJob *model.Job = new(model.Job)
-
-	database := db.client.Database(db.dbName)
-	collJobs := database.Collection(JobsCollectionName)
-	collQueue := database.Collection(JobQueueCollectionName)
-
-	query := bson.M{
-		"_id":    job.ID,
-		"status": model.StatusPending,
-	}
-	update := bson.M{
-		"$set": bson.M{"status": model.StatusProcessing},
-	}
-
-	after := mopts.After
-	opt := mopts.FindOneAndUpdateOptions{
-		ReturnDocument: &after,
-	}
-
-	err := collQueue.FindOneAndUpdate(ctx, query, update, &opt).Decode(acquiredJob)
-	if err == mongo.ErrNoDocuments {
-		return nil, nil
-	} else if err != nil {
-		return nil, err
-	}
-
-	_, err = collJobs.UpdateOne(ctx, query, update)
-	if err == mongo.ErrNoDocuments {
-		return nil, nil
-	} else if err != nil {
-		return nil, err
-	}
-
-	return acquiredJob, nil
-}
-
 // UpdateJobAddResult add a task execution result to a job status
 func (db *DataStoreMongo) UpdateJobAddResult(ctx context.Context,
 	job *model.Job, result *model.TaskResult) error {
+	options := &mopts.UpdateOptions{}
+	options.SetUpsert(true)
+
+	update := bson.M{
+		"$addToSet": bson.M{
+			"results": result,
+		},
+		"$setOnInsert": bson.M{
+			"workflow_name":    job.WorkflowName,
+			"input_parameters": job.InputParameters,
+			"status":           job.Status,
+			"insert_time":      job.InsertTime,
+			"version":          job.WorkflowVersion,
+		},
+	}
+
 	collection := db.client.Database(db.dbName).
 		Collection(JobsCollectionName)
-	update := bson.M{"$addToSet": bson.M{"results": result}}
-	_, err := collection.UpdateOne(ctx, bson.M{"_id": job.ID}, update)
+	_, err := collection.UpdateOne(ctx, bson.M{"_id": job.ID}, update, options)
 	if err != nil {
 		return err
 	}
@@ -466,11 +351,14 @@ func (db *DataStoreMongo) UpdateJobAddResult(ctx context.Context,
 
 // UpdateJobStatus set the task execution status for a job status
 func (db *DataStoreMongo) UpdateJobStatus(
-	ctx context.Context, job *model.Job, status int) error {
-
+	ctx context.Context, job *model.Job, status int32) error {
 	if model.StatusToString(status) == "unknown" {
 		return model.ErrInvalidStatus
 	}
+
+	options := &mopts.UpdateOptions{}
+	options.SetUpsert(true)
+
 	collection := db.client.Database(db.dbName).
 		Collection(JobsCollectionName)
 	_, err := collection.UpdateOne(ctx, bson.M{
@@ -479,7 +367,14 @@ func (db *DataStoreMongo) UpdateJobStatus(
 		"$set": bson.M{
 			"status": status,
 		},
-	})
+		"$setOnInsert": bson.M{
+			"workflow_name":    job.WorkflowName,
+			"input_parameters": job.InputParameters,
+			"results":          job.Results,
+			"insert_time":      job.InsertTime,
+			"version":          job.WorkflowVersion,
+		},
+	}, options)
 	if err != nil {
 		return err
 	}

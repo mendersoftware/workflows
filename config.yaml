@@ -2,7 +2,31 @@
 # Defauls to: ":8080" which will listen on all avalable interfaces.
 # Overwrite with environment variable: WORKFLOWS_LISTEN
 
-listen: :8080
+# listen: :8080
+
+# NATS uri
+# Defauls to: "nats://localhost:4222"
+# Overwrite with environment variable: WORKFLOWS_NATS_URI
+
+nats_uri: "nats://mender-nats:4222"
+
+# NATS stream name
+# Defauls to: "WORKFLOWS"
+# Overwrite with environment variable: WORKFLOWS_NATS_STREAM_NAME
+
+# nats_stream_name: "WORKFLOWS"
+
+# NATS subscriber topic name
+# Defauls to: "default"
+# Overwrite with environment variable: WORKFLOWS_NATS_SUBSCRIBER_TOPIC
+
+# nats_subscriber_topic: "default"
+
+# NATS subscriber durable name
+# Defauls to: "workflows-worker"
+# Overwrite with environment variable: WORKFLOWS_NATS_SUBSCRIBER_DURABLE
+
+# nats_subscriber_durable: "workflows-worker"
 
 # Mongodb connection string
 # Defaults to: "mongodb://localhost"
@@ -14,7 +38,7 @@ mongo-url: mongodb://mender-mongo:27017
 # Defaults to: "workflows"
 # Overwrite with environment variable: WORKFLOWS_MONGO_DBNAME
 
-mongo-dbname: workflows
+# mongo-dbname: workflows
 
 # Enable SSL for mongo connections
 # Defaults to: false

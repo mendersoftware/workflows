@@ -59,4 +59,4 @@ def test_reindex_reporting(mmock_url, workflows_url):
     assert response["status"] == "done"
     assert len(response["results"]) == 1
     assert response["results"][0]["success"] == True
-    assert response["results"][0]["httpResponse"]["statusCode"] == 202
+    assert response["results"][0]["nats"]["error"] == ""

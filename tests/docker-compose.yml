@@ -10,6 +10,16 @@ services:
         aliases:
           - mender-mongo
 
+  nats:
+      image: nats:2.6.2-alpine3.14
+      command: -js -sd /opt/nats
+      ports:
+        - "4222:4222"
+      networks:
+        acceptance-tests:
+          aliases:
+            - mender-nats
+
   workflows-worker:
     image: mendersoftware/workflows-worker:prtest
     volumes:
@@ -21,6 +31,7 @@ services:
           - workflows-worker
     depends_on:
       - mongodb
+      - nats
 
   workflows-server:
     image: mendersoftware/workflows:prtest
@@ -34,6 +45,7 @@ services:
           - workflows-server
     depends_on:
       - mongodb
+      - nats
 
 networks:
     acceptance-tests:

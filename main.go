@@ -1,4 +1,4 @@
-// Copyright 2020 Northern.tech AS
+// Copyright 2021 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -17,12 +17,15 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/mendersoftware/go-lib-micro/config"
-	"github.com/mendersoftware/workflows/model"
-	"github.com/urfave/cli"
 	"log"
 	"os"
 	"strings"
+
+	"github.com/mendersoftware/go-lib-micro/config"
+	"github.com/mendersoftware/workflows/client/nats"
+	"github.com/mendersoftware/workflows/model"
+	"github.com/pkg/errors"
+	"github.com/urfave/cli"
 
 	"github.com/mendersoftware/workflows/app/server"
 	"github.com/mendersoftware/workflows/app/worker"
@@ -100,7 +103,6 @@ func doMain(args []string) {
 		},
 	}
 	app.Usage = "Workflows"
-	app.Version = "1.0.0"
 	app.Action = cmdServer
 
 	app.Before = func(args *cli.Context) error {
@@ -125,13 +127,36 @@ func doMain(args []string) {
 	}
 }
 
+func getNatsClient() (nats.Client, error) {
+	natsURI := config.Config.GetString(dconfig.SettingNatsURI)
+	nats, err := nats.NewClientWithDefaults(natsURI)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to connect to nats")
+	}
+
+	streamName := config.Config.GetString(dconfig.SettingNatsStreamName)
+	nats = nats.WithStreamName(streamName)
+	err = nats.JetStreamCreateStream(nats.StreamName())
+	if err != nil {
+		return nil, err
+	}
+	return nats, nil
+}
+
 func cmdServer(args *cli.Context) error {
 	dataStore, err := store.SetupDataStore(args.Bool("automigrate"))
 	if err != nil {
 		return err
 	}
 	defer dataStore.Close()
-	return server.InitAndRun(config.Config, dataStore)
+
+	nats, err := getNatsClient()
+	if err != nil {
+		return err
+	}
+	defer nats.Close()
+
+	return server.InitAndRun(config.Config, dataStore, nats)
 }
 
 func cmdWorker(args *cli.Context) error {
@@ -140,6 +165,12 @@ func cmdWorker(args *cli.Context) error {
 		return err
 	}
 	defer dataStore.Close()
+
+	nats, err := getNatsClient()
+	if err != nil {
+		return err
+	}
+	defer nats.Close()
 
 	var included, excluded []string
 
@@ -157,7 +188,7 @@ func cmdWorker(args *cli.Context) error {
 		Included: included,
 		Excluded: excluded,
 	}
-	return worker.InitAndRun(config.Config, workflows, dataStore)
+	return worker.InitAndRun(config.Config, workflows, dataStore, nats)
 }
 
 func cmdMigrate(args *cli.Context) error {

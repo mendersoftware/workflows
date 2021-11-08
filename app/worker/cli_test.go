@@ -61,7 +61,7 @@ func TestProcessJobCLI(t *testing.T) {
 		mocklib.AnythingOfType("string"),
 	).Return(workflow, nil)
 
-	dataStore.On("AcquireJob",
+	dataStore.On("UpsertJob",
 		mocklib.MatchedBy(
 			func(_ context.Context) bool {
 				return true
@@ -96,7 +96,7 @@ func TestProcessJobCLI(t *testing.T) {
 			}),
 	).Return(nil)
 
-	err := processJob(ctx, job, dataStore)
+	err := processJob(ctx, job, dataStore, nil)
 
 	assert.Nil(t, err)
 }
@@ -152,7 +152,7 @@ func TestProcessJobCLIWrongExitCode(t *testing.T) {
 		mocklib.AnythingOfType("string"),
 	).Return(workflow, nil)
 
-	dataStore.On("AcquireJob",
+	dataStore.On("UpsertJob",
 		mocklib.MatchedBy(
 			func(_ context.Context) bool {
 				return true
@@ -187,7 +187,7 @@ func TestProcessJobCLIWrongExitCode(t *testing.T) {
 			}),
 	).Return(nil)
 
-	err := processJob(ctx, job, dataStore)
+	err := processJob(ctx, job, dataStore, nil)
 	assert.Nil(t, err)
 }
 
@@ -228,7 +228,7 @@ func TestProcessJobCLTimeOut(t *testing.T) {
 		mocklib.AnythingOfType("string"),
 	).Return(workflow, nil)
 
-	dataStore.On("AcquireJob",
+	dataStore.On("UpsertJob",
 		mocklib.MatchedBy(
 			func(_ context.Context) bool {
 				return true
@@ -263,7 +263,7 @@ func TestProcessJobCLTimeOut(t *testing.T) {
 			}),
 	).Return(nil)
 
-	err := processJob(ctx, job, dataStore)
+	err := processJob(ctx, job, dataStore, nil)
 	assert.Nil(t, err)
 }
 
@@ -296,7 +296,7 @@ func TestProcessJobCLIFailedIncompatibleDefinition(t *testing.T) {
 		mocklib.AnythingOfType("string"),
 	).Return(workflow, nil)
 
-	dataStore.On("AcquireJob",
+	dataStore.On("UpsertJob",
 		mocklib.MatchedBy(
 			func(_ context.Context) bool {
 				return true
@@ -313,7 +313,7 @@ func TestProcessJobCLIFailedIncompatibleDefinition(t *testing.T) {
 		model.StatusFailure,
 	).Return(nil)
 
-	err := processJob(ctx, job, dataStore)
+	err := processJob(ctx, job, dataStore, nil)
 	assert.NotNil(t, err)
 	assert.EqualError(t, err, "Error: Task definition incompatible with specified type (cli)")
 }

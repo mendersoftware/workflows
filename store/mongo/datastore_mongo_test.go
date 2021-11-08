@@ -220,35 +220,17 @@ func TestGetWorkflowByName(t *testing.T) {
 	assert.Equal(t, workflowFromDb, testWorkflow)
 }
 
-func TestInsertJob(t *testing.T) {
+func TestUpsertJob(t *testing.T) {
 	flag.Parse()
 	if testing.Short() {
 		t.Skip()
 	}
 
-	workflow := model.Workflow{
-		Name:          "TestInsertJob",
-		Description:   "Description",
-		SchemaVersion: 1,
-		Version:       1,
-		Tasks: []model.Task{
-			{
-				Name: "task_1",
-				Type: model.TaskTypeCLI,
-			},
-		},
-		InputParameters: []string{
-			"key1",
-			"key2",
-		},
-	}
-
 	ctx := context.Background()
-	count, _ := testDataStore.InsertWorkflows(ctx, workflow)
-	assert.Equal(t, 1, count)
 
 	job := &model.Job{
-		WorkflowName: workflow.Name,
+		WorkflowName: "test",
+		Status:       model.StatusPending,
 		InputParameters: []model.InputParameter{
 			{
 				Name:  "key1",
@@ -261,87 +243,12 @@ func TestInsertJob(t *testing.T) {
 		},
 	}
 
-	inserted, err := testDataStore.InsertJob(ctx, job)
+	inserted, err := testDataStore.UpsertJob(ctx, job)
 	assert.Nil(t, err)
+	assert.NotNil(t, inserted)
 	assert.Equal(t, job.WorkflowName, inserted.WorkflowName)
 	assert.Equal(t, job.InputParameters, inserted.InputParameters)
 	assert.Equal(t, model.StatusPending, inserted.Status)
-}
-
-func TestInsertJobWorkflowNotFound(t *testing.T) {
-	flag.Parse()
-	if testing.Short() {
-		t.Skip()
-	}
-
-	job := &model.Job{
-		WorkflowName: "TestInsertJobWorkflowNotFound",
-		InputParameters: []model.InputParameter{
-			{
-				Name:  "key1",
-				Value: "value1",
-			},
-			{
-				Name:  "key2",
-				Value: "value2",
-			},
-		},
-	}
-
-	ctx := context.Background()
-	inserted, err := testDataStore.InsertJob(ctx, job)
-	assert.Nil(t, inserted)
-	assert.Error(t, err, "Workflow not found")
-}
-
-func TestAcquireJob(t *testing.T) {
-	flag.Parse()
-	if testing.Short() {
-		t.Skip()
-	}
-
-	workflow := model.Workflow{
-		Name:          "TestAcquireJob",
-		Description:   "Description",
-		SchemaVersion: 1,
-		Version:       1,
-		Tasks: []model.Task{
-			{
-				Name: "task_1",
-				Type: model.TaskTypeCLI,
-			},
-		},
-		InputParameters: []string{
-			"key1",
-			"key2",
-		},
-	}
-
-	ctx := context.Background()
-	count, _ := testDataStore.InsertWorkflows(ctx, workflow)
-	assert.Equal(t, 1, count)
-
-	job := &model.Job{
-		WorkflowName: workflow.Name,
-		InputParameters: []model.InputParameter{
-			{
-				Name:  "key1",
-				Value: "value1",
-			},
-			{
-				Name:  "key2",
-				Value: "value2",
-			},
-		},
-	}
-
-	inserted, err := testDataStore.InsertJob(ctx, job)
-	assert.Nil(t, err)
-
-	acquired, err := testDataStore.AcquireJob(ctx, inserted)
-	assert.Nil(t, err)
-	assert.NotNil(t, acquired)
-	assert.Equal(t, model.StatusProcessing, acquired.Status)
 }
 
 func TestUpdateJobStatus(t *testing.T) {
@@ -385,7 +292,7 @@ func TestUpdateJobStatus(t *testing.T) {
 		},
 	}
 
-	inserted, err := testDataStore.InsertJob(ctx, job)
+	inserted, err := testDataStore.UpsertJob(ctx, job)
 	assert.Nil(t, err)
 
 	err = testDataStore.UpdateJobStatus(ctx, inserted, model.StatusFailure)
@@ -425,6 +332,7 @@ func TestUpdateJobStatusInvalid(t *testing.T) {
 
 	job := &model.Job{
 		WorkflowName: workflow.Name,
+		Status:       model.StatusPending,
 		InputParameters: []model.InputParameter{
 			{
 				Name:  "key1",
@@ -437,7 +345,7 @@ func TestUpdateJobStatusInvalid(t *testing.T) {
 		},
 	}
 
-	inserted, err := testDataStore.InsertJob(ctx, job)
+	inserted, err := testDataStore.UpsertJob(ctx, job)
 	assert.Nil(t, err)
 
 	err = testDataStore.UpdateJobStatus(ctx, inserted, 99999)
@@ -489,7 +397,7 @@ func TestUpdateJobAddResult(t *testing.T) {
 		},
 	}
 
-	inserted, err := testDataStore.InsertJob(ctx, job)
+	inserted, err := testDataStore.UpsertJob(ctx, job)
 	assert.Nil(t, err)
 
 	result := &model.TaskResult{
@@ -515,364 +423,6 @@ func TestUpdateJobAddResult(t *testing.T) {
 	assert.Equal(t, 0, jobFromDb.Results[0].CLI.ExitCode)
 }
 
-func TestGetJobs(t *testing.T) {
-	flag.Parse()
-	if testing.Short() {
-		t.Skip()
-	}
-
-	workflow := model.Workflow{
-		Name:          "TestGetJobs",
-		Description:   "Description",
-		SchemaVersion: 1,
-		Version:       1,
-		Tasks: []model.Task{
-			{
-				Name: "task_1",
-				Type: model.TaskTypeCLI,
-			},
-		},
-		InputParameters: []string{
-			"key1",
-			"key2",
-		},
-	}
-
-	ctx := context.Background()
-	count, _ := testDataStore.InsertWorkflows(ctx, workflow)
-	assert.Equal(t, 1, count)
-
-	job := &model.Job{
-		WorkflowName: workflow.Name,
-		InputParameters: []model.InputParameter{
-			{
-				Name:  "key1",
-				Value: "value1",
-			},
-			{
-				Name:  "key2",
-				Value: "value2",
-			},
-		},
-	}
-
-	_, err := testDataStore.InsertJob(ctx, job)
-	assert.Nil(t, err)
-
-	channel, _ := testDataStore.GetJobs(ctx, []string{}, []string{})
-	var jobReceived *model.Job
-	for {
-		jobReceived = (<-channel).(*model.Job)
-		if jobReceived.WorkflowName == job.WorkflowName {
-			break
-		}
-	}
-
-	assert.NotNil(t, jobReceived)
-	assert.Equal(t, job.WorkflowName, jobReceived.WorkflowName)
-	assert.Equal(t, job.InputParameters, jobReceived.InputParameters)
-	assert.Equal(t, model.StatusPending, jobReceived.Status)
-}
-
-func TestGetJobsIncludedWorkflowName(t *testing.T) {
-	flag.Parse()
-	if testing.Short() {
-		t.Skip()
-	}
-
-	workflow := model.Workflow{
-		Name:          "TestGetJobsIncludedWorkflowName",
-		Description:   "Description",
-		SchemaVersion: 1,
-		Version:       1,
-		Tasks: []model.Task{
-			{
-				Name: "task_1",
-				Type: model.TaskTypeCLI,
-			},
-		},
-		InputParameters: []string{
-			"key1",
-			"key2",
-		},
-	}
-
-	ctx := context.Background()
-	count, _ := testDataStore.InsertWorkflows(ctx, workflow)
-	assert.Equal(t, 1, count)
-
-	job := &model.Job{
-		WorkflowName: workflow.Name,
-		InputParameters: []model.InputParameter{
-			{
-				Name:  "key1",
-				Value: "value1",
-			},
-			{
-				Name:  "key2",
-				Value: "value2",
-			},
-		},
-	}
-
-	_, err := testDataStore.InsertJob(ctx, job)
-	assert.Nil(t, err)
-
-	channel, _ := testDataStore.GetJobs(ctx, []string{"TestGetJobsIncludedWorkflowName"}, []string{})
-	var jobReceived *model.Job
-	for {
-		jobReceived = (<-channel).(*model.Job)
-		if jobReceived.WorkflowName == job.WorkflowName {
-			break
-		}
-	}
-
-	assert.NotNil(t, jobReceived)
-	assert.Equal(t, job.WorkflowName, jobReceived.WorkflowName)
-	assert.Equal(t, job.InputParameters, jobReceived.InputParameters)
-	assert.Equal(t, model.StatusPending, jobReceived.Status)
-}
-
-func TestGetJobsIncludedWorkflowNameNotFound(t *testing.T) {
-	flag.Parse()
-	if testing.Short() {
-		t.Skip()
-	}
-
-	workflow := model.Workflow{
-		Name:          "TestGetJobsIncludedWorkflowNameNotFound",
-		Description:   "Description",
-		SchemaVersion: 1,
-		Version:       1,
-		Tasks: []model.Task{
-			{
-				Name: "task_1",
-				Type: model.TaskTypeCLI,
-			},
-		},
-		InputParameters: []string{
-			"key1",
-			"key2",
-		},
-	}
-
-	ctx := context.Background()
-	count, _ := testDataStore.InsertWorkflows(ctx, workflow)
-	assert.Equal(t, 1, count)
-
-	job := &model.Job{
-		WorkflowName: workflow.Name,
-		InputParameters: []model.InputParameter{
-			{
-				Name:  "key1",
-				Value: "value1",
-			},
-			{
-				Name:  "key2",
-				Value: "value2",
-			},
-		},
-	}
-
-	_, err := testDataStore.InsertJob(ctx, job)
-	assert.Nil(t, err)
-
-	channel, _ := testDataStore.GetJobs(ctx, []string{"NotFound"}, []string{})
-	var jobReceived *model.Job
-	select {
-	case obj := <-channel:
-		jobReceived = obj.(*model.Job)
-		if jobReceived.WorkflowName == job.WorkflowName {
-			break
-		} else {
-			jobReceived = nil
-		}
-	case <-time.After(3 * time.Second):
-		break
-	}
-
-	assert.Nil(t, jobReceived)
-}
-
-func TestGetJobsExcludedWorkflowName(t *testing.T) {
-	flag.Parse()
-	if testing.Short() {
-		t.Skip()
-	}
-
-	workflow := model.Workflow{
-		Name:          "TestGetJobsExcludedWorkflowName",
-		Description:   "Description",
-		SchemaVersion: 1,
-		Version:       1,
-		Tasks: []model.Task{
-			{
-				Name: "task_1",
-				Type: model.TaskTypeCLI,
-			},
-		},
-		InputParameters: []string{
-			"key1",
-			"key2",
-		},
-	}
-
-	ctx := context.Background()
-	count, _ := testDataStore.InsertWorkflows(ctx, workflow)
-	assert.Equal(t, 1, count)
-
-	job := &model.Job{
-		WorkflowName: workflow.Name,
-		InputParameters: []model.InputParameter{
-			{
-				Name:  "key1",
-				Value: "value1",
-			},
-			{
-				Name:  "key2",
-				Value: "value2",
-			},
-		},
-	}
-
-	_, err := testDataStore.InsertJob(ctx, job)
-	assert.Nil(t, err)
-
-	channel, _ := testDataStore.GetJobs(ctx, []string{}, []string{"dummy"})
-	var jobReceived *model.Job
-	for {
-		jobReceived = (<-channel).(*model.Job)
-		if jobReceived.WorkflowName == job.WorkflowName {
-			break
-		}
-	}
-
-	assert.NotNil(t, jobReceived)
-	assert.Equal(t, job.WorkflowName, jobReceived.WorkflowName)
-	assert.Equal(t, job.InputParameters, jobReceived.InputParameters)
-	assert.Equal(t, model.StatusPending, jobReceived.Status)
-}
-
-func TestGetJobsExcludedWorkflowNameNotFound(t *testing.T) {
-	flag.Parse()
-	if testing.Short() {
-		t.Skip()
-	}
-
-	workflow := model.Workflow{
-		Name:          "TestGetJobsExcludedWorkflowNameNotFound",
-		Description:   "Description",
-		SchemaVersion: 1,
-		Version:       1,
-		Tasks: []model.Task{
-			{
-				Name: "task_1",
-				Type: model.TaskTypeCLI,
-			},
-		},
-		InputParameters: []string{
-			"key1",
-			"key2",
-		},
-	}
-
-	ctx := context.Background()
-	count, _ := testDataStore.InsertWorkflows(ctx, workflow)
-	assert.Equal(t, 1, count)
-
-	job := &model.Job{
-		WorkflowName: workflow.Name,
-		InputParameters: []model.InputParameter{
-			{
-				Name:  "key1",
-				Value: "value1",
-			},
-			{
-				Name:  "key2",
-				Value: "value2",
-			},
-		},
-	}
-
-	_, err := testDataStore.InsertJob(ctx, job)
-	assert.Nil(t, err)
-
-	channel, _ := testDataStore.GetJobs(ctx, []string{}, []string{"TestGetJobsExcludedWorkflowNameNotFound"})
-	var jobReceived *model.Job
-	select {
-	case obj := <-channel:
-		jobReceived = obj.(*model.Job)
-		if jobReceived.WorkflowName == job.WorkflowName {
-			break
-		} else {
-			jobReceived = nil
-		}
-	case <-time.After(3 * time.Second):
-		break
-	}
-
-	assert.Nil(t, jobReceived)
-}
-
-func TestGetJobsIncludedAndExcludedWorkflowNames(t *testing.T) {
-	flag.Parse()
-	if testing.Short() {
-		t.Skip()
-	}
-
-	workflow := model.Workflow{
-		Name:          "TestGetJobsIncludedAndExcludedWorkflowNames",
-		Description:   "Description",
-		SchemaVersion: 1,
-		Version:       1,
-		Tasks: []model.Task{
-			{
-				Name: "task_1",
-				Type: model.TaskTypeCLI,
-			},
-		},
-		InputParameters: []string{
-			"key1",
-			"key2",
-		},
-	}
-
-	ctx := context.Background()
-	count, _ := testDataStore.InsertWorkflows(ctx, workflow)
-	assert.Equal(t, 1, count)
-
-	job := &model.Job{
-		WorkflowName: workflow.Name,
-		InputParameters: []model.InputParameter{
-			{
-				Name:  "key1",
-				Value: "value1",
-			},
-			{
-				Name:  "key2",
-				Value: "value2",
-			},
-		},
-	}
-
-	_, err := testDataStore.InsertJob(ctx, job)
-	assert.Nil(t, err)
-
-	channel, _ := testDataStore.GetJobs(ctx, []string{"TestGetJobsIncludedAndExcludedWorkflowNames"}, []string{"dummy"})
-	var jobReceived *model.Job
-	for {
-		jobReceived = (<-channel).(*model.Job)
-		if jobReceived.WorkflowName == job.WorkflowName {
-			break
-		}
-	}
-
-	assert.NotNil(t, jobReceived)
-	assert.Equal(t, job.WorkflowName, jobReceived.WorkflowName)
-	assert.Equal(t, job.InputParameters, jobReceived.InputParameters)
-	assert.Equal(t, model.StatusPending, jobReceived.Status)
-}
-
 func TestGetAllJobs(t *testing.T) {
 	flag.Parse()
 	if testing.Short() {
@@ -880,7 +430,7 @@ func TestGetAllJobs(t *testing.T) {
 	}
 
 	workflow := model.Workflow{
-		Name:          "TestGetJobsIncludedAndExcludedWorkflowNames",
+		Name:          "TestGetAllJobs",
 		Description:   "Description",
 		SchemaVersion: 1,
 		Version:       1,
@@ -902,6 +452,7 @@ func TestGetAllJobs(t *testing.T) {
 
 	job := &model.Job{
 		WorkflowName: workflow.Name,
+		Status:       model.StatusPending,
 		InputParameters: []model.InputParameter{
 			{
 				Name:  "key1",
@@ -918,7 +469,7 @@ func TestGetAllJobs(t *testing.T) {
 	collJobs := database.Collection(JobsCollectionName)
 	collJobs.DeleteMany(ctx, bson.M{})
 
-	_, err := testDataStore.InsertJob(ctx, job)
+	_, err := testDataStore.UpsertJob(ctx, job)
 	assert.Nil(t, err)
 
 	jobs, totalCount, err := testDataStore.GetAllJobs(ctx, 1, 4)

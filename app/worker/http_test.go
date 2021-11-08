@@ -193,7 +193,7 @@ func TestProcessJobHTTP(t *testing.T) {
 				mocklib.AnythingOfType("string"),
 			).Return(testCase.Workflow, nil)
 
-			dataStore.On("AcquireJob",
+			dataStore.On("UpsertJob",
 				mocklib.MatchedBy(
 					func(_ context.Context) bool {
 						return true
@@ -247,7 +247,7 @@ func TestProcessJobHTTP(t *testing.T) {
 				}
 				return resp, nil
 			}
-			err := processJob(ctx, job, dataStore)
+			err := processJob(ctx, job, dataStore, nil)
 			makeHTTPRequest = makeHTTPRequestOriginal
 
 			switch e := testCase.Error.(type) {
@@ -307,7 +307,7 @@ func TestProcessJobHTTPValidStatusCode(t *testing.T) {
 		mocklib.AnythingOfType("string"),
 	).Return(workflow, nil)
 
-	dataStore.On("AcquireJob",
+	dataStore.On("UpsertJob",
 		mocklib.MatchedBy(
 			func(_ context.Context) bool {
 				return true
@@ -353,7 +353,7 @@ func TestProcessJobHTTPValidStatusCode(t *testing.T) {
 		}
 		return resp, nil
 	}
-	err := processJob(ctx, job, dataStore)
+	err := processJob(ctx, job, dataStore, nil)
 	makeHTTPRequest = makeHTTPRequestOriginal
 
 	assert.Nil(t, err)
@@ -416,7 +416,7 @@ func TestProcessJobHTTPWrongStatusCode(t *testing.T) {
 		mocklib.AnythingOfType("string"),
 	).Return(workflow, nil)
 
-	dataStore.On("AcquireJob",
+	dataStore.On("UpsertJob",
 		mocklib.MatchedBy(
 			func(_ context.Context) bool {
 				return true
@@ -462,7 +462,7 @@ func TestProcessJobHTTPWrongStatusCode(t *testing.T) {
 		}
 		return resp, nil
 	}
-	err := processJob(ctx, job, dataStore)
+	err := processJob(ctx, job, dataStore, nil)
 	makeHTTPRequest = makeHTTPRequestOriginal
 
 	assert.Nil(t, err)
@@ -497,7 +497,7 @@ func TestProcessJobHTTPFailedIncompatibleDefinition(t *testing.T) {
 		mocklib.AnythingOfType("string"),
 	).Return(workflow, nil)
 
-	dataStore.On("AcquireJob",
+	dataStore.On("UpsertJob",
 		mocklib.MatchedBy(
 			func(_ context.Context) bool {
 				return true
@@ -514,7 +514,7 @@ func TestProcessJobHTTPFailedIncompatibleDefinition(t *testing.T) {
 		model.StatusFailure,
 	).Return(nil)
 
-	err := processJob(ctx, job, dataStore)
+	err := processJob(ctx, job, dataStore, nil)
 	assert.NotNil(t, err)
 	assert.EqualError(t, err, "Error: Task definition incompatible with specified type (http)")
 }

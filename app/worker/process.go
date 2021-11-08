@@ -20,19 +20,27 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pkg/errors"
+
 	"github.com/mendersoftware/go-lib-micro/log"
+	"github.com/mendersoftware/workflows/client/nats"
 	"github.com/mendersoftware/workflows/model"
 	"github.com/mendersoftware/workflows/store"
 )
 
+// this variable is set when running acceptance tests to disable ephemeral jobs
+// without it, it is not possible to inspect the jobs collection to assert the
+// values stored in the database
+var NoEphemeralWorkflows = false
+
 func processJob(ctx context.Context, job *model.Job,
-	dataStore store.DataStore) error {
+	dataStore store.DataStore, nats nats.Client) error {
 	l := log.FromContext(ctx)
 
 	workflow, err := dataStore.GetWorkflowByName(ctx, job.WorkflowName, job.WorkflowVersion)
 	if err != nil {
-		l.Warnf("The workflow %q of job %s does not exist",
-			job.WorkflowName, job.ID)
+		l.Warnf("The workflow %q of job %s does not exist: %v",
+			job.WorkflowName, job.ID, err)
 		err := dataStore.UpdateJobStatus(ctx, job, model.StatusFailure)
 		if err != nil {
 			return err
@@ -40,19 +48,13 @@ func processJob(ctx context.Context, job *model.Job,
 		return nil
 	}
 
-	acquiredJob, err := dataStore.AcquireJob(ctx, job)
-	if err != nil {
-		l.Error(err.Error())
-		err := dataStore.UpdateJobStatus(ctx, job, model.StatusFailure)
+	if !workflow.Ephemeral || NoEphemeralWorkflows {
+		job.Status = model.StatusPending
+		_, err = dataStore.UpsertJob(ctx, job)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "insert of the job failed")
 		}
-		return nil
-	} else if acquiredJob == nil {
-		l.Debugf("The job with given ID (%s) does not exist or was already taken", job.ID)
-		return nil
 	}
-	job = acquiredJob
 
 	l.Infof("%s: started, %s", job.ID, job.WorkflowName)
 
@@ -64,7 +66,7 @@ func processJob(ctx context.Context, job *model.Job,
 			attempt uint8 = 0
 		)
 		for attempt <= task.Retries {
-			result, err = processTask(task, job, workflow, l)
+			result, err = processTask(task, job, workflow, nats, l)
 			if err != nil {
 				_ = dataStore.UpdateJobStatus(ctx, job, model.StatusFailure)
 				return err
@@ -78,9 +80,11 @@ func processJob(ctx context.Context, job *model.Job,
 			}
 		}
 		job.Results = append(job.Results, *result)
-		err = dataStore.UpdateJobAddResult(ctx, job, result)
-		if err != nil {
-			l.Errorf("Error uploading results: %s", err.Error())
+		if !workflow.Ephemeral || !result.Success || NoEphemeralWorkflows {
+			err = dataStore.UpdateJobAddResult(ctx, job, result)
+			if err != nil {
+				l.Errorf("Error uploading results: %s", err.Error())
+			}
 		}
 		if !result.Success {
 			success = false
@@ -88,17 +92,19 @@ func processJob(ctx context.Context, job *model.Job,
 		}
 	}
 
-	var newStatus string
+	var status int32
 	if success {
-		err = dataStore.UpdateJobStatus(ctx, job, model.StatusDone)
-		newStatus = "done"
+		status = model.StatusDone
 	} else {
-		err = dataStore.UpdateJobStatus(ctx, job, model.StatusFailure)
-		newStatus = "failed"
+		status = model.StatusFailure
 	}
-	if err != nil {
-		l.Warn(fmt.Sprintf("Unable to set job status to %s", newStatus))
-		return err
+	if !workflow.Ephemeral || NoEphemeralWorkflows {
+		newStatus := model.StatusToString(status)
+		err = dataStore.UpdateJobStatus(ctx, job, status)
+		if err != nil {
+			l.Warn(fmt.Sprintf("Unable to set job status to %s", newStatus))
+			return err
+		}
 	}
 
 	l.Infof("%s: done", job.ID)
@@ -106,7 +112,7 @@ func processJob(ctx context.Context, job *model.Job,
 }
 
 func processTask(task model.Task, job *model.Job,
-	workflow *model.Workflow, l *log.Logger) (*model.TaskResult, error) {
+	workflow *model.Workflow, nats nats.Client, l *log.Logger) (*model.TaskResult, error) {
 
 	var result *model.TaskResult
 	var err error
@@ -146,6 +152,14 @@ func processTask(task model.Task, job *model.Job,
 					"with specified type (cli)")
 		}
 		result, err = processCLITask(cliTask, job, workflow)
+	case model.TaskTypeNATS:
+		var natsTask *model.NATSTask = task.NATS
+		if natsTask == nil {
+			return nil, fmt.Errorf(
+				"Error: Task definition incompatible " +
+					"with specified type (nats)")
+		}
+		result, err = processNATSTask(natsTask, job, workflow, nats)
 	case model.TaskTypeSMTP:
 		var smtpTask *model.SMTPTask = task.SMTP
 		if smtpTask == nil {
