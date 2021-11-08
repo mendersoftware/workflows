@@ -64,16 +64,16 @@ func InitAndRun(conf config.Reader, workflows Workflows, dataStore store.DataSto
 	topic := config.Config.GetString(dconfig.SettingNatsSubscriberTopic)
 	subject := streamName + "." + topic
 	durableName := config.Config.GetString(dconfig.SettingNatsSubscriberDurable)
+	concurrency := conf.GetInt(dconfig.SettingConcurrency)
 
 	channel := make(chan *natsio.Msg)
-	unsubscribe, err := natsClient.JetStreamSubscribe(ctx, subject, durableName, channel)
+	unsubscribe, err := natsClient.JetStreamSubscribe(ctx, subject, durableName, concurrency, channel)
 	if err != nil {
 		return errors.Wrap(err, "failed to subscribe to the nats JetStream")
 	}
 	defer unsubscribe()
 
 	var msg interface{}
-	concurrency := conf.GetInt(dconfig.SettingConcurrency)
 	sem := make(chan bool, concurrency)
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, unix.SIGINT, unix.SIGTERM)
