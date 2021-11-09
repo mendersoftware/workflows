@@ -66,7 +66,7 @@ func InitAndRun(conf config.Reader, workflows Workflows, dataStore store.DataSto
 	durableName := config.Config.GetString(dconfig.SettingNatsSubscriberDurable)
 	concurrency := conf.GetInt(dconfig.SettingConcurrency)
 
-	channel := make(chan *natsio.Msg)
+	channel := make(chan *natsio.Msg, concurrency)
 	unsubscribe, err := natsClient.JetStreamSubscribe(ctx, subject, durableName, concurrency, channel)
 	if err != nil {
 		return errors.Wrap(err, "failed to subscribe to the nats JetStream")
