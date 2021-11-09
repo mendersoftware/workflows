@@ -28,8 +28,6 @@ const (
 	reconnectWaitTime = 1 * time.Second
 	// Set the number of redeliveries for a message
 	maxDeliver = 3
-	// Set the number of inflight messages
-	maxAckPending = 1
 	// Set the ACK wait
 	AckWait = 30 * time.Second
 )
@@ -44,7 +42,7 @@ type Client interface {
 	StreamName() string
 	IsConnected() bool
 	JetStreamCreateStream(streamName string) error
-	JetStreamSubscribe(ctx context.Context, subj, durable string, q chan *nats.Msg) (UnsubscribeFunc, error)
+	JetStreamSubscribe(ctx context.Context, subj, durable string, maxAckPending int, q chan *nats.Msg) (UnsubscribeFunc, error)
 	JetStreamPublish(string, []byte) error
 }
 
@@ -133,6 +131,7 @@ func noop() error {
 func (c *client) JetStreamSubscribe(
 	ctx context.Context,
 	subj, durable string,
+	maxAckPending int,
 	q chan *nats.Msg,
 ) (UnsubscribeFunc, error) {
 	sub, err := c.js.ChanQueueSubscribe(subj, durable, q,

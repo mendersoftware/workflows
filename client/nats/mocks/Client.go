@@ -78,12 +78,12 @@ func (_m *Client) JetStreamPublish(_a0 string, _a1 []byte) error {
 }
 
 // JetStreamSubscribe provides a mock function with given fields: ctx, subj, durable
-func (_m *Client) JetStreamSubscribe(ctx context.Context, subj string, durable string, q chan *natsio.Msg) (nats.UnsubscribeFunc, error) {
+func (_m *Client) JetStreamSubscribe(ctx context.Context, subj string, durable string, maxAckPending int, q chan *natsio.Msg) (nats.UnsubscribeFunc, error) {
 	ret := _m.Called(ctx, subj, durable)
 
 	var r0 nats.UnsubscribeFunc
-	if rf, ok := ret.Get(0).(func(context.Context, string, string, chan *natsio.Msg) nats.UnsubscribeFunc); ok {
-		r0 = rf(ctx, subj, durable, q)
+	if rf, ok := ret.Get(0).(func(context.Context, string, string, int, chan *natsio.Msg) nats.UnsubscribeFunc); ok {
+		r0 = rf(ctx, subj, durable, maxAckPending, q)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(nats.UnsubscribeFunc)
@@ -91,8 +91,8 @@ func (_m *Client) JetStreamSubscribe(ctx context.Context, subj string, durable s
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(context.Context, string, string, chan *natsio.Msg) error); ok {
-		r1 = rf(ctx, subj, durable, q)
+	if rf, ok := ret.Get(1).(func(context.Context, string, string, int, chan *natsio.Msg) error); ok {
+		r1 = rf(ctx, subj, durable, maxAckPending, q)
 	} else {
 		r1 = ret.Error(1)
 	}
