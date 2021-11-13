@@ -1,4 +1,4 @@
-// Copyright 2020 Northern.tech AS
+// Copyright 2021 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -26,7 +26,13 @@ type SMTPClientMock struct {
 }
 
 // SendMail is the mocked method to send emails
-func (c *SMTPClientMock) SendMail(addr string, a smtp.Auth, from string, to []string, msg []byte) error {
+func (c *SMTPClientMock) SendMail(
+	addr string,
+	a smtp.Auth,
+	from string,
+	to []string,
+	msg []byte,
+) error {
 	ret := c.Called(addr, a, from, to, msg)
 
 	var r0 error

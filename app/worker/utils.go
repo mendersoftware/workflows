@@ -23,9 +23,10 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/mendersoftware/workflows/model"
 	"github.com/thedevsaddam/gojsonq"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+
+	"github.com/mendersoftware/workflows/model"
 )
 
 const (
@@ -46,7 +47,8 @@ func processJobString(data string, workflow *model.Workflow, job *model.Job) str
 		// content of the ${...} expression, without the brackets
 		match := submatch[1]
 		defaultValue := submatch[2]
-		if strings.HasPrefix(match, workflowInputVariable) && len(match) > len(workflowInputVariable) {
+		if strings.HasPrefix(match, workflowInputVariable) &&
+			len(match) > len(workflowInputVariable) {
 			// Replace ${workflow.input.KEY} with the KEY input variable
 			paramName := match[len(workflowInputVariable):]
 			found := false
@@ -61,7 +63,8 @@ func processJobString(data string, workflow *model.Workflow, job *model.Job) str
 			if !found && defaultValue != "" {
 				data = strings.ReplaceAll(data, submatch[0], defaultValue)
 			}
-		} else if strings.HasPrefix(match, workflowEnvVariable) && len(match) > len(workflowEnvVariable) {
+		} else if strings.HasPrefix(match, workflowEnvVariable) &&
+			len(match) > len(workflowEnvVariable) {
 			// Replace ${env.KEY} with the KEY environment variable
 			envName := match[len(workflowEnvVariable):]
 			envValue := os.Getenv(envName)
@@ -71,8 +74,8 @@ func processJobString(data string, workflow *model.Workflow, job *model.Job) str
 			data = strings.ReplaceAll(data, submatch[0], envValue)
 		} else if output := reExpressionOutput.FindStringSubmatch(match); len(output) > 0 {
 			// Replace ${TASK_NAME.json.JSONPATH} with the value of the JSONPATH expression from the
-			// JSON output of the previous task with name TASK_NAME. If the output is not a valid JSON
-			// or the JSONPATH does not resolve to a value, replace with empty string
+			// JSON output of the previous task with name TASK_NAME. If the output is not a valid
+			// JSON or the JSONPATH does not resolve to a value, replace with empty string
 			for _, result := range job.Results {
 				if result.Name == output[1] {
 					varKey := output[2]
@@ -149,7 +152,8 @@ func processJobJSON(data interface{}, workflow *model.Workflow, job *model.Job) 
 	case string:
 		if len(value) > 3 && value[0:2] == "${" && value[len(value)-1:] == "}" {
 			key := value[2 : len(value)-1]
-			if strings.HasPrefix(key, workflowInputVariable) && len(key) > len(workflowInputVariable) {
+			if strings.HasPrefix(key, workflowInputVariable) &&
+				len(key) > len(workflowInputVariable) {
 				key = key[len(workflowInputVariable):]
 				for _, param := range job.InputParameters {
 					if param.Name == key && param.Raw != nil {

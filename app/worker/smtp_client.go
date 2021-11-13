@@ -1,4 +1,4 @@
-// Copyright 2020 Northern.tech AS
+// Copyright 2021 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -27,7 +27,13 @@ type SMTPClientInterface interface {
 type SMTPClient struct {
 }
 
-// SendMail sends an email usimg smtp.SendMail
-func (c *SMTPClient) SendMail(addr string, a smtp.Auth, from string, to []string, msg []byte) error {
+// SendMail sends an email using smtp.SendMail
+func (c *SMTPClient) SendMail(
+	addr string,
+	a smtp.Auth,
+	from string,
+	to []string,
+	msg []byte,
+) error {
 	return smtp.SendMail(addr, a, from, to, msg)
 }

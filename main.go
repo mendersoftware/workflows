@@ -22,14 +22,14 @@ import (
 	"strings"
 
 	"github.com/mendersoftware/go-lib-micro/config"
-	"github.com/mendersoftware/workflows/client/nats"
-	"github.com/mendersoftware/workflows/model"
 	"github.com/pkg/errors"
 	"github.com/urfave/cli"
 
 	"github.com/mendersoftware/workflows/app/server"
 	"github.com/mendersoftware/workflows/app/worker"
+	"github.com/mendersoftware/workflows/client/nats"
 	dconfig "github.com/mendersoftware/workflows/config"
+	"github.com/mendersoftware/workflows/model"
 	store "github.com/mendersoftware/workflows/store/mongo"
 )
 
@@ -43,8 +43,9 @@ func doMain(args []string) {
 	app := &cli.App{
 		Flags: []cli.Flag{
 			&cli.StringFlag{
-				Name:        "config",
-				Usage:       "Configuration `FILE`. Supports JSON, TOML, YAML and HCL formatted configs.",
+				Name: "config",
+				Usage: "Configuration `FILE`." +
+					" Supports JSON, TOML, YAML and HCL formatted configs.",
 				Value:       "config.yaml",
 				Destination: &configPath,
 			},
@@ -225,7 +226,12 @@ func cmdListJobs(args *cli.Context) error {
 		count, page, count/perPage, perPage, "insert time", "id", "status", "workflow")
 	for _, j := range jobs {
 		format := "Mon, 2 Jan 2006 15:04:05 MST"
-		fmt.Printf("%29s %24s %10s %s\n", j.InsertTime.Format(format), j.ID, model.StatusToString(j.Status), j.WorkflowName)
+		fmt.Printf(
+			"%29s %24s %10s %s\n",
+			j.InsertTime.Format(format),
+			j.ID, model.StatusToString(j.Status),
+			j.WorkflowName,
+		)
 	}
 	fmt.Printf("all jobs: %d; page: %d/%d\n", count, page, count/perPage)
 

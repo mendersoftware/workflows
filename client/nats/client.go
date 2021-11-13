@@ -42,7 +42,13 @@ type Client interface {
 	StreamName() string
 	IsConnected() bool
 	JetStreamCreateStream(streamName string) error
-	JetStreamSubscribe(ctx context.Context, subj, durable string, maxAckPending int, q chan *nats.Msg) (UnsubscribeFunc, error)
+	JetStreamSubscribe(
+		ctx context.Context,
+		subj,
+		durable string,
+		maxAckPending int,
+		q chan *nats.Msg,
+	) (UnsubscribeFunc, error)
 	JetStreamPublish(string, []byte) error
 }
 

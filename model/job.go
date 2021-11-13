@@ -86,12 +86,13 @@ func (param InputParameters) Map() map[string]interface{} {
 
 // TaskResult contains the result of the execution of a task
 type TaskResult struct {
-	Name         string                  `json:"name" bson:"name"`
-	Type         string                  `json:"type" bson:"type"`
-	Success      bool                    `json:"success" bson:"success"`
-	Skipped      bool                    `json:"skipped" bson:"skipped"`
-	CLI          *TaskResultCLI          `json:"cli,omitempty" bson:"cli,omitempty"`
-	HTTPRequest  *TaskResultHTTPRequest  `json:"httpRequest,omitempty" bson:"httpRequest,omitempty"`
+	Name        string                 `json:"name" bson:"name"`
+	Type        string                 `json:"type" bson:"type"`
+	Success     bool                   `json:"success" bson:"success"`
+	Skipped     bool                   `json:"skipped" bson:"skipped"`
+	CLI         *TaskResultCLI         `json:"cli,omitempty" bson:"cli,omitempty"`
+	HTTPRequest *TaskResultHTTPRequest `json:"httpRequest,omitempty" bson:"httpRequest,omitempty"`
+	//nolint:lll
 	HTTPResponse *TaskResultHTTPResponse `json:"httpResponse,omitempty" bson:"httpResponse,omitempty"`
 	NATS         *TaskResultNATS         `json:"nats,omitempty" bson:"nats,omitempty"`
 	SMTP         *TaskResultSMTP         `json:"smtp,omitempty" bson:"smtp,omitempty"`
@@ -151,7 +152,7 @@ func (job *Job) Validate(workflow *Workflow) error {
 
 func (job *Job) PrepareForJSONMarshalling() {
 	job.StatusString = StatusToString(job.Status)
-	for i, _ := range job.InputParameters {
+	for i := range job.InputParameters {
 		job.InputParameters[i].Raw = nil
 	}
 }

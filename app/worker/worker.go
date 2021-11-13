@@ -41,7 +41,12 @@ type Workflows struct {
 }
 
 // InitAndRun initializes the worker and runs it
-func InitAndRun(conf config.Reader, workflows Workflows, dataStore store.DataStore, natsClient nats.Client) error {
+func InitAndRun(
+	conf config.Reader,
+	workflows Workflows,
+	dataStore store.DataStore,
+	natsClient nats.Client,
+) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	// Calling cancel() before returning should shut down
 	// all workers. However, the new driver is not
@@ -67,11 +72,19 @@ func InitAndRun(conf config.Reader, workflows Workflows, dataStore store.DataSto
 	concurrency := conf.GetInt(dconfig.SettingConcurrency)
 
 	channel := make(chan *natsio.Msg, concurrency)
-	unsubscribe, err := natsClient.JetStreamSubscribe(ctx, subject, durableName, concurrency, channel)
+	unsubscribe, err := natsClient.JetStreamSubscribe(
+		ctx,
+		subject,
+		durableName,
+		concurrency,
+		channel,
+	)
 	if err != nil {
 		return errors.Wrap(err, "failed to subscribe to the nats JetStream")
 	}
-	defer unsubscribe()
+	defer func() {
+		_ = unsubscribe()
+	}()
 
 	var msg interface{}
 	sem := make(chan bool, concurrency)
@@ -85,9 +98,6 @@ func InitAndRun(conf config.Reader, workflows Workflows, dataStore store.DataSto
 			signal.Stop(quit)
 			l.Info("Shutdown Worker ...")
 			return err
-		}
-		if msg == nil {
-			break
 		}
 		switch msg := msg.(type) {
 		case *natsio.Msg:
@@ -128,6 +138,4 @@ func InitAndRun(conf config.Reader, workflows Workflows, dataStore store.DataSto
 			return msg
 		}
 	}
-
-	return nil
 }

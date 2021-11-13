@@ -23,6 +23,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/mendersoftware/go-lib-micro/log"
+
 	"github.com/mendersoftware/workflows/client/nats"
 	"github.com/mendersoftware/workflows/model"
 	"github.com/mendersoftware/workflows/store"

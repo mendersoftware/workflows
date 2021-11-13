@@ -25,6 +25,7 @@ import (
 
 	"github.com/mendersoftware/go-lib-micro/config"
 	"github.com/mendersoftware/go-lib-micro/log"
+
 	dconfig "github.com/mendersoftware/workflows/config"
 	"github.com/mendersoftware/workflows/model"
 )
@@ -148,7 +149,13 @@ func processSMTPTask(smtpTask *model.SMTPTask, job *model.Job,
 	}
 	result.Success = true
 	if len(recipientAddresses) > 0 {
-		err = smtpClient.SendMail(smtpHostname, auth, fromAddress, recipientAddresses, msgBuffer.Bytes())
+		err = smtpClient.SendMail(
+			smtpHostname,
+			auth,
+			fromAddress,
+			recipientAddresses,
+			msgBuffer.Bytes(),
+		)
 		l.Debugf("processSMTPTask: smtpClient.SendMail returned %v", err)
 		if err != nil {
 			l.Errorf("processSMTPTask: smtpClient.SendMail returned %v", err)

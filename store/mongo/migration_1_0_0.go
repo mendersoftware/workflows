@@ -1,4 +1,4 @@
-// Copyright 2020 Northern.tech AS
+// Copyright 2021 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -43,7 +43,6 @@ func (m *migration1_0_0) Up(from migrate.Version) error {
 	idxQueue := collQueue.Indexes()
 	idxJobs := collJobs.Indexes()
 	indexOptions := mopts.Index()
-	indexOptions.SetBackground(false)
 	indexOptions.SetName("status")
 	statusIndex := mongo.IndexModel{
 		Keys:    bson.D{{Key: "status", Value: 1}},
