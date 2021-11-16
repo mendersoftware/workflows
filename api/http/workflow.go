@@ -27,6 +27,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"github.com/mendersoftware/go-lib-micro/log"
+
 	"github.com/mendersoftware/workflows/app/worker"
 	"github.com/mendersoftware/workflows/client/nats"
 	"github.com/mendersoftware/workflows/model"
@@ -119,8 +120,11 @@ func (h WorkflowController) GetWorkflows(c *gin.Context) {
 	c.JSON(http.StatusOK, h.dataStore.GetWorkflows(c))
 }
 
-func (h WorkflowController) startWorkflowGetJob(c *gin.Context, inputParameters map[string]interface{},
-	name string) ([]byte, string, string, error) {
+func (h WorkflowController) startWorkflowGetJob(
+	c *gin.Context,
+	inputParameters map[string]interface{},
+	name string,
+) ([]byte, string, string, error) {
 	workflowVersion := ""
 	if values := c.Request.Header[HeaderWorkflowMinVersion]; len(values) > 0 {
 		workflowVersion = values[0]

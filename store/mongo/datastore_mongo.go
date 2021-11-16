@@ -33,6 +33,7 @@ import (
 
 	"github.com/mendersoftware/go-lib-micro/config"
 	"github.com/mendersoftware/go-lib-micro/log"
+
 	dconfig "github.com/mendersoftware/workflows/config"
 	"github.com/mendersoftware/workflows/model"
 	"github.com/mendersoftware/workflows/store"
@@ -82,7 +83,7 @@ func doMigrations(ctx context.Context, client *Client,
 
 func disconnectClient(parentCtx context.Context, client *Client) {
 	ctx, cancel := context.WithTimeout(parentCtx, 10*time.Second)
-	client.Disconnect(ctx)
+	_ = client.Disconnect(ctx)
 	<-ctx.Done()
 	cancel()
 }
@@ -93,7 +94,7 @@ type Client struct {
 }
 
 // NewClient returns a mongo client
-func NewClient(ctx context.Context, c config.Reader) (*Client, error) {
+func NewClient(_ context.Context, c config.Reader) (*Client, error) {
 
 	clientOptions := mopts.Client()
 	mongoURL := c.GetString(dconfig.SettingMongo)
@@ -122,8 +123,8 @@ func NewClient(ctx context.Context, c config.Reader) (*Client, error) {
 		clientOptions.SetTLSConfig(tlsConfig)
 	}
 
-	// Set writeconcern to acknowlage after write has propagated to the
-	// mongod instance and commited to the file system journal.
+	// Set writeconcern to acknowledge after write has propagated to the
+	// mongod instance and committed to the file system journal.
 	var wc *writeconcern.WriteConcern
 	wc.WithOptions(writeconcern.W(1), writeconcern.J(true))
 	clientOptions.SetWriteConcern(wc)
@@ -182,7 +183,7 @@ func NewDataStoreWithClient(client *Client, c config.Reader) *DataStoreMongo {
 		}
 	}
 	// If the message bus collection is empty, the trailing cursor dies
-	collQueue.InsertOne(ctx, model.Job{WorkflowName: "noop", ID: "0"})
+	_, _ = collQueue.InsertOne(ctx, model.Job{WorkflowName: "noop", ID: "0"})
 
 	return &DataStoreMongo{
 		client:    client,
@@ -210,7 +211,12 @@ func (db *DataStoreMongo) LoadWorkflows(ctx context.Context, l *log.Logger) erro
 				l.Infof("LoadWorkflows: not loaded: %s v%d.", workflow.Name, workflow.Version)
 			}
 			if err != nil {
-				l.Infof("LoadWorkflows: error loading: %s v%d: %s.", workflow.Name, workflow.Version, err.Error())
+				l.Infof(
+					"LoadWorkflows: error loading: %s v%d: %s.",
+					workflow.Name,
+					workflow.Version,
+					err.Error(),
+				)
 			}
 		}
 	} else {
@@ -221,7 +227,10 @@ func (db *DataStoreMongo) LoadWorkflows(ctx context.Context, l *log.Logger) erro
 
 // InsertWorkflows inserts a workflow to the database and cache and returns the number of
 // inserted elements or an error for the first error generated.
-func (db *DataStoreMongo) InsertWorkflows(ctx context.Context, workflows ...model.Workflow) (int, error) {
+func (db *DataStoreMongo) InsertWorkflows(
+	ctx context.Context,
+	workflows ...model.Workflow,
+) (int, error) {
 	database := db.client.Database(db.dbName)
 	collWflows := database.Collection(WorkflowCollectionName)
 	for i, workflow := range workflows {
@@ -250,7 +259,11 @@ func (db *DataStoreMongo) InsertWorkflows(ctx context.Context, workflows ...mode
 
 // GetWorkflowByName gets the workflow with the given name - either from the
 // cache, or searches the database if the workflow is not cached.
-func (db *DataStoreMongo) GetWorkflowByName(ctx context.Context, workflowName string, version string) (*model.Workflow, error) {
+func (db *DataStoreMongo) GetWorkflowByName(
+	ctx context.Context,
+	workflowName string,
+	version string,
+) (*model.Workflow, error) {
 	workflow, ok := db.workflows[workflowName]
 	l := log.FromContext(ctx)
 
@@ -414,6 +427,9 @@ func (db *DataStoreMongo) GetAllJobs(
 	sortField["insert_time"] = -1
 	findOptions.SetSort(sortField)
 	cur, err := collection.Find(ctx, bson.M{}, findOptions)
+	if err != nil {
+		return []model.Job{}, 0, err
+	}
 
 	var jobs []model.Job
 	err = cur.All(ctx, &jobs)
@@ -424,6 +440,9 @@ func (db *DataStoreMongo) GetAllJobs(
 	}
 
 	count, err := collection.CountDocuments(ctx, bson.M{})
+	if err != nil {
+		return []model.Job{}, 0, err
+	}
 	return jobs, count, nil
 }
 
@@ -431,10 +450,4 @@ func (db *DataStoreMongo) GetAllJobs(
 func (db *DataStoreMongo) Close() {
 	ctx := context.Background()
 	disconnectClient(ctx, db.client)
-}
-
-func (db *DataStoreMongo) dropDatabase() error {
-	ctx := context.Background()
-	err := db.client.Database(db.dbName).Drop(ctx)
-	return err
 }

@@ -76,7 +76,8 @@ func GetWorkflowsFromPath(path string) map[string]*Workflow {
 				l.Warn(err.Error())
 				continue
 			}
-			if workflows[workflow.Name] == nil || workflows[workflow.Name].Version <= workflow.Version {
+			if workflows[workflow.Name] == nil ||
+				workflows[workflow.Name].Version <= workflow.Version {
 				workflows[workflow.Name] = workflow
 			}
 		}

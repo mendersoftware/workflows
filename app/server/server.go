@@ -25,6 +25,7 @@ import (
 
 	"github.com/mendersoftware/go-lib-micro/config"
 	"github.com/mendersoftware/go-lib-micro/log"
+
 	api "github.com/mendersoftware/workflows/api/http"
 	"github.com/mendersoftware/workflows/client/nats"
 	dconfig "github.com/mendersoftware/workflows/config"

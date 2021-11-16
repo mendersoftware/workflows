@@ -1,4 +1,4 @@
-// Copyright 2020 Northern.tech AS
+// Copyright 2021 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
 package mongo
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -59,6 +60,12 @@ func setupDatabase() {
 	}
 
 	testDataStore = dataStore
+}
+
+func (db *DataStoreMongo) dropDatabase() error {
+	ctx := context.Background()
+	err := db.client.Database(db.dbName).Drop(ctx)
+	return err
 }
 
 func teardownDatabase() {

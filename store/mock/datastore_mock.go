@@ -20,6 +20,7 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	"github.com/mendersoftware/go-lib-micro/log"
+
 	"github.com/mendersoftware/workflows/model"
 )
 
@@ -203,7 +204,11 @@ func (db *DataStore) GetJobByNameAndID(ctx context.Context,
 	return r0, r1
 }
 
-func (db *DataStore) GetAllJobs(ctx context.Context, page int64, perPage int64) ([]model.Job, int64, error) {
+func (db *DataStore) GetAllJobs(
+	ctx context.Context,
+	page int64,
+	perPage int64,
+) ([]model.Job, int64, error) {
 	ret := db.Called(ctx, page, perPage)
 
 	var r0 []model.Job

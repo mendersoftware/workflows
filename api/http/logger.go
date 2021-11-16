@@ -56,7 +56,15 @@ func routerLogger(logger logrus.FieldLogger) gin.HandlerFunc {
 		if len(c.Errors) > 0 {
 			entry.Error(c.Errors.ByType(gin.ErrorTypePrivate).String())
 		} else {
-			msg := fmt.Sprintf("%d %f %s %s %s - %s", statusCode, latency, method, path, clientIP, clientUserAgent)
+			msg := fmt.Sprintf(
+				"%d %f %s %s %s - %s",
+				statusCode,
+				latency,
+				method,
+				path,
+				clientIP,
+				clientUserAgent,
+			)
 			if statusCode > 499 {
 				entry.Error(msg)
 			} else if statusCode > 399 {
