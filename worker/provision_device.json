@@ -1,7 +1,7 @@
 {
     "name": "provision_device",
     "description": "Provision device.",
-    "version": 6,
+    "version": 7,
     "tasks": [
         {
             "name": "create_device_inventory",
@@ -56,6 +56,30 @@
                 "connectionTimeOut": 8000,
                 "readTimeOut": 8000,
                 "statusCodes": [201, 409]
+            }
+        },
+        {
+            "name": "provision_azure-iot-manager",
+            "type": "http",
+            "retries": 3,
+            "http": {
+                "uri": "http://${env.AZURE_IOT_MANAGER_ADDR|mender-azure-iot-manager:8080}/api/internal/v1/azure-iot-manager/tenants/${workflow.input.tenant_id}/devices",
+                "method": "POST",
+                "contentType": "application/json",
+                "json": {
+                    "device_id": "${workflow.input.device_id}"
+                },
+                "headers": {
+                    "X-MEN-RequestID": "${workflow.input.request_id}"
+                },
+                "connectionTimeOut": 8000,
+                "readTimeOut": 8000,
+                "statusCodes": [
+                    201,
+                    202,
+                    204,
+                    409
+                ]
             }
         }
     ],
