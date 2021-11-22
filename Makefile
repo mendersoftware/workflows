@@ -48,11 +48,11 @@ clean:
 
 .PHONY: acceptance-testing-up
 acceptance-testing-up:
-	docker-compose $(COMPOSEFILES_ACCEPTANCE_TESTING) up -d
+	docker-compose $(COMPOSEFILES_ACCEPTANCE_TESTING) up --scale acceptance-testing=0 -d
 
 .PHONY: acceptance-testing-run
 acceptance-testing-run:
-	docker exec tests_acceptance-testing_1 /testing/run.sh
+	docker-compose $(COMPOSEFILES_ACCEPTANCE_TESTING) run --rm acceptance-testing
 
 .PHONY: acceptance-testing-logs
 acceptance-testing-logs:
