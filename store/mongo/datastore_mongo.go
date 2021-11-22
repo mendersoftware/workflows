@@ -40,9 +40,6 @@ import (
 )
 
 const (
-	// JobQueueCollectionName refers to the collection of pending jobs
-	JobQueueCollectionName = "job_queue"
-
 	// JobsCollectionName refers to the collection of finished or
 	// jobs in progress.
 	JobsCollectionName = "jobs"
@@ -173,7 +170,6 @@ func NewDataStoreWithClient(client *Client, c config.Reader) *DataStoreMongo {
 	workflows := make(map[string]*model.Workflow)
 	database := client.Database(dbName)
 	collWflows := database.Collection(WorkflowCollectionName)
-	collQueue := database.Collection(JobQueueCollectionName)
 	cur, err := collWflows.Find(ctx, bson.M{})
 	if err == nil {
 		if err = cur.All(ctx, &findResults); err == nil {
@@ -182,8 +178,6 @@ func NewDataStoreWithClient(client *Client, c config.Reader) *DataStoreMongo {
 			}
 		}
 	}
-	// If the message bus collection is empty, the trailing cursor dies
-	_, _ = collQueue.InsertOne(ctx, model.Job{WorkflowName: "noop", ID: "0"})
 
 	return &DataStoreMongo{
 		client:    client,
