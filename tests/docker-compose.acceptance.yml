@@ -17,6 +17,7 @@ services:
           - mender-deviceconnect
           - mender-deviceconfig
           - mender-reporting
+          - mender-azure-iot-manager
           - mmock
 
   workflows-worker:
