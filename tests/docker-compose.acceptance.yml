@@ -17,6 +17,7 @@ services:
           - mender-deviceconnect
           - mender-deviceconfig
           - mender-reporting
+          - mender-azure-iot-manager
           - mmock
 
   workflows-worker:
@@ -26,8 +27,7 @@ services:
 
   acceptance-testing:
     image: mendersoftware/mender-test-containers:acceptance-testing
-    entrypoint: sh
-    command: -c "while true; do sleep 5; done;"
+    entrypoint: /testing/run.sh
     volumes:
       - ".:/testing"
     networks:
