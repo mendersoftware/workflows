@@ -3,7 +3,7 @@ module github.com/mendersoftware/workflows
 go 1.14
 
 require (
-	github.com/gin-gonic/gin v1.7.4
+	github.com/gin-gonic/gin v1.7.7
 	github.com/mendersoftware/go-lib-micro v0.0.0-20200529072844-ecc6d0b89fa6
 	github.com/nats-io/nats-server/v2 v2.6.3 // indirect
 	github.com/nats-io/nats.go v1.13.1-0.20211018182449-f2416a8b1483
