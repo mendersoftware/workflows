@@ -1,7 +1,7 @@
 {
     "name": "update_device_status",
     "description": "Update device status.",
-    "version": 3,
+    "version": 4,
     "tasks": [
         {
             "name": "update_device_identity_inventory",
@@ -11,7 +11,30 @@
                 "uri": "http://${env.INVENTORY_ADDR|mender-inventory:8080}/api/internal/v1/inventory/tenants/${workflow.input.tenant_id}/devices/status/${workflow.input.device_status}",
                 "method": "POST",
                 "contentType": "application/json",
-                "body": "${workflow.input.devices}",
+                "json": "${workflow.input.devices}",
+                "headers": {
+                    "X-MEN-RequestID": "${workflow.input.request_id}"
+                },
+                "connectionTimeOut": 8000,
+                "readTimeOut": 8000
+            }
+        },
+        {
+            "name": "update azure status",
+            "type": "http",
+            "retries": 3,
+            "requires": [
+                "${workflow.input.azure_devices}",
+                "${workflow.input.azure_status}"
+            ],
+            "http": {
+                "uri": "http://${env.AZURE_IOT_MANAGER_ADDR|mender-azure-iot-manager:8080}/api/internal/v1/azure-iot-manager/tenants/${workflow.input.tenant_id}/bulk/devices/status",
+                "method": "PUT",
+                "contentType": "application/json",
+                "json": {
+                    "device_ids": "${workflow.input.azure_devices}",
+                    "status": "${workflow.input.azure_status}"
+                },
                 "headers": {
                     "X-MEN-RequestID": "${workflow.input.request_id}"
                 },
@@ -19,11 +42,16 @@
                 "readTimeOut": 8000
             }
         }
+
     ],
     "inputParameters": [
         "request_id",
         "devices",
         "device_status",
         "tenant_id"
+    ],
+    "optionalParameters": [
+        "azure_devices",
+        "azure_status"
     ]
 }
