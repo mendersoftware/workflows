@@ -60,7 +60,7 @@ func processJobString(data string, workflow *model.Workflow, job *model.Job) str
 					break
 				}
 			}
-			if !found && defaultValue != "" {
+			if !found {
 				data = strings.ReplaceAll(data, submatch[0], defaultValue)
 			}
 		} else if strings.HasPrefix(match, workflowEnvVariable) &&
