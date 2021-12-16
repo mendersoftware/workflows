@@ -22,6 +22,9 @@ services:
 
   workflows-worker:
     image: mendersoftware/workflows-worker:prtest
+    build:
+      context: ".."
+      dockerfile: Dockerfile.acceptance-testing.worker
     volumes:
       - ".:/testing"
       - "../worker/:/etc/workflows/definitions"
@@ -35,6 +38,9 @@ services:
 
   workflows-server:
     image: mendersoftware/workflows:prtest
+    build:
+      context: ".."
+      dockerfile: Dockerfile.acceptance-testing
     ports:
       - "8080:8080"
     volumes:
