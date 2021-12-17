@@ -12,7 +12,7 @@ services:
           - mender-mongo
 
   nats:
-      image: nats:2.6.2-alpine3.14
+      image: nats:2.6.5-alpine3.14
       command: -js -sd /opt/nats
       ports:
         - "4222:4222"
