@@ -24,6 +24,7 @@ services:
             - mender-nats
 
   workflows-worker:
+    build: .
     image: mendersoftware/workflows:master
     command: worker --automigrate
     networks:
@@ -32,6 +33,7 @@ services:
           - workflows-worker
 
   workflows-server:
+    build: .
     image: mendersoftware/workflows:master
     command: server --automigrate
     ports:
