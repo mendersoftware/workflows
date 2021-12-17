@@ -19,6 +19,8 @@ import (
 	"time"
 
 	"github.com/nats-io/nats.go"
+
+	"github.com/mendersoftware/go-lib-micro/log"
 )
 
 const (
@@ -70,9 +72,29 @@ func NewClient(url string, opts ...nats.Option) (Client, error) {
 
 // NewClient returns a new nats client with default options
 func NewClientWithDefaults(url string) (Client, error) {
+	ctx := context.Background()
+	l := log.FromContext(ctx)
+
 	natsClient, err := NewClient(url,
-		nats.ReconnectBufSize(reconnectBufSize),
-		nats.ReconnectWait(reconnectWaitTime),
+		func(o *nats.Options) error {
+			o.AllowReconnect = true
+			o.MaxReconnect = -1
+			o.ReconnectBufSize = reconnectBufSize
+			o.ReconnectWait = reconnectWaitTime
+			o.RetryOnFailedConnect = true
+			o.ClosedCB = func(_ *nats.Conn) {
+				l.Info("nats client closed the connection")
+			}
+			o.DisconnectedErrCB = func(_ *nats.Conn, e error) {
+				if e != nil {
+					l.Warnf("nats client disconnected, err: %v", e)
+				}
+			}
+			o.ReconnectedCB = func(_ *nats.Conn) {
+				l.Warn("nats client reconnected")
+			}
+			return nil
+		},
 	)
 	if err != nil {
 		return nil, err
