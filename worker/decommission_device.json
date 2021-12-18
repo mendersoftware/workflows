@@ -1,7 +1,7 @@
 {
     "name": "decommission_device",
     "description": "Removes device info from all services.",
-    "version": 7,
+    "version": 8,
     "tasks": [
         {
             "name": "delete_device_inventory",
@@ -68,11 +68,11 @@
             }
         },
         {
-            "name": "delete_azure_iot_device",
+            "name": "delete_iot_device",
             "type": "http",
             "retries": 3,
             "http": {
-                "uri": "http://${env.AZURE_IOT_MANAGER_ADDR|mender-azure-iot-manager:8080}/api/internal/v1/azure-iot-manager/tenants/${workflow.input.tenant_id}/devices/${workflow.input.device_id}",
+                "uri": "http://${env.IOT_MANAGER_ADDR|mender-iot-manager:8080}/api/internal/v1/iot-manager/tenants/${workflow.input.tenant_id}/devices/${workflow.input.device_id}",
                 "method": "DELETE",
                 "headers": {
                     "X-MEN-RequestID": "${workflow.input.request_id}"
