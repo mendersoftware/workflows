@@ -1,7 +1,7 @@
 {
     "name": "provision_device",
     "description": "Provision device.",
-    "version": 7,
+    "version": 8,
     "tasks": [
         {
             "name": "create_device_inventory",
@@ -59,11 +59,11 @@
             }
         },
         {
-            "name": "provision_azure-iot-manager",
+            "name": "provision_iot-manager",
             "type": "http",
             "retries": 3,
             "http": {
-                "uri": "http://${env.AZURE_IOT_MANAGER_ADDR|mender-azure-iot-manager:8080}/api/internal/v1/azure-iot-manager/tenants/${workflow.input.tenant_id}/devices",
+                "uri": "http://${env.IOT_MANAGER_ADDR|mender-iot-manager:8080}/api/internal/v1/iot-manager/tenants/${workflow.input.tenant_id}/devices",
                 "method": "POST",
                 "contentType": "application/json",
                 "json": {

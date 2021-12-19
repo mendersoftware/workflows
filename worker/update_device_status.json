@@ -1,7 +1,7 @@
 {
     "name": "update_device_status",
     "description": "Update device status.",
-    "version": 4,
+    "version": 5,
     "tasks": [
         {
             "name": "update_device_identity_inventory",
@@ -28,7 +28,7 @@
                 "${workflow.input.azure_status}"
             ],
             "http": {
-                "uri": "http://${env.AZURE_IOT_MANAGER_ADDR|mender-azure-iot-manager:8080}/api/internal/v1/azure-iot-manager/tenants/${workflow.input.tenant_id}/bulk/devices/status",
+                "uri": "http://${env.IOT_MANAGER_ADDR|mender-iot-manager:8080}/api/internal/v1/iot-manager/tenants/${workflow.input.tenant_id}/bulk/devices/status",
                 "method": "PUT",
                 "contentType": "application/json",
                 "json": {

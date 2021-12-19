@@ -1,8 +1,8 @@
 {
-    "description": "azure-iot-manager: provision device",
+    "description": "iot-manager: provision device",
     "request": {
         "method": "POST",
-        "path": "/api/internal/v1/azure-iot-manager/tenants/123456789012345678901234/devices"
+        "path": "/api/internal/v1/iot-manager/tenants/123456789012345678901234/devices"
     },
     "response": {
         "statusCode": 201
