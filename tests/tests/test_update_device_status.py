@@ -16,12 +16,17 @@ import json
 import requests
 import time
 
+
 def test_update_device_status(mmock_url, workflows_url):
     # start the provision_device workflow
     request_id = "1234567890"
     device_status = "accepted"
-    devices = [{"id":"1", "revision":1}, {"id":"2", "revision":1}, {"id":"3", "revision":1}]
-    devices_json = json.dumps(devices, separators=(",",":"))
+    devices = [
+        {"id": "1", "revision": 1},
+        {"id": "2", "revision": 1},
+        {"id": "3", "revision": 1},
+    ]
+    devices_json = json.dumps(devices, separators=(",", ":"))
     tenant_id = "1"
     res = requests.post(
         workflows_url + "/api/v1/workflow/update_device_status",
@@ -54,19 +59,20 @@ def test_update_device_status(mmock_url, workflows_url):
             break
     # verify the status
     assert {"name": "request_id", "value": request_id} in response["inputParameters"]
-    assert {"name": "devices", "value": devices_json.strip("[]")} in response["inputParameters"]
+    assert {"name": "devices", "value": devices_json.strip("[]")} in response[
+        "inputParameters"
+    ]
     assert response["status"] == "done", response
     assert len(response["results"]) == 2
     assert response["results"][0]["success"] == True
     assert response["results"][0]["httpResponse"]["statusCode"] == 200
-    assert response["results"][1]["skipped"]
     #  verify the mock server has been correctly called
     res = requests.get(mmock_url + "/api/request/all")
     assert res.status_code == 200
     response = res.json()
-    assert len(response) == 1
-    expected = {
-        "request": {
+    assert len(response) == 2
+    expected_req = [
+        {
             "scheme": "http",
             "host": "mender-inventory",
             "port": "8080",
@@ -86,6 +92,27 @@ def test_update_device_status(mmock_url, workflows_url):
             },
             "cookies": {},
             "body": devices_json,
-        }
-    }
-    assert expected["request"] == response[0]["request"]
+        },
+        {
+            "scheme": "http",
+            "host": "mender-iot-manager",
+            "port": "8080",
+            "method": "PUT",
+            "path": "/api/internal/v1/iot-manager/tenants/"
+            + tenant_id
+            + "/bulk/devices/status/"
+            + device_status,
+            "queryStringParameters": {},
+            "fragment": "",
+            "headers": {
+                "Content-Type": ["application/json"],
+                "Accept-Encoding": ["gzip"],
+                "Content-Length": ["73"],
+                "User-Agent": ["Go-http-client/1.1"],
+                "X-Men-Requestid": [request_id],
+            },
+            "cookies": {},
+            "body": devices_json,
+        },
+    ]
+    assert expected_req == [res["request"] for res in response]

@@ -2,33 +2,8 @@
     "name": "provision_external_device",
     "description": "Populate the external device identity to the Mender backend services",
     "ephemeral": true,
-    "version": 1,
+    "version": 2,
     "tasks": [
-        {
-            "name": "set_external_id",
-            "type": "http",
-            "retries": 3,
-            "http": {
-                "uri": "http://${env.DEVICEAUTH_ADDR|mender-device-auth:8080}/api/internal/v1/devauth/tenants/${workflow.input.tenant_id}/devices/${workflow.input.device_id}/external",
-                "method": "PUT",
-                "headers": {
-                    "X-MEN-Requestid": "${workflow.input.request_id}",
-                    "Content-Type": "application/json"
-                },
-                "json": {
-                    "provider": "${workflow.input.provider}",
-                    "id": "${workflow.input.device_id}",
-                    "name": "${workflow.input.device_name}"
-                },
-                "connectionTimeOut": 8000,
-                "readTimeOut": 8000,
-                "statusCodes": [
-                    200,
-                    204,
-                    404
-                ]
-            }
-        },
         {
             "name": "submit_configuration",
             "type": "http",
@@ -78,11 +53,7 @@
     "inputParameters": [
         "configuration",
         "device_id",
-        "provider",
         "request_id",
         "tenant_id"
-    ],
-    "optionalParameters": [
-        "device_name"
     ]
 }
