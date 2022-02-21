@@ -28,6 +28,7 @@ services:
     volumes:
       - ".:/testing"
       - "../worker/:/etc/workflows/definitions"
+    working_dir: /testing
     networks:
       acceptance-tests:
         aliases:
@@ -45,6 +46,7 @@ services:
       - "8080:8080"
     volumes:
       - ".:/testing"
+    working_dir: /testing
     networks:
       acceptance-tests:
         aliases:

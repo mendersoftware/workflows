@@ -6,13 +6,17 @@ RUN apk add --no-cache \
 RUN mkdir -p /go/src/github.com/mendersoftware/workflows
 COPY . /go/src/github.com/mendersoftware/workflows
 RUN cd /go/src/github.com/mendersoftware/workflows && \
-    env CGO_ENABLED=0 go test -c -o workflows-test -coverpkg $(go list ./... | grep -v vendor | grep -v mocks | grep -v test | tr  '\n' ,)
+    env CGO_ENABLED=0 go test -c \
+    -tags main -o workflows \
+    -cover -covermode atomic \
+    -coverpkg $(go list -deps | \
+    grep '^github.com/mendersoftware/workflows' | \
+    tr  '\n' ,)
 
 FROM alpine:3.15.0
 RUN apk add --no-cache ca-certificates xz
-COPY --from=builder /go/src/github.com/mendersoftware/workflows/workflows-test /usr/bin
+COPY --from=builder /go/src/github.com/mendersoftware/workflows/workflows /usr/bin
 
-WORKDIR /etc/workflows/definitions
 COPY ./worker/config.yaml /etc/workflows/config.yaml
 
 COPY ./worker/decommission_device.json .
@@ -25,9 +29,9 @@ COPY ./worker/reindex_reporting.json .
 COPY ./worker/reindex_inventory.json .
 
 ENTRYPOINT [ \
-    "/usr/bin/workflows-test", \
-    "-test.coverprofile=/testing/coverage-acceptance-worker.txt", \
-    "-acceptance-tests", \
-    "-test.run=TestRunMain", \
-    "-cli-args=--config=/etc/workflows/config.yaml worker --automigrate --workflows=decommission_device,deploy_device_configuration,provision_device,update_device_status,update_device_inventory,reindex_reporting,reindex_inventory --excluded-workflows=generate_artifact" \
+    "/usr/bin/workflows", \
+    "--config=/etc/workflows/config.yaml", \
+    "worker", "--automigrate", \
+    "--workflows=decommission_device,deploy_device_configuration,provision_device,update_device_status,update_device_inventory,reindex_reporting,reindex_inventory", \
+    "--excluded-workflows=generate_artifact" \
 ]
