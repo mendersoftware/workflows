@@ -65,11 +65,17 @@ test:acceptance_tests:
   after_script:
     - make acceptance-testing-logs
     - make acceptance-testing-down
+    # Aggregate the coverage files
+    - set -- tests/coverage-acceptance@*.txt
+    - head -n 1 $1 > tests/coverage-acceptance.txt
+    - |
+      for cover in $@; do
+        tail -n +2 $cover >> tests/coverage-acceptance.txt;
+      done
   artifacts:
     expire_in: 2w
     paths:
       - tests/coverage-acceptance.txt
-      - tests/coverage-acceptance-worker.txt
 
 # workflows (server) is built and published by the template; specify
 # jobs only for the worker
@@ -122,11 +128,3 @@ publish:acceptance:
       -flagname acceptance
       -parallel
       -coverprofile ./tests/coverage-acceptance.txt
-    - goveralls
-      -repotoken ${COVERALLS_TOKEN}
-      -service gitlab-ci
-      -jobid $CI_PIPELINE_ID
-      -covermode set
-      -flagname acceptance-worker
-      -parallel
-      -coverprofile ./tests/coverage-acceptance-worker.txt
