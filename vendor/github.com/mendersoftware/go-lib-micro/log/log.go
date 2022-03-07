@@ -1,4 +1,4 @@
-// Copyright 2018 Northern.tech AS
+// Copyright 2022 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -64,6 +64,7 @@ func init() {
 	}
 	Log.Level = logrus.InfoLevel
 	Log.Hooks.Add(ContextHook{})
+	Log.ExitFunc = func(int) {}
 }
 
 // Setup allows to override the global logger setup.
@@ -129,7 +130,7 @@ func (hook ContextHook) Fire(entry *logrus.Entry) error {
 			funcName := runtime.FuncForPC(pc).Name()
 
 			//detect if we're still in logrus (formatting funcs)
-			if !strings.Contains(funcName, "github.com/Sirupsen/logrus") {
+			if !strings.Contains(funcName, "github.com/sirupsen/logrus") {
 				entry.Data["file"] = path.Base(file)
 				entry.Data["func"] = path.Base(funcName)
 				entry.Data["line"] = line
