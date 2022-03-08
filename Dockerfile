@@ -1,17 +1,18 @@
-FROM golang:1.16.5-alpine3.12 as builder
+FROM golang:1.17.8-alpine3.15 as builder
 RUN apk add --no-cache \
     xz-dev \
     musl-dev \
     gcc
-RUN mkdir -p /go/src/github.com/mendersoftware/workflows
-COPY . /go/src/github.com/mendersoftware/workflows
-RUN cd /go/src/github.com/mendersoftware/workflows && env CGO_ENABLED=1 go build
+WORKDIR /go/src/github.com/mendersoftware/workflows
+COPY ./ .
+RUN env CGO_ENABLED=1 go build
 
 FROM alpine:3.15.0
 RUN apk add --no-cache ca-certificates xz
+COPY --from=builder /go/src/github.com/mendersoftware/workflows/workflows /usr/bin
+
 RUN mkdir -p /etc/workflows
 COPY ./config.yaml /etc/workflows
-COPY --from=builder /go/src/github.com/mendersoftware/workflows/workflows /usr/bin
 ENTRYPOINT ["/usr/bin/workflows", "--config", "/etc/workflows/config.yaml"]
 
 EXPOSE 8080

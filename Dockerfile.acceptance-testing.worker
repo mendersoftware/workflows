@@ -1,12 +1,11 @@
-FROM golang:1.16.5-alpine3.12 as builder
+FROM golang:1.17.8-alpine3.15 as builder
 RUN apk add --no-cache \
     xz-dev \
     musl-dev \
     gcc
-RUN mkdir -p /go/src/github.com/mendersoftware/workflows
-COPY . /go/src/github.com/mendersoftware/workflows
-RUN cd /go/src/github.com/mendersoftware/workflows && \
-    env CGO_ENABLED=0 go test -c \
+WORKDIR /go/src/github.com/mendersoftware/workflows
+COPY ./ .
+RUN env CGO_ENABLED=0 go test -c \
     -tags main -o workflows \
     -cover -covermode atomic \
     -coverpkg $(go list -deps | \
@@ -17,8 +16,8 @@ FROM alpine:3.15.0
 RUN apk add --no-cache ca-certificates xz
 COPY --from=builder /go/src/github.com/mendersoftware/workflows/workflows /usr/bin
 
-COPY ./worker/config.yaml /etc/workflows/config.yaml
-
+RUN mkdir -p /etc/workflows/definitions
+WORKDIR /etc/workflows/definitions
 COPY ./worker/decommission_device.json .
 COPY ./worker/deploy_device_configuration.json .
 COPY ./worker/provision_external_device.json .
@@ -27,11 +26,13 @@ COPY ./worker/update_device_status.json .
 COPY ./worker/update_device_inventory.json .
 COPY ./worker/reindex_reporting.json .
 COPY ./worker/reindex_inventory.json .
+WORKDIR /
 
+COPY ./worker/config.yaml /etc/workflows/config.yaml
 ENTRYPOINT [ \
     "/usr/bin/workflows", \
     "--config=/etc/workflows/config.yaml", \
     "worker", "--automigrate", \
     "--workflows=decommission_device,deploy_device_configuration,provision_device,update_device_status,update_device_inventory,reindex_reporting,reindex_inventory", \
     "--excluded-workflows=generate_artifact" \
-]
+    ]
