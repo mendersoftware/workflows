@@ -12,7 +12,7 @@ RUN env CGO_ENABLED=0 go test -c \
     grep '^github.com/mendersoftware/workflows' | \
     tr  '\n' ,)
 
-FROM alpine:3.15.0
+FROM alpine:3.15.1
 RUN apk add --no-cache ca-certificates xz
 COPY --from=builder /go/src/github.com/mendersoftware/workflows/workflows /usr/bin
 

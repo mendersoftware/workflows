@@ -7,7 +7,7 @@ WORKDIR /go/src/github.com/mendersoftware/workflows
 COPY ./ .
 RUN env CGO_ENABLED=1 go build
 
-FROM alpine:3.15.0
+FROM alpine:3.15.1
 RUN apk add --no-cache ca-certificates xz
 COPY --from=builder /go/src/github.com/mendersoftware/workflows/workflows /usr/bin
 
