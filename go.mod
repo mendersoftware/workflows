@@ -5,8 +5,8 @@ go 1.14
 require (
 	github.com/gin-gonic/gin v1.7.7
 	github.com/mendersoftware/go-lib-micro v0.0.0-20220304124258-d8414885f1c3
-	github.com/nats-io/nats-server/v2 v2.6.3 // indirect
-	github.com/nats-io/nats.go v1.13.1-0.20211018182449-f2416a8b1483
+	github.com/nats-io/nats-server/v2 v2.6.2 // indirect
+	github.com/nats-io/nats.go v1.13.0
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.7.0
