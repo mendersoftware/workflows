@@ -1,4 +1,4 @@
-// Copyright 2021 Northern.tech AS
+// Copyright 2022 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"os"
 	"os/signal"
+	"sync"
 	"time"
 
 	natsio "github.com/nats-io/nats.go"
@@ -33,6 +34,10 @@ import (
 	"github.com/mendersoftware/workflows/model"
 	"github.com/mendersoftware/workflows/store"
 )
+
+// notifyPeriod is the frequency for notifying the
+// NATS server about slow workflows.
+const notifyPeriod = nats.AckWait * 8 / 10
 
 // Workflows filters workflows executed by a worker
 type Workflows struct {
@@ -86,56 +91,126 @@ func InitAndRun(
 		_ = unsubscribe()
 	}()
 
-	var msg interface{}
-	sem := make(chan bool, concurrency)
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, unix.SIGINT, unix.SIGTERM)
+
+	// Spawn worker pool
+	var wg = new(sync.WaitGroup)
+	wg.Add(concurrency)
+	for i := 0; i < concurrency; i++ {
+		workerID := i
+		go func() {
+			defer func() {
+				wg.Done()
+				cancel() // Unblock main thread if it's waiting
+			}()
+			wl := l.F(log.Ctx{"worker_id": workerID})
+			wCtx := log.WithContext(ctx, wl)
+
+			wl.Info("worker starting up")
+			workerMain(wCtx, channel, natsClient, dataStore)
+			wl.Info("worker shut down")
+		}()
+	}
+
+	// Run until a SIGTERM or SIGINT is received or one of the workers
+	// stops unexpectedly
+	select {
+	case <-quit:
+	case <-ctx.Done():
+		err = ctx.Err()
+	}
+	// Notify workers that we're done
+	close(channel)
+
+	// Wait for all workers to finish their current task
+	wg.Wait()
+	return err
+}
+
+func workerMain(ctx context.Context, msgIn <-chan *natsio.Msg, nc nats.Client, ds store.DataStore) {
+	l := log.FromContext(ctx)
+	sidecarChan := make(chan *natsio.Msg, 1)
+	sidecarTimer := (*reusableTimer)(time.NewTimer(0))
+	defer close(sidecarChan)
+	done := ctx.Done()
+
+	// workerSidecar is responsible for notifying the broker about slow workflows
+	go workerSidecar(ctx, sidecarChan)
+	var isOpen bool
+	for {
+		var msg *natsio.Msg
+		select {
+		case <-done:
+			return
+		case msg, isOpen = <-msgIn:
+			if !isOpen {
+				return
+			}
+			// Notify the sidecar routine about the new message
+			select {
+			case <-sidecarTimer.After(notifyPeriod / 8):
+				l.Warn("timeout notifying sidecar routine about message")
+
+			case sidecarChan <- msg:
+			}
+		}
+
+		job := &model.Job{}
+		err := json.Unmarshal(msg.Data, job)
+		if err != nil {
+			l.Error(errors.Wrap(err, "failed to unmarshall message"))
+			if err := msg.Term(); err != nil {
+				l.Error(errors.Wrap(err, "failed to term the message"))
+			}
+			continue
+		}
+		// process the job
+		l.Infof("Worker: processing job %s workflow %s", job.ID, job.WorkflowName)
+		err = processJob(ctx, job, ds, nc)
+		if err != nil {
+			l.Errorf("error: %v", err)
+		}
+		// Release message
+		sidecarChan <- nil
+		// stop the in progress ticker and ack the message
+		if err := msg.AckSync(); err != nil {
+			l.Error(errors.Wrap(err, "failed to ack the message"))
+		}
+	}
+}
+
+// workerSidecar helps notifying the NATS server about slow workflows.
+// When workerMain picks up a new task, this routine is woken up and starts
+// a timer that sends an "IN PROGRESS" package back to the broker if the worker
+// takes too long.
+func workerSidecar(ctx context.Context, msgIn <-chan *natsio.Msg) {
+	var (
+		isOpen        bool
+		msgInProgress *natsio.Msg
+	)
+	done := ctx.Done()
+	t := (*reusableTimer)(time.NewTimer(0))
 	for {
 		select {
-		case msg = <-channel:
-
-		case <-quit:
-			signal.Stop(quit)
-			l.Info("Shutdown Worker ...")
-			return err
-		}
-		switch msg := msg.(type) {
-		case *natsio.Msg:
-			job := &model.Job{}
-			err := json.Unmarshal(msg.Data, job)
-			if err != nil {
-				l.Error(errors.Wrap(err, "failed to unmarshall message"))
-				if err := msg.Term(); err != nil {
-					l.Error(errors.Wrap(err, "failed to term the message"))
-				}
-				continue
+		case <-done:
+			return
+		case msgInProgress, isOpen = <-msgIn:
+			if !isOpen {
+				return
 			}
-			sem <- true
-			go func(ctx context.Context,
-				job *model.Job, dataStore store.DataStore) {
-				defer func() { <-sem }()
-				// ticker to keep the message in progress
-				ticker := time.NewTicker(nats.AckWait * 8 / 10)
-				go func() {
-					for range ticker.C {
-						_ = msg.InProgress()
-					}
-				}()
-				// process the job
-				l.Infof("Worker: processing job %s workflow %s", job.ID, job.WorkflowName)
-				err := processJob(ctx, job, dataStore, natsClient)
-				if err != nil {
-					l.Errorf("error: %v", err)
+		}
+		for msgInProgress != nil {
+			select {
+			case <-t.After(notifyPeriod):
+				_ = msgInProgress.InProgress()
+			case <-done:
+				return
+			case msgInProgress, isOpen = <-msgIn:
+				if !isOpen {
+					return
 				}
-				// stop the in progress ticker and ack the message
-				ticker.Stop()
-				if err := msg.AckSync(); err != nil {
-					l.Error(errors.Wrap(err, "failed to ack the message"))
-				}
-			}(ctx, job, dataStore)
-
-		case error:
-			return msg
+			}
 		}
 	}
 }
