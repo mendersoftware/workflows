@@ -20,10 +20,14 @@ services:
           - mender-iot-manager
           - mmock
 
+  workflows-server:
+    restart: always
+
   workflows-worker:
     environment:
       HAVE_DEVICECONNECT: 1
       HAVE_DEVICECONFIG: 1
+    restart: always
 
   acceptance-testing:
     image: mendersoftware/mender-test-containers:acceptance-testing
