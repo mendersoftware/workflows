@@ -8,17 +8,19 @@ RUN chown -R nobody:nobody /etc_extra
 RUN apk add --no-cache \
     xz-dev \
     musl-dev \
+    ca-certificates \
     gcc
 COPY ./ .
-RUN env CGO_ENABLED=1 go build
+RUN env CGO_ENABLED=0 go build
 
-FROM alpine:3.15.4
-RUN apk add --no-cache ca-certificates xz
+FROM scratch
 EXPOSE 8080
 COPY --from=builder /etc_extra/ /etc/
 USER 65534
 WORKDIR /etc/workflows
-
-COPY --chown=nobody ./config.yaml /etc/workflows/
+COPY ./config.yaml .
+COPY --from=builder --chown=nobody /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --chown=nobody ./config.yaml .
 COPY --from=builder --chown=nobody /go/src/github.com/mendersoftware/workflows/workflows /usr/bin/
+
 ENTRYPOINT ["/usr/bin/workflows", "--config", "/etc/workflows/config.yaml"]
