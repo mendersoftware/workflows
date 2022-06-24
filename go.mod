@@ -9,7 +9,7 @@ require (
 	github.com/nats-io/nats.go v1.16.0
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.8.1
-	github.com/stretchr/testify v1.7.2
+	github.com/stretchr/testify v1.7.5
 	github.com/thedevsaddam/gojsonq v2.3.0+incompatible
 	github.com/urfave/cli v1.22.9
 	go.mongodb.org/mongo-driver v1.9.1
