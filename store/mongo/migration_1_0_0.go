@@ -19,7 +19,6 @@ import (
 
 	"github.com/mendersoftware/go-lib-micro/mongo/migrate"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	mopts "go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -33,23 +32,13 @@ type migration1_0_0 struct {
 func (m *migration1_0_0) Up(from migrate.Version) error {
 	ctx := context.Background()
 	database := m.client.Database(m.db)
-	database.RunCommand(ctx, bson.D{
-		primitive.E{Key: "create", Value: JobQueueCollectionName},
-		primitive.E{Key: "capped", Value: true},
-		primitive.E{Key: "size", Value: 1024 * 1024 * 1024 * 64},
-	})
-	collQueue := database.Collection(JobQueueCollectionName)
 	collJobs := database.Collection(JobsCollectionName)
-	idxQueue := collQueue.Indexes()
 	idxJobs := collJobs.Indexes()
 	indexOptions := mopts.Index()
 	indexOptions.SetName("status")
 	statusIndex := mongo.IndexModel{
 		Keys:    bson.D{{Key: "status", Value: 1}},
 		Options: indexOptions,
-	}
-	if _, err := idxQueue.CreateOne(ctx, statusIndex); err != nil {
-		return err
 	}
 	if _, err := idxJobs.CreateOne(ctx, statusIndex); err != nil {
 		return err
