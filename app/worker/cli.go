@@ -1,4 +1,4 @@
-// Copyright 2020 Northern.tech AS
+// Copyright 2022 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import (
 	"os/exec"
 	"time"
 
+	"github.com/mendersoftware/workflows/app/processor"
 	"github.com/mendersoftware/workflows/model"
 )
 
@@ -28,18 +29,21 @@ const (
 	MaxExecutionTime int = 3600 * 4
 )
 
-func processCLITask(cliTask *model.CLITask, job *model.Job,
-	workflow *model.Workflow) (*model.TaskResult, error) {
+func processCLITask(
+	cliTask *model.CLITask,
+	ps *processor.JobStringProcessor,
+	jp *processor.JobProcessor,
+) (*model.TaskResult, error) {
 	commands := make([]string, 0, 10)
 	for _, command := range cliTask.Command {
-		command := processJobString(command, workflow, job)
+		command := ps.ProcessJobString(command)
 		commands = append(commands, command)
 	}
 
 	ctx := context.Background()
 	timeout := cliTask.ExecutionTimeOut
 	if timeout <= 0 {
-		timeout = 3600 * 4
+		timeout = MaxExecutionTime
 	}
 	ctxWithOptionalTimeOut, cancel := context.WithTimeout(ctx, time.Duration(timeout)*time.Second)
 	defer cancel()

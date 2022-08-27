@@ -1,4 +1,4 @@
-// Copyright 2021 Northern.tech AS
+// Copyright 2022 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.mongodb.org/mongo-driver/bson"
 
+	"github.com/mendersoftware/workflows/app/processor"
 	"github.com/mendersoftware/workflows/model"
 )
 
@@ -38,16 +39,23 @@ func TestProcessJobString(t *testing.T) {
 		InputParameters: []model.InputParameter{
 			{
 				Name:  "key",
-				Value: "test",
+				Value: "test+test",
 			},
 		},
 	}
 
-	res := processJobString("_${workflow.input.key}_", workflow, job)
-	assert.Equal(t, "_test_", res)
+	ps := processor.NewJobStringProcessor(workflow, job)
+	res := ps.ProcessJobString("_${workflow.input.key}_")
+	assert.Equal(t, "_test+test_", res)
 
-	res = processJobString("_${workflow.input.another_key|default}_", workflow, job)
+	res = ps.ProcessJobString("_${workflow.input.another_key|default}_")
 	assert.Equal(t, "_default_", res)
+
+	res = ps.ProcessJobString("_${encoding=url;workflow.input.key}_")
+	assert.Equal(t, "_test%2Btest_", res)
+
+	res = ps.ProcessJobString("_${encoding=plain;workflow.input.key}_")
+	assert.Equal(t, "_test+test_", res)
 }
 
 func TestProcessJobStringEnvVariable(t *testing.T) {
@@ -56,12 +64,13 @@ func TestProcessJobStringEnvVariable(t *testing.T) {
 	}
 	job := &model.Job{}
 
-	res := processJobString("_${env.PWD}_", workflow, job)
+	ps := processor.NewJobStringProcessor(workflow, job)
+	res := ps.ProcessJobString("_${env.PWD}_")
 	pwd := os.Getenv("PWD")
 	expected := fmt.Sprintf("_%s_", pwd)
 	assert.Equal(t, expected, res)
 
-	res = processJobString("_${env.ENV_VARIABLE_WHICH_DOES_NOT_EXIST|default}_", workflow, job)
+	res = ps.ProcessJobString("_${env.ENV_VARIABLE_WHICH_DOES_NOT_EXIST|default}_")
 	expected = "_default_"
 	assert.Equal(t, expected, res)
 }
@@ -160,7 +169,8 @@ func TestProcessJobStringJSONOutputFromPreviousResult(t *testing.T) {
 			Results: []model.TaskResult{test.taskResult},
 		}
 
-		res := processJobString(test.expression, workflow, job)
+		ps := processor.NewJobStringProcessor(workflow, job)
+		res := ps.ProcessJobString(test.expression)
 		assert.Equal(t, test.expectedValue, res)
 	}
 }
@@ -281,7 +291,10 @@ func TestProcessJobJSON(t *testing.T) {
 				},
 			}
 
-			res := processJobJSON(test.json, workflow, job)
+			ps := processor.NewJobStringProcessor(workflow, job)
+			jp := processor.NewJobProcessor(job)
+
+			res := jp.ProcessJSON(test.json, ps)
 			assert.Equal(t, test.result, res)
 
 			jsonString, err := json.Marshal(res)

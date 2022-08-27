@@ -7,7 +7,7 @@
             "type": "http",
             "retries": 3,
             "http": {
-                "uri": "http://${env.INVENTORY_ADDR|mender-inventory:8080}/api/internal/v1/inventory/tenants/${workflow.input.tenant_id}/devices",
+                "uri": "http://${env.INVENTORY_ADDR|mender-inventory:8080}/api/internal/v1/inventory/tenants/${encoding=url;workflow.input.tenant_id}/devices",
                 "method": "POST",
                 "contentType": "application/json",
                 "json": {
@@ -33,7 +33,7 @@
                 "${env.HAVE_DEVICECONNECT}"
             ],
             "http": {
-                "uri": "http://${env.DEVICECONNECT_ADDR|mender-deviceconnect:8080}/api/internal/v1/deviceconnect/tenants/${workflow.input.tenant_id}/devices",
+                "uri": "http://${env.DEVICECONNECT_ADDR|mender-deviceconnect:8080}/api/internal/v1/deviceconnect/tenants/${encoding=url;workflow.input.tenant_id}/devices",
                 "method": "POST",
                 "contentType": "application/json",
                 "json": {"device_id": "${workflow.input.device_id}"},
@@ -52,7 +52,7 @@
                 "${env.HAVE_DEVICECONFIG}"
             ],
             "http": {
-                "uri": "http://${env.DEVICECONFIG_ADDR|mender-deviceconfig:8080}/api/internal/v1/deviceconfig/tenants/${workflow.input.tenant_id}/devices",
+                "uri": "http://${env.DEVICECONFIG_ADDR|mender-deviceconfig:8080}/api/internal/v1/deviceconfig/tenants/${encoding=url;workflow.input.tenant_id}/devices",
                 "method": "POST",
                 "contentType": "application/json",
                 "json": {"device_id": "${workflow.input.device_id}"},
@@ -69,7 +69,7 @@
             "type": "http",
             "retries": 3,
             "http": {
-                "uri": "http://${env.IOT_MANAGER_ADDR|mender-iot-manager:8080}/api/internal/v1/iot-manager/tenants/${workflow.input.tenant_id}/devices",
+                "uri": "http://${env.IOT_MANAGER_ADDR|mender-iot-manager:8080}/api/internal/v1/iot-manager/tenants/${encoding=url;workflow.input.tenant_id}/devices",
                 "method": "POST",
                 "contentType": "application/json",
                 "json": "${workflow.input.device}",

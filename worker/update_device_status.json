@@ -8,7 +8,7 @@
             "type": "http",
             "retries": 3,
             "http": {
-                "uri": "http://${env.INVENTORY_ADDR|mender-inventory:8080}/api/internal/v1/inventory/tenants/${workflow.input.tenant_id}/devices/status/${workflow.input.device_status}",
+                "uri": "http://${env.INVENTORY_ADDR|mender-inventory:8080}/api/internal/v1/inventory/tenants/${encoding=url;workflow.input.tenant_id}/devices/status/${encoding=url;workflow.input.device_status}",
                 "method": "POST",
                 "contentType": "application/json",
                 "json": "${workflow.input.devices}",
@@ -24,7 +24,7 @@
             "type": "http",
             "retries": 3,
             "http": {
-                "uri": "http://${env.IOT_MANAGER_ADDR|mender-iot-manager:8080}/api/internal/v1/iot-manager/tenants/${workflow.input.tenant_id}/bulk/devices/status/${workflow.input.device_status}",
+                "uri": "http://${env.IOT_MANAGER_ADDR|mender-iot-manager:8080}/api/internal/v1/iot-manager/tenants/${encoding=url;workflow.input.tenant_id}/bulk/devices/status/${encoding=url;workflow.input.device_status}",
                 "method": "PUT",
                 "contentType": "application/json",
                 "json": "${workflow.input.devices}",
