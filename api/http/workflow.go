@@ -1,4 +1,4 @@
-// Copyright 2021 Northern.tech AS
+// Copyright 2022 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -28,10 +28,10 @@ import (
 
 	"github.com/mendersoftware/go-lib-micro/log"
 
-	"github.com/mendersoftware/workflows/app/worker"
 	"github.com/mendersoftware/workflows/client/nats"
 	"github.com/mendersoftware/workflows/model"
 	"github.com/mendersoftware/workflows/store"
+	"github.com/mendersoftware/workflows/utils"
 )
 
 const (
@@ -136,7 +136,7 @@ func (h WorkflowController) startWorkflowGetJob(
 		if ok {
 			values := make([]string, 0, 10)
 			for _, value := range valueSlice {
-				valueString, err := worker.ConvertAnythingToString(value)
+				valueString, err := utils.ConvertAnythingToString(value)
 				if err == nil {
 					values = append(values, valueString)
 				}
@@ -147,7 +147,7 @@ func (h WorkflowController) startWorkflowGetJob(
 				Raw:   value,
 			})
 		} else {
-			valueString, err := worker.ConvertAnythingToString(value)
+			valueString, err := utils.ConvertAnythingToString(value)
 			if err == nil {
 				jobInputParameters = append(jobInputParameters, model.InputParameter{
 					Name:  key,

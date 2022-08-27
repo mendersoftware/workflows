@@ -1,4 +1,4 @@
-// Copyright 2021 Northern.tech AS
+// Copyright 2022 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import (
 
 	"github.com/mendersoftware/go-lib-micro/log"
 
+	"github.com/mendersoftware/workflows/app/processor"
 	"github.com/mendersoftware/workflows/client/nats"
 	"github.com/mendersoftware/workflows/model"
 	"github.com/mendersoftware/workflows/store"
@@ -118,10 +119,12 @@ func processTask(task model.Task, job *model.Job,
 	var result *model.TaskResult
 	var err error
 
+	ps := processor.NewJobStringProcessor(workflow, job)
+	jp := processor.NewJobProcessor(job)
 	if len(task.Requires) > 0 {
 		for _, require := range task.Requires {
-			require = processJobString(require, workflow, job)
-			require = maybeExecuteGoTemplate(require, job.InputParameters.Map())
+			require = ps.ProcessJobString(require)
+			require = ps.MaybeExecuteGoTemplate(require)
 			if require == "" {
 				result := &model.TaskResult{
 					Name:    task.Name,
@@ -142,9 +145,7 @@ func processTask(task model.Task, job *model.Job,
 				"Error: Task definition incompatible " +
 					"with specified type (http)")
 		}
-		l.Infof("processTask: calling http task: %s %s", httpTask.Method,
-			processJobString(httpTask.URI, workflow, job))
-		result, err = processHTTPTask(httpTask, job, workflow, l)
+		result, err = processHTTPTask(httpTask, ps, jp, l)
 	case model.TaskTypeCLI:
 		var cliTask *model.CLITask = task.CLI
 		if cliTask == nil {
@@ -152,7 +153,7 @@ func processTask(task model.Task, job *model.Job,
 				"Error: Task definition incompatible " +
 					"with specified type (cli)")
 		}
-		result, err = processCLITask(cliTask, job, workflow)
+		result, err = processCLITask(cliTask, ps, jp)
 	case model.TaskTypeNATS:
 		var natsTask *model.NATSTask = task.NATS
 		if natsTask == nil {
@@ -160,7 +161,7 @@ func processTask(task model.Task, job *model.Job,
 				"Error: Task definition incompatible " +
 					"with specified type (nats)")
 		}
-		result, err = processNATSTask(natsTask, job, workflow, nats)
+		result, err = processNATSTask(natsTask, ps, jp, nats)
 	case model.TaskTypeSMTP:
 		var smtpTask *model.SMTPTask = task.SMTP
 		if smtpTask == nil {
@@ -169,11 +170,11 @@ func processTask(task model.Task, job *model.Job,
 					"with specified type (smtp)")
 		}
 		l.Infof("processTask: calling smtp task: From: %s To: %s Subject: %s",
-			processJobString(smtpTask.From, workflow, job),
-			processJobString(strings.Join(smtpTask.To, ","), workflow, job),
-			processJobString(smtpTask.Subject, workflow, job),
+			ps.ProcessJobString(smtpTask.From),
+			ps.ProcessJobString(strings.Join(smtpTask.To, ",")),
+			ps.ProcessJobString(smtpTask.Subject),
 		)
-		result, err = processSMTPTask(smtpTask, job, workflow, l)
+		result, err = processSMTPTask(smtpTask, ps, jp, l)
 	default:
 		result = nil
 		err = fmt.Errorf("Unrecognized task type: %s", task.Type)

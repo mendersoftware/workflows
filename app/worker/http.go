@@ -1,4 +1,4 @@
-// Copyright 2021 Northern.tech AS
+// Copyright 2022 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import (
 
 	"github.com/mendersoftware/go-lib-micro/log"
 
+	"github.com/mendersoftware/workflows/app/processor"
 	"github.com/mendersoftware/workflows/model"
 )
 
@@ -39,34 +40,41 @@ var makeHTTPRequest = func(req *http.Request, timeout time.Duration) (*http.Resp
 	return res, nil
 }
 
-func processHTTPTask(httpTask *model.HTTPTask, job *model.Job,
-	workflow *model.Workflow, l *log.Logger) (*model.TaskResult, error) {
-	uri := processJobString(httpTask.URI, workflow, job)
+func processHTTPTask(
+	httpTask *model.HTTPTask,
+	ps *processor.JobStringProcessor,
+	jp *processor.JobProcessor,
+	l *log.Logger,
+) (*model.TaskResult, error) {
+	options := &processor.Options{Encoding: processor.URL}
+	uri := ps.ProcessJobString(httpTask.URI, options)
+	l.Infof("processHTTPTask: starting with: method=%s uri=%s (options=%+v)",
+		httpTask.Method,
+		uri,
+		options,
+	)
 
 	var payloadString string
 	if len(httpTask.FormData) > 0 {
 		form := url.Values{}
 		for key, value := range httpTask.FormData {
-			key = processJobString(key, workflow, job)
-			key = maybeExecuteGoTemplate(key, job.InputParameters.Map())
-			value = processJobString(value, workflow, job)
-			value = maybeExecuteGoTemplate(value, job.InputParameters.Map())
+			key = ps.ProcessJobString(key)
+			key = ps.MaybeExecuteGoTemplate(key)
+			value = ps.ProcessJobString(value)
+			value = ps.MaybeExecuteGoTemplate(value)
 			form.Add(key, value)
 		}
 		payloadString = form.Encode()
 	} else if httpTask.JSON != nil {
-		payloadJSON := processJobJSON(httpTask.JSON, workflow, job)
+		payloadJSON := jp.ProcessJSON(httpTask.JSON, ps)
 		payloadBytes, err := json.Marshal(payloadJSON)
 		if err != nil {
 			return nil, err
 		}
 		payloadString = string(payloadBytes)
 	} else {
-		payloadString = processJobString(httpTask.Body, workflow, job)
-		payloadString = maybeExecuteGoTemplate(
-			payloadString,
-			job.InputParameters.Map(),
-		)
+		payloadString = ps.ProcessJobString(httpTask.Body)
+		payloadString = ps.MaybeExecuteGoTemplate(payloadString)
 	}
 	payload := strings.NewReader(payloadString)
 
@@ -81,7 +89,7 @@ func processHTTPTask(httpTask *model.HTTPTask, job *model.Job,
 
 	var headersToBeSent []string
 	for name, value := range httpTask.Headers {
-		headerValue := processJobString(value, workflow, job)
+		headerValue := ps.ProcessJobString(value)
 		req.Header.Add(name, headerValue)
 		headersToBeSent = append(headersToBeSent,
 			fmt.Sprintf("%s: %s", name, headerValue))
