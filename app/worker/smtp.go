@@ -1,4 +1,4 @@
-// Copyright 2021 Northern.tech AS
+// Copyright 2022 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -26,14 +26,19 @@ import (
 	"github.com/mendersoftware/go-lib-micro/config"
 	"github.com/mendersoftware/go-lib-micro/log"
 
+	"github.com/mendersoftware/workflows/app/processor"
 	dconfig "github.com/mendersoftware/workflows/config"
 	"github.com/mendersoftware/workflows/model"
 )
 
 var smtpClient SMTPClientInterface = new(SMTPClient)
 
-func processSMTPTask(smtpTask *model.SMTPTask, job *model.Job,
-	workflow *model.Workflow, l *log.Logger) (*model.TaskResult, error) {
+func processSMTPTask(
+	smtpTask *model.SMTPTask,
+	ps *processor.JobStringProcessor,
+	jp *processor.JobProcessor,
+	l *log.Logger,
+) (*model.TaskResult, error) {
 	var result *model.TaskResult = &model.TaskResult{
 		SMTP: &model.TaskResultSMTP{},
 	}
@@ -43,31 +48,31 @@ func processSMTPTask(smtpTask *model.SMTPTask, job *model.Job,
 
 	to := make([]string, 0, 10)
 	for _, address := range smtpTask.To {
-		addresses := strings.Split(processJobString(address, workflow, job), ",")
+		addresses := strings.Split(ps.ProcessJobString(address), ",")
 		recipients = append(recipients, addresses...)
 		to = append(to, addresses...)
 	}
 
 	cc := make([]string, 0, 10)
 	for _, address := range smtpTask.Cc {
-		addresses := strings.Split(processJobString(address, workflow, job), ",")
+		addresses := strings.Split(ps.ProcessJobString(address), ",")
 		recipients = append(recipients, addresses...)
 		cc = append(cc, addresses...)
 	}
 
 	bcc := make([]string, 0, 10)
 	for _, address := range smtpTask.Bcc {
-		addresses := strings.Split(processJobString(address, workflow, job), ",")
+		addresses := strings.Split(ps.ProcessJobString(address), ",")
 		recipients = append(recipients, addresses...)
 		bcc = append(bcc, addresses...)
 	}
 
-	from := processJobString(smtpTask.From, workflow, job)
-	subject := processJobString(smtpTask.Subject, workflow, job)
+	from := ps.ProcessJobString(smtpTask.From)
+	subject := ps.ProcessJobString(smtpTask.Subject)
 
 	var err error
 	var body, HTML string
-	if body, err = processJobStringOrFile(smtpTask.Body, workflow, job); err != nil {
+	if body, err = processJobStringOrFile(smtpTask.Body, ps); err != nil {
 		result.Success = false
 		result.SMTP.Error = err.Error()
 		l.Infof("processSMTPTask error reading file: '%s'", err.Error())
@@ -75,7 +80,7 @@ func processSMTPTask(smtpTask *model.SMTPTask, job *model.Job,
 	}
 	l.Debugf("processSMTPTask body text: '\n%s\n'", body)
 
-	if HTML, err = processJobStringOrFile(smtpTask.HTML, workflow, job); err != nil {
+	if HTML, err = processJobStringOrFile(smtpTask.HTML, ps); err != nil {
 		result.Success = false
 		result.SMTP.Error = err.Error()
 		l.Infof("processSMTPTask error reading file: '%s'", err.Error())

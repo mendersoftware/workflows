@@ -12,24 +12,19 @@
 //    See the License for the specific language governing permissions and
 //    limitations under the License.
 
-package worker
+package utils
 
-import (
-	"io/ioutil"
-	"strings"
+import "encoding/json"
 
-	"github.com/mendersoftware/workflows/app/processor"
-)
-
-func processJobStringOrFile(data string, ps *processor.JobStringProcessor) (string, error) {
-	data = ps.ProcessJobString(data)
-	if strings.HasPrefix(data, "@") {
-		filePath := data[1:]
-		buffer, err := ioutil.ReadFile(filePath)
+// ConvertAnythingToString returns the string representation of anything
+func ConvertAnythingToString(value interface{}) (string, error) {
+	valueString, ok := value.(string)
+	if !ok {
+		valueBytes, err := json.Marshal(value)
 		if err != nil {
 			return "", err
 		}
-		data = ps.ProcessJobString(string(buffer))
+		valueString = string(valueBytes)
 	}
-	return data, nil
+	return valueString, nil
 }

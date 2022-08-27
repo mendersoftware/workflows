@@ -12,7 +12,7 @@
                 "requires": [
                     "${env.HAVE_DEVICECONFIG}"
                 ],
-                "uri": "http://${env.DEVICECONFIG_ADDR|mender-deviceconfig:8080}/api/internal/v1/deviceconfig/tenants/${workflow.input.tenant_id}/configurations/device/${workflow.input.device_id}",
+                "uri": "http://${env.DEVICECONFIG_ADDR|mender-deviceconfig:8080}/api/internal/v1/deviceconfig/tenants/${encoding=url;workflow.input.tenant_id}/configurations/device/${encoding=url;workflow.input.device_id}",
                 "method": "PATCH",
                 "headers": {
                     "X-MEN-Requestid": "${workflow.input.request_id}",
@@ -36,7 +36,7 @@
                 "requires": [
                     "${env.HAVE_DEVICECONFIG}"
                 ],
-                "uri": "http://${env.DEVICECONFIG_ADDR|mender-deviceconfig:8080}/api/internal/v1/deviceconfig/tenants/${workflow.input.tenant_id}/configurations/device/${workflow.input.device_id}/deploy",
+                "uri": "http://${env.DEVICECONFIG_ADDR|mender-deviceconfig:8080}/api/internal/v1/deviceconfig/tenants/${encoding=url;workflow.input.tenant_id}/configurations/device/${encoding=url;workflow.input.device_id}/deploy",
                 "method": "POST",
                 "contentType": "application/json",
                 "headers": {
