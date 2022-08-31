@@ -1,4 +1,4 @@
-# Copyright 2021 Northern.tech AS
+# Copyright 2022 Northern.tech AS
 #
 #    Licensed under the Apache License, Version 2.0 (the "License");
 #    you may not use this file except in compliance with the License.
@@ -32,6 +32,8 @@ def do_provision_device(mmock_url, workflows_url, tenant_id):
             "request_id": "1234567890",
             "device_id": "1",
             "tenant_id": tenant_id,
+            "status": "accepted",
+            "device": {"id": "1"},
         },
     )
     assert res.status_code == 201
@@ -81,13 +83,13 @@ def do_provision_device(mmock_url, workflows_url, tenant_id):
                 "fragment": "",
                 "headers": {
                     "Accept-Encoding": ["gzip"],
-                    "Content-Length": ["10"],
+                    "Content-Length": ["81"],
                     "Content-Type": ["application/json"],
                     "User-Agent": ["Go-http-client/1.1"],
                     "X-Men-Requestid": ["1234567890"],
                 },
                 "cookies": {},
-                "body": '{"id":"1"}',
+                "body": '{"attributes":[{"name":"status","scope":"identity","value":"accepted"}],"id":"1"}',
             },
         },
         {
