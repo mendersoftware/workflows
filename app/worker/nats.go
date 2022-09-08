@@ -1,4 +1,4 @@
-// Copyright 2021 Northern.tech AS
+// Copyright 2022 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -17,18 +17,23 @@ package worker
 import (
 	"encoding/json"
 
+	"github.com/mendersoftware/workflows/app/processor"
 	"github.com/mendersoftware/workflows/client/nats"
 	"github.com/mendersoftware/workflows/model"
 )
 
-func processNATSTask(natsTask *model.NATSTask, job *model.Job,
-	workflow *model.Workflow, nats nats.Client) (*model.TaskResult, error) {
+func processNATSTask(
+	natsTask *model.NATSTask,
+	ps *processor.JobStringProcessor,
+	jp *processor.JobProcessor,
+	nats nats.Client,
+) (*model.TaskResult, error) {
 
 	var result *model.TaskResult = &model.TaskResult{
 		NATS: &model.TaskResultNATS{},
 	}
 
-	dataJSON := processJobJSON(natsTask.Data, workflow, job)
+	dataJSON := jp.ProcessJSON(natsTask.Data, ps)
 	dataJSONBytes, err := json.Marshal(dataJSON)
 	if err == nil {
 		subject := nats.StreamName() + "." + natsTask.Subject
