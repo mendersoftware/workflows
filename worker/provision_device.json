@@ -1,7 +1,7 @@
 {
     "name": "provision_device",
     "description": "Provision device.",
-    "version": 9,
+    "version": 10,
     "tasks": [{
             "name": "create_device_inventory",
             "type": "http",

@@ -1,7 +1,7 @@
 {
     "name": "deploy_device_configuration",
     "description": "Deploy configuration to a device",
-    "version": 1,
+    "version": 2,
     "tasks": [
         {
             "name": "create_configuration_deployment",

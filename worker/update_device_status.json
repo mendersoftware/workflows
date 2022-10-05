@@ -1,7 +1,7 @@
 {
     "name": "update_device_status",
     "description": "Update device status.",
-    "version": 6,
+    "version": 7,
     "tasks": [
         {
             "name": "update_device_identity_inventory",
