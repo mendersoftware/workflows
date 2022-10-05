@@ -8,7 +8,7 @@
             "type": "http",
             "retries": 3,
             "http": {
-                "uri": "http://${env.DEPLOYMENTS_ADDR|mender-deployments:8080}/api/internal/v1/deployments/tenants/${workflow.input.tenant_id}/configuration/deployments/${workflow.input.deployment_id}/devices/${workflow.input.device_id}",
+                "uri": "http://${env.DEPLOYMENTS_ADDR|mender-deployments:8080}/api/internal/v1/deployments/tenants/${encoding=url;workflow.input.tenant_id}/configuration/deployments/${encoding=url;workflow.input.deployment_id}/devices/${encoding=url;workflow.input.device_id}",
                 "method": "POST",
                 "contentType": "application/json",
                 "json": {
@@ -28,7 +28,7 @@
             "type": "http",
             "retries": 3,
             "http": {
-                "uri": "http://${env.DEVICECONNECT_ADDR|mender-deviceconnect:8080}/api/internal/v1/deviceconnect/tenants/${workflow.input.tenant_id}/devices/${workflow.input.device_id}/check-update",
+                "uri": "http://${env.DEVICECONNECT_ADDR|mender-deviceconnect:8080}/api/internal/v1/deviceconnect/tenants/${encoding=url;workflow.input.tenant_id}/devices/${encoding=url;workflow.input.device_id}/check-update",
                 "method": "POST",
                 "headers": {
                     "X-MEN-RequestID": "${workflow.input.request_id}"
