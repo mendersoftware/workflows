@@ -2,7 +2,7 @@
     "name": "provision_external_device",
     "description": "Populate the external device identity to the Mender backend services",
     "ephemeral": true,
-    "version": 2,
+    "version": 3,
     "tasks": [
         {
             "name": "submit_configuration",
