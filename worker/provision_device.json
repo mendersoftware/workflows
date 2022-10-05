@@ -1,7 +1,7 @@
 {
     "name": "provision_device",
     "description": "Provision device.",
-    "version": 8,
+    "version": 9,
     "tasks": [
         {
             "name": "create_device_inventory",
