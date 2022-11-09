@@ -1,4 +1,4 @@
-// Copyright 2021 Northern.tech AS
+// Copyright 2022 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -28,8 +28,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	mopts "go.mongodb.org/mongo-driver/mongo/options"
-	"go.mongodb.org/mongo-driver/mongo/readconcern"
-	"go.mongodb.org/mongo-driver/mongo/writeconcern"
 
 	"github.com/mendersoftware/go-lib-micro/config"
 	"github.com/mendersoftware/go-lib-micro/log"
@@ -117,16 +115,6 @@ func NewClient(_ context.Context, c config.Reader) (*Client, error) {
 		tlsConfig := &tls.Config{}
 		tlsConfig.InsecureSkipVerify = c.GetBool(dconfig.SettingDbSSLSkipVerify)
 		clientOptions.SetTLSConfig(tlsConfig)
-	}
-
-	// Set writeconcern to acknowledge after write has propagated to the
-	// mongod instance and committed to the file system journal.
-	var wc *writeconcern.WriteConcern
-	wc.WithOptions(writeconcern.W(1), writeconcern.J(true))
-	clientOptions.SetWriteConcern(wc)
-
-	if clientOptions.ReplicaSet != nil {
-		clientOptions.SetReadConcern(readconcern.Linearizable())
 	}
 
 	// Set 10s timeout
