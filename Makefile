@@ -52,7 +52,7 @@ acceptance-testing-up:
 
 .PHONY: acceptance-testing-run
 acceptance-testing-run:
-	docker-compose $(COMPOSEFILES_ACCEPTANCE_TESTING) run --rm acceptance-testing
+	docker-compose $(COMPOSEFILES_ACCEPTANCE_TESTING) run --rm --no-deps acceptance-testing
 
 .PHONY: acceptance-testing-logs
 acceptance-testing-logs:

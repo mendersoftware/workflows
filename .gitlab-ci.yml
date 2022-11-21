@@ -26,7 +26,12 @@ test:prepare_acceptance:
   stage: .pre
   image: docker
   services:
-    - docker:19.03.5-dind
+    - docker:dind
+  variables:
+    DOCKER_HOST: "tcp://docker:2376"
+    DOCKER_CERT_PATH: "/certs/client"
+    DOCKER_TLS_VERIFY: "1"
+    DOCKER_TLS_CERTDIR: "/certs"
   before_script:
     - export WORKER_DOCKER_REPOSITORY="mendersoftware/workflows-worker"
   script:
@@ -52,7 +57,12 @@ test:acceptance_tests:
     - docker
   image: tiangolo/docker-with-compose
   services:
-    - docker:19.03.5-dind
+    - docker:dind
+  variables:
+    DOCKER_HOST: "tcp://docker:2376"
+    DOCKER_CERT_PATH: "/certs/client"
+    DOCKER_TLS_VERIFY: "1"
+    DOCKER_TLS_CERTDIR: "/certs"
   dependencies:
     - test:prepare_acceptance
   before_script:
