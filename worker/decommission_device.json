@@ -1,7 +1,7 @@
 {
     "name": "decommission_device",
     "description": "Removes device info from all services.",
-    "version": 9,
+    "version": 10,
     "tasks": [
         {
             "name": "delete_device_inventory",
@@ -84,6 +84,20 @@
                     204,
                     404
                 ]
+            }
+        },
+        {
+            "name": "delete_device_auth",
+            "type": "http",
+            "retries": 3,
+            "http": {
+                "uri": "http://${env.DEVICEAUTH_ADDR|mender-device-auth:8080}/api/internal/v1/devauth/tenants/${encoding=url;workflow.input.tenant_id}/devices/${encoding=url;workflow.input.device_id}",
+                "method": "DELETE",
+                "headers": {
+                    "X-MEN-RequestID": "${workflow.input.request_id}"
+                },
+                "connectionTimeOut": 8000,
+                "readTimeOut": 8000
             }
         }
     ],
