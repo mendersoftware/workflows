@@ -27,6 +27,7 @@ COPY --chown=nobody ./worker/provision_external_device.json .
 COPY --chown=nobody ./worker/update_device_status.json .
 COPY --chown=nobody ./worker/update_device_inventory.json .
 COPY --chown=nobody ./worker/reindex_reporting.json .
+COPY --chown=nobody ./worker/reindex_reporting_deployment.json .
 COPY --chown=nobody ./worker/reindex_inventory.json .
 WORKDIR /
 
