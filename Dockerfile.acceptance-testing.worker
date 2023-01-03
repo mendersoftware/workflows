@@ -32,6 +32,7 @@ COPY --chown=nobody ./worker/provision_device.json .
 COPY --chown=nobody ./worker/update_device_status.json .
 COPY --chown=nobody ./worker/update_device_inventory.json .
 COPY --chown=nobody ./worker/reindex_reporting.json .
+COPY --chown=nobody ./worker/reindex_reporting_deployment.json .
 COPY --chown=nobody ./worker/reindex_inventory.json .
 WORKDIR /
 
@@ -41,6 +42,6 @@ ENTRYPOINT [ \
     "/usr/bin/workflows", \
     "--config=/etc/workflows/config.yaml", \
     "worker", "--automigrate", \
-    "--workflows=decommission_device,deploy_device_configuration,provision_device,update_device_status,update_device_inventory,reindex_reporting,reindex_inventory", \
+    "--workflows=decommission_device,deploy_device_configuration,provision_device,update_device_status,update_device_inventory,reindex_reporting,reindex_reporting_deployment,reindex_inventory", \
     "--excluded-workflows=generate_artifact" \
     ]
