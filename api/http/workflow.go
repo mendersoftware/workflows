@@ -29,6 +29,7 @@ import (
 	"github.com/mendersoftware/go-lib-micro/log"
 
 	"github.com/mendersoftware/workflows/client/nats"
+	"github.com/mendersoftware/workflows/config"
 	"github.com/mendersoftware/workflows/model"
 	"github.com/mendersoftware/workflows/store"
 	"github.com/mendersoftware/workflows/utils"
@@ -186,6 +187,14 @@ func (h WorkflowController) startWorkflowGetJob(
 		topic = model.DefaultTopic
 	}
 	subject := h.nats.StreamName() + "." + topic
+
+	if !workflow.Ephemeral || config.NoEphemeralWorkflows {
+		job.Status = model.StatusPending
+		_, err := h.dataStore.UpsertJob(c, job)
+		if err != nil {
+			return nil, "", "", errors.Wrap(err, "insert of the job failed")
+		}
+	}
 
 	return jobJSON, job.ID, subject, nil
 }

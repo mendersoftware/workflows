@@ -1,4 +1,4 @@
-// Copyright 2022 Northern.tech AS
+// Copyright 2023 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -20,20 +20,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pkg/errors"
-
 	"github.com/mendersoftware/go-lib-micro/log"
 
 	"github.com/mendersoftware/workflows/app/processor"
 	"github.com/mendersoftware/workflows/client/nats"
+	"github.com/mendersoftware/workflows/config"
 	"github.com/mendersoftware/workflows/model"
 	"github.com/mendersoftware/workflows/store"
 )
-
-// this variable is set when running acceptance tests to disable ephemeral jobs
-// without it, it is not possible to inspect the jobs collection to assert the
-// values stored in the database
-var NoEphemeralWorkflows = false
 
 func processJob(ctx context.Context, job *model.Job,
 	dataStore store.DataStore, nats nats.Client) error {
@@ -48,14 +42,6 @@ func processJob(ctx context.Context, job *model.Job,
 			return err
 		}
 		return nil
-	}
-
-	if !workflow.Ephemeral || NoEphemeralWorkflows {
-		job.Status = model.StatusPending
-		_, err = dataStore.UpsertJob(ctx, job)
-		if err != nil {
-			return errors.Wrap(err, "insert of the job failed")
-		}
 	}
 
 	l.Infof("%s: started, %s", job.ID, job.WorkflowName)
@@ -82,7 +68,7 @@ func processJob(ctx context.Context, job *model.Job,
 			}
 		}
 		job.Results = append(job.Results, *result)
-		if !workflow.Ephemeral || !result.Success || NoEphemeralWorkflows {
+		if !workflow.Ephemeral || !result.Success || config.NoEphemeralWorkflows {
 			err = dataStore.UpdateJobAddResult(ctx, job, result)
 			if err != nil {
 				l.Errorf("Error uploading results: %s", err.Error())
@@ -100,7 +86,7 @@ func processJob(ctx context.Context, job *model.Job,
 	} else {
 		status = model.StatusFailure
 	}
-	if !workflow.Ephemeral || NoEphemeralWorkflows {
+	if !workflow.Ephemeral || config.NoEphemeralWorkflows {
 		newStatus := model.StatusToString(status)
 		err = dataStore.UpdateJobStatus(ctx, job, status)
 		if err != nil {

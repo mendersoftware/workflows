@@ -150,3 +150,8 @@ func GetNatsConsumerConfig(c config.Reader) (consumer nats.ConsumerConfig, err e
 		`invalid settings "nats.consumer"`,
 	)
 }
+
+// this variable is set when running acceptance tests to disable ephemeral jobs
+// without it, it is not possible to inspect the jobs collection to assert the
+// values stored in the database
+var NoEphemeralWorkflows = false
