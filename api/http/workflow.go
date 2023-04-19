@@ -1,4 +1,4 @@
-// Copyright 2022 Northern.tech AS
+// Copyright 2023 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -221,7 +221,7 @@ func (h WorkflowController) StartWorkflow(c *gin.Context) {
 		return
 	}
 
-	err = h.nats.JetStreamPublish(subject, jobJSON)
+	err = h.nats.Publish(subject, jobJSON)
 	if err != nil {
 		l.Error(errors.Wrap(err, "JetStreamPublish failed"))
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -272,7 +272,7 @@ func (h WorkflowController) StartBatchWorkflows(c *gin.Context) {
 			"id":   jobID,
 			"name": name,
 		}
-		err = h.nats.JetStreamPublish(subject, jobJSON)
+		err = h.nats.Publish(subject, jobJSON)
 		if err != nil {
 			l.Error(errors.Wrap(err, "JetStreamPublish failed"))
 			delete(jobResult, "id")

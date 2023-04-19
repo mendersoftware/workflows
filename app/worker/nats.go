@@ -1,4 +1,4 @@
-// Copyright 2022 Northern.tech AS
+// Copyright 2023 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -37,7 +37,7 @@ func processNATSTask(
 	dataJSONBytes, err := json.Marshal(dataJSON)
 	if err == nil {
 		subject := nats.StreamName() + "." + natsTask.Subject
-		err = nats.JetStreamPublish(subject, dataJSONBytes)
+		err = nats.Publish(subject, dataJSONBytes)
 	}
 	result.Success = err == nil
 	if err != nil {

@@ -1,4 +1,4 @@
-// Copyright 2021 Northern.tech AS
+// Copyright 2023 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -232,7 +232,7 @@ func TestWorkflowFoundAndStartedWithParameters(t *testing.T) {
 		mocklib.AnythingOfType("string"),
 	).Return(workflow, nil)
 
-	nats.On("JetStreamPublish",
+	nats.On("Publish",
 		"stream.default",
 		mocklib.MatchedBy(func(data []byte) bool {
 			job := &model.Job{}
@@ -305,7 +305,7 @@ func TestWorkflowFailToPublish(t *testing.T) {
 		mocklib.AnythingOfType("string"),
 	).Return(workflow, nil)
 
-	nats.On("JetStreamPublish",
+	nats.On("Publish",
 		"stream.default",
 		mocklib.MatchedBy(func(data []byte) bool {
 			job := &model.Job{}
@@ -363,7 +363,7 @@ func TestWorkflowFoundAndStartedWithVersion(t *testing.T) {
 		mocklib.AnythingOfType("string"),
 	).Return(workflow, nil)
 
-	nats.On("JetStreamPublish",
+	nats.On("Publish",
 		"stream.default",
 		mocklib.MatchedBy(func(data []byte) bool {
 			job := &model.Job{}
@@ -451,7 +451,7 @@ func TestWorkflowFoundAndStartedWithNonStringParameter(t *testing.T) {
 		mocklib.AnythingOfType("string"),
 	).Return(workflow, nil)
 
-	nats.On("JetStreamPublish",
+	nats.On("Publish",
 		"stream.default",
 		mocklib.MatchedBy(func(data []byte) bool {
 			job := &model.Job{}
@@ -528,7 +528,7 @@ func TestWorkflowFoundAndStartedWithListOfStringsParameter(t *testing.T) {
 		mocklib.AnythingOfType("string"),
 	).Return(workflow, nil)
 
-	nats.On("JetStreamPublish",
+	nats.On("Publish",
 		"stream.default",
 		mocklib.MatchedBy(func(data []byte) bool {
 			job := &model.Job{}
@@ -712,7 +712,7 @@ func TestBatchWorkflowFoundAndStartedWithParameters(t *testing.T) {
 		mocklib.AnythingOfType("string"),
 	).Return(workflow, nil)
 
-	nats.On("JetStreamPublish",
+	nats.On("Publish",
 		"stream.default",
 		mocklib.MatchedBy(func(data []byte) bool {
 			job := &model.Job{}
@@ -785,7 +785,7 @@ func TestBatchWorkflowFailToPublish(t *testing.T) {
 		mocklib.AnythingOfType("string"),
 	).Return(workflow, nil)
 
-	nats.On("JetStreamPublish",
+	nats.On("Publish",
 		"stream.default",
 		mocklib.MatchedBy(func(data []byte) bool {
 			job := &model.Job{}

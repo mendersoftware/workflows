@@ -1,4 +1,4 @@
-// Copyright 2022 Northern.tech AS
+// Copyright 2023 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -20,9 +20,7 @@ import (
 	"os"
 	"os/signal"
 	"sync"
-	"time"
 
-	natsio "github.com/nats-io/nats.go"
 	"github.com/pkg/errors"
 	"golang.org/x/sys/unix"
 
@@ -34,10 +32,6 @@ import (
 	"github.com/mendersoftware/workflows/model"
 	"github.com/mendersoftware/workflows/store"
 )
-
-// notifyPeriod is the frequency for notifying the
-// NATS server about slow workflows.
-const notifyPeriod = nats.AckWait * 8 / 10
 
 // Workflows filters workflows executed by a worker
 type Workflows struct {
@@ -70,147 +64,107 @@ func InitAndRun(
 		return errors.Wrap(err, "failed to load workflows")
 	}
 
-	streamName := config.Config.GetString(dconfig.SettingNatsStreamName)
-	topic := config.Config.GetString(dconfig.SettingNatsSubscriberTopic)
-	subject := streamName + "." + topic
 	durableName := config.Config.GetString(dconfig.SettingNatsSubscriberDurable)
 	concurrency := conf.GetInt(dconfig.SettingConcurrency)
 
-	channel := make(chan *natsio.Msg, concurrency)
-	unsubscribe, err := natsClient.JetStreamSubscribe(
+	channel := make(chan []byte, concurrency)
+	sub, err := natsClient.Subscribe(
 		ctx,
-		subject,
 		durableName,
-		concurrency,
 		channel,
 	)
 	if err != nil {
 		return errors.Wrap(err, "failed to subscribe to the nats JetStream")
 	}
-	defer func() {
-		_ = unsubscribe()
-	}()
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, unix.SIGINT, unix.SIGTERM)
+
+	workerError := make(chan error, 1)
+	var errorOnce sync.Once
 
 	// Spawn worker pool
 	var wg = new(sync.WaitGroup)
 	wg.Add(concurrency)
 	for i := 0; i < concurrency; i++ {
 		workerID := i
-		go func() {
+		go func() (err error) {
 			defer func() {
 				wg.Done()
-				cancel() // Unblock main thread if it's waiting
+				errorOnce.Do(func() {
+					workerError <- err
+				})
 			}()
 			wl := l.F(log.Ctx{"worker_id": workerID})
 			wCtx := log.WithContext(ctx, wl)
 
 			wl.Info("worker starting up")
-			workerMain(wCtx, channel, natsClient, dataStore)
-			wl.Info("worker shut down")
-		}()
+			err = workerMain(wCtx, channel, natsClient, dataStore)
+			if err != nil {
+				wl.Errorf("worker shut down with error: %s", err)
+			} else {
+				wl.Info("worker shut down")
+			}
+			return err
+		}() // nolint:errcheck
 	}
+
+	go func() {
+		err = sub.ListenAndServe()
+		if err != nil {
+			l.Errorf("subscription closed with error: %s", err)
+		}
+	}()
 
 	// Run until a SIGTERM or SIGINT is received or one of the workers
 	// stops unexpectedly
 	select {
-	case <-quit:
+	case sig := <-quit:
+		l.Errorf("received signal %s: terminating gracefully", sig)
+		err = sub.Close()
+	case err = <-workerError:
+		sub.Close()
 	case <-ctx.Done():
 		err = ctx.Err()
 	}
-	// Notify workers that we're done
-	close(channel)
 
 	// Wait for all workers to finish their current task
 	wg.Wait()
 	return err
 }
 
-func workerMain(ctx context.Context, msgIn <-chan *natsio.Msg, nc nats.Client, ds store.DataStore) {
+func workerMain(
+	ctx context.Context,
+	msgIn <-chan []byte,
+	nc nats.Client,
+	ds store.DataStore,
+) (err error) {
 	l := log.FromContext(ctx)
-	sidecarChan := make(chan *natsio.Msg, 1)
-	sidecarTimer := (*reusableTimer)(time.NewTimer(0))
-	defer close(sidecarChan)
 	done := ctx.Done()
 
-	// workerSidecar is responsible for notifying the broker about slow workflows
-	go workerSidecar(ctx, sidecarChan)
 	var isOpen bool
 	for {
-		var msg *natsio.Msg
+		var msg []byte
 		select {
 		case <-done:
-			return
+			return ctx.Err()
 		case msg, isOpen = <-msgIn:
 			if !isOpen {
-				return
-			}
-			// Notify the sidecar routine about the new message
-			select {
-			case <-sidecarTimer.After(notifyPeriod / 8):
-				l.Warn("timeout notifying sidecar routine about message")
-
-			case sidecarChan <- msg:
+				return nil
 			}
 		}
 
 		job := &model.Job{}
-		err := json.Unmarshal(msg.Data, job)
+		err = json.Unmarshal(msg, job)
 		if err != nil {
-			l.Error(errors.Wrap(err, "failed to unmarshall message"))
-			if err := msg.Term(); err != nil {
-				l.Error(errors.Wrap(err, "failed to term the message"))
-			}
+			l.Error(errors.WithMessage(err, "failed to unmarshall message"))
 			continue
 		}
 		// process the job
 		l.Infof("Worker: processing job %s workflow %s", job.ID, job.WorkflowName)
 		err = processJob(ctx, job, ds, nc)
 		if err != nil {
-			l.Errorf("error: %v", err)
-		}
-		// Release message
-		sidecarChan <- nil
-		// stop the in progress ticker and ack the message
-		if err := msg.AckSync(); err != nil {
-			l.Error(errors.Wrap(err, "failed to ack the message"))
-		}
-	}
-}
-
-// workerSidecar helps notifying the NATS server about slow workflows.
-// When workerMain picks up a new task, this routine is woken up and starts
-// a timer that sends an "IN PROGRESS" package back to the broker if the worker
-// takes too long.
-func workerSidecar(ctx context.Context, msgIn <-chan *natsio.Msg) {
-	var (
-		isOpen        bool
-		msgInProgress *natsio.Msg
-	)
-	done := ctx.Done()
-	t := (*reusableTimer)(time.NewTimer(0))
-	for {
-		select {
-		case <-done:
-			return
-		case msgInProgress, isOpen = <-msgIn:
-			if !isOpen {
-				return
-			}
-		}
-		for msgInProgress != nil {
-			select {
-			case <-t.After(notifyPeriod):
-				_ = msgInProgress.InProgress()
-			case <-done:
-				return
-			case msgInProgress, isOpen = <-msgIn:
-				if !isOpen {
-					return
-				}
-			}
+			l.Errorf("error processing job: %s", err)
 		}
 	}
 }

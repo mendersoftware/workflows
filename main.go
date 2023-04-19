@@ -1,4 +1,4 @@
-// Copyright 2021 Northern.tech AS
+// Copyright 2023 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -127,20 +127,28 @@ func doMain(args []string) {
 	}
 }
 
-func getNatsClient() (nats.Client, error) {
+func getNatsClient(consumer bool) (nats.Client, error) {
 	natsURI := config.Config.GetString(dconfig.SettingNatsURI)
-	nats, err := nats.NewClientWithDefaults(natsURI)
+	streamName := config.Config.GetString(dconfig.SettingNatsStreamName)
+
+	nc, err := nats.NewClientWithDefaults(natsURI, streamName)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to connect to nats")
 	}
-
-	streamName := config.Config.GetString(dconfig.SettingNatsStreamName)
-	nats = nats.WithStreamName(streamName)
-	err = nats.JetStreamCreateStream(nats.StreamName())
-	if err != nil {
-		return nil, err
+	if consumer {
+		consumerName := config.Config.GetString(
+			dconfig.SettingNatsSubscriberDurable,
+		)
+		var cfg nats.ConsumerConfig
+		cfg, err = dconfig.GetNatsConsumerConfig(config.Config)
+		if err != nil {
+			return nil, err
+		}
+		err = nc.CreateConsumer(consumerName, cfg)
+	} else {
+		err = nc.CreateStream()
 	}
-	return nats, nil
+	return nc, err
 }
 
 func cmdServer(args *cli.Context) error {
@@ -150,7 +158,7 @@ func cmdServer(args *cli.Context) error {
 	}
 	defer dataStore.Close()
 
-	nats, err := getNatsClient()
+	nats, err := getNatsClient(false)
 	if err != nil {
 		return err
 	}
@@ -166,7 +174,7 @@ func cmdWorker(args *cli.Context) error {
 	}
 	defer dataStore.Close()
 
-	nats, err := getNatsClient()
+	nats, err := getNatsClient(true)
 	if err != nil {
 		return err
 	}
