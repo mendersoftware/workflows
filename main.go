@@ -84,6 +84,16 @@ func doMain(args []string) {
 				Name:   "migrate",
 				Usage:  "Run the migrations",
 				Action: cmdMigrate,
+				Flags: []cli.Flag{
+					cli.BoolFlag{
+						Name:  "skip-nats",
+						Usage: "Skip initialization of NATS Jetstream",
+					},
+					cli.BoolFlag{
+						Name:  "nats-force",
+						Usage: "Force recreation of consumer configuration",
+					},
+				},
 			},
 			{
 				Name:   "list-jobs",
@@ -151,6 +161,24 @@ func getNatsClient(consumer bool) (nats.Client, error) {
 	return nc, err
 }
 
+func initNats(client nats.Client, autoReplace bool) error {
+	cfg, err := dconfig.GetNatsConsumerConfig(config.Config)
+	if err != nil {
+		return errors.WithMessage(err, "invalid nats configuration")
+	}
+	cfg.AutoReplace = autoReplace
+	consumerName := config.Config.GetString(dconfig.SettingNatsSubscriberDurable)
+	err = client.CreateStream()
+	if err != nil {
+		return errors.WithMessage(err, "failed to initialize NATS Jetstream")
+	}
+	err = client.CreateConsumer(consumerName, cfg)
+	if err != nil {
+		return errors.WithMessage(err, "failed to initialize NATS consumer configuration")
+	}
+	return nil
+}
+
 func cmdServer(args *cli.Context) error {
 	dataStore, err := store.SetupDataStore(args.Bool("automigrate"))
 	if err != nil {
@@ -163,6 +191,12 @@ func cmdServer(args *cli.Context) error {
 		return err
 	}
 	defer nats.Close()
+	if args.Bool("automigrate") {
+		err = nats.CreateStream()
+		if err != nil {
+			return err
+		}
+	}
 
 	return server.InitAndRun(config.Config, dataStore, nats)
 }
@@ -174,11 +208,15 @@ func cmdWorker(args *cli.Context) error {
 	}
 	defer dataStore.Close()
 
-	nats, err := getNatsClient(true)
+	nc, err := getNatsClient(true)
 	if err != nil {
 		return err
 	}
-	defer nats.Close()
+	defer nc.Close()
+	err = initNats(nc, args.Bool("automigrate"))
+	if err != nil {
+		return err
+	}
 
 	var included, excluded []string
 
@@ -196,7 +234,7 @@ func cmdWorker(args *cli.Context) error {
 		Included: included,
 		Excluded: excluded,
 	}
-	return worker.InitAndRun(config.Config, workflows, dataStore, nats)
+	return worker.InitAndRun(config.Config, workflows, dataStore, nc)
 }
 
 func cmdMigrate(args *cli.Context) error {
@@ -204,7 +242,15 @@ func cmdMigrate(args *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	return nil
+	if !args.Bool("skip-nats") {
+		var nc nats.Client
+		nc, err = getNatsClient(true)
+		if err != nil {
+			return err
+		}
+		err = initNats(nc, args.Bool("force-nats"))
+	}
+	return err
 }
 
 func cmdListJobs(args *cli.Context) error {
