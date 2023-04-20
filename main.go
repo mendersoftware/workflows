@@ -1,4 +1,4 @@
-// Copyright 2021 Northern.tech AS
+// Copyright 2023 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -84,6 +84,16 @@ func doMain(args []string) {
 				Name:   "migrate",
 				Usage:  "Run the migrations",
 				Action: cmdMigrate,
+				Flags: []cli.Flag{
+					cli.BoolFlag{
+						Name:  "skip-nats",
+						Usage: "Skip migrating the NATS Jetstream configuration",
+					},
+					cli.BoolFlag{
+						Name:  "skip-database",
+						Usage: "Skip migrating the database",
+					},
+				},
 			},
 			{
 				Name:   "list-jobs",
@@ -127,20 +137,25 @@ func doMain(args []string) {
 	}
 }
 
-func getNatsClient() (nats.Client, error) {
+func getNatsClient(automigrate bool) (nats.Client, error) {
 	natsURI := config.Config.GetString(dconfig.SettingNatsURI)
-	nats, err := nats.NewClientWithDefaults(natsURI)
+	streamName := config.Config.GetString(dconfig.SettingNatsStreamName)
+	durableName := config.Config.GetString(dconfig.SettingNatsSubscriberDurable)
+	nats, err := nats.NewClientWithDefaults(natsURI, streamName)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to connect to nats")
 	}
 
-	streamName := config.Config.GetString(dconfig.SettingNatsStreamName)
-	nats = nats.WithStreamName(streamName)
 	err = nats.JetStreamCreateStream(nats.StreamName())
 	if err != nil {
 		return nil, err
 	}
-	return nats, nil
+	cfg, err := dconfig.GetNatsConsumerConfig(config.Config)
+	if err != nil {
+		return nil, err
+	}
+	err = nats.CreateConsumer(durableName, automigrate, cfg)
+	return nats, err
 }
 
 func cmdServer(args *cli.Context) error {
@@ -150,7 +165,7 @@ func cmdServer(args *cli.Context) error {
 	}
 	defer dataStore.Close()
 
-	nats, err := getNatsClient()
+	nats, err := getNatsClient(args.Bool("automigrate"))
 	if err != nil {
 		return err
 	}
@@ -166,7 +181,7 @@ func cmdWorker(args *cli.Context) error {
 	}
 	defer dataStore.Close()
 
-	nats, err := getNatsClient()
+	nats, err := getNatsClient(args.Bool("automigrate"))
 	if err != nil {
 		return err
 	}
@@ -192,11 +207,17 @@ func cmdWorker(args *cli.Context) error {
 }
 
 func cmdMigrate(args *cli.Context) error {
-	_, err := store.SetupDataStore(true)
-	if err != nil {
-		return err
+	var err error
+	if !args.Bool("skip-database") {
+		_, err = store.SetupDataStore(true)
+		if err != nil {
+			return err
+		}
 	}
-	return nil
+	if !args.Bool("skip-nats") {
+		_, err = getNatsClient(true)
+	}
+	return err
 }
 
 func cmdListJobs(args *cli.Context) error {
