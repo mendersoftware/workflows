@@ -28,6 +28,21 @@ nats_uri: "nats://mender-nats:4222"
 
 # nats_subscriber_durable: "workflows-worker"
 
+# nats:
+#   NATS Consumer parameters
+#   consumer:
+#     Maximum number of delivery attempts before a message is discarded
+#     Environment variable: WORKFLOWS_NATS_CONSUMER_MAX_DELIVER
+#     max_deliver: 3
+#     Maximum number of pending messages. This variable put an upper
+#     bound on the number of workflows that can be processed in parallel.
+#     Environment variable: WORKFLOWS_NATS_CONSUMER_MAX_PENDING
+#     max_pending: 1000
+#     The time it takes before an ack is expected or the message is redelivered.
+#     Environment variable: WORKFLOWS_NATS_CONSUMER_ACK_WAIT
+#     ack_wait: 30s
+
+
 # Mongodb connection string
 # Defaults to: "mongodb://localhost"
 # Overwrite with environment variable: WORKFLOWS_MONGO_URL
