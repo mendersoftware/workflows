@@ -1,4 +1,4 @@
-// Copyright 2021 Northern.tech AS
+// Copyright 2023 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -16,9 +16,11 @@ package nats
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"time"
 
-	"github.com/nats-io/nats.go"
+	natsio "github.com/nats-io/nats.go"
 
 	"github.com/mendersoftware/go-lib-micro/log"
 )
@@ -28,35 +30,36 @@ const (
 	reconnectBufSize = 10 * 1024 * 1024
 	// Set reconnect interval to 1 second
 	reconnectWaitTime = 1 * time.Second
-	// Set the number of redeliveries for a message
-	maxDeliver = 3
-	// Set the ACK wait
-	AckWait = 30 * time.Second
+)
+
+var (
+	ErrIncompatibleConsumer = errors.New("nats: cannot subscribe to a pull consumer")
 )
 
 type UnsubscribeFunc func() error
 
 // Client is the nats client
+//
 //go:generate ../../utils/mockgen.sh
 type Client interface {
 	Close()
-	WithStreamName(streamName string) Client
 	StreamName() string
 	IsConnected() bool
 	JetStreamCreateStream(streamName string) error
+	GetConsumerConfig(name string) (*ConsumerConfig, error)
+	CreateConsumer(name string, upsert bool, config ConsumerConfig) error
 	JetStreamSubscribe(
 		ctx context.Context,
 		subj,
 		durable string,
-		maxAckPending int,
-		q chan *nats.Msg,
+		q chan *natsio.Msg,
 	) (UnsubscribeFunc, error)
 	JetStreamPublish(string, []byte) error
 }
 
 // NewClient returns a new nats client
-func NewClient(url string, opts ...nats.Option) (Client, error) {
-	natsClient, err := nats.Connect(url, opts...)
+func NewClient(url string, streamName string, opts ...natsio.Option) (Client, error) {
+	natsClient, err := natsio.Connect(url, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -65,32 +68,34 @@ func NewClient(url string, opts ...nats.Option) (Client, error) {
 		return nil, err
 	}
 	return &client{
-		nats: natsClient,
-		js:   js,
+		nats:       natsClient,
+		streamName: streamName,
+		js:         js,
 	}, nil
 }
 
 // NewClient returns a new nats client with default options
-func NewClientWithDefaults(url string) (Client, error) {
+func NewClientWithDefaults(url string, streamName string) (Client, error) {
 	ctx := context.Background()
 	l := log.FromContext(ctx)
 
 	natsClient, err := NewClient(url,
-		func(o *nats.Options) error {
+		streamName,
+		func(o *natsio.Options) error {
 			o.AllowReconnect = true
 			o.MaxReconnect = -1
 			o.ReconnectBufSize = reconnectBufSize
 			o.ReconnectWait = reconnectWaitTime
 			o.RetryOnFailedConnect = true
-			o.ClosedCB = func(_ *nats.Conn) {
+			o.ClosedCB = func(_ *natsio.Conn) {
 				l.Info("nats client closed the connection")
 			}
-			o.DisconnectedErrCB = func(_ *nats.Conn, e error) {
+			o.DisconnectedErrCB = func(_ *natsio.Conn, e error) {
 				if e != nil {
 					l.Warnf("nats client disconnected, err: %v", e)
 				}
 			}
-			o.ReconnectedCB = func(_ *nats.Conn) {
+			o.ReconnectedCB = func(_ *natsio.Conn) {
 				l.Warn("nats client reconnected")
 			}
 			return nil
@@ -103,15 +108,9 @@ func NewClientWithDefaults(url string) (Client, error) {
 }
 
 type client struct {
-	nats       *nats.Conn
-	js         nats.JetStreamContext
+	nats       *natsio.Conn
+	js         natsio.JetStreamContext
 	streamName string
-}
-
-// IsConnected returns true if the client is connected to nats
-func (c *client) WithStreamName(streamName string) Client {
-	c.streamName = streamName
-	return c
 }
 
 // IsConnected returns true if the client is connected to nats
@@ -132,16 +131,16 @@ func (c *client) IsConnected() bool {
 // JetStreamCreateStream creates a stream
 func (c *client) JetStreamCreateStream(streamName string) error {
 	stream, err := c.js.StreamInfo(streamName)
-	if err != nil && err != nats.ErrStreamNotFound {
+	if err != nil && err != natsio.ErrStreamNotFound {
 		return err
 	}
 	if stream == nil {
-		_, err = c.js.AddStream(&nats.StreamConfig{
+		_, err = c.js.AddStream(&natsio.StreamConfig{
 			Name:      streamName,
 			NoAck:     false,
 			MaxAge:    24 * time.Hour,
-			Retention: nats.WorkQueuePolicy,
-			Storage:   nats.FileStorage,
+			Retention: natsio.WorkQueuePolicy,
+			Storage:   natsio.FileStorage,
 			Subjects:  []string{streamName + ".>"},
 		})
 		if err != nil {
@@ -155,19 +154,125 @@ func noop() error {
 	return nil
 }
 
+type ConsumerConfig struct {
+	// Filter expression for which topics this consumer covers.
+	Filter string
+	// MaxPending messages in the work queue.
+	// NOTE: This sets an upper limit on the horizontal scalability of the
+	// service.
+	MaxPending int
+	// MaxDeliver sets the maximum amount of time the message will be
+	// (re-) delivered.
+	MaxDeliver int
+	// AckWait sets the time to wait for message acknowledgement before
+	// resending the message.
+	AckWait time.Duration
+}
+
+func (cfg ConsumerConfig) Validate() error {
+	if cfg.AckWait < time.Second {
+		return fmt.Errorf(
+			"invalid consumer configuration AckWait: %s < 1s",
+			cfg.AckWait)
+	}
+	if cfg.MaxDeliver < 1 {
+		return fmt.Errorf(
+			"invalid consumer configuration MaxDeliver: %d < 1",
+			cfg.MaxDeliver)
+	}
+	if cfg.MaxPending < 1 {
+		return fmt.Errorf(
+			"invalid consumer configuration MaxPending: %d < 1",
+			cfg.MaxPending)
+	}
+	return nil
+}
+
+const consumerVersionString = "workflows/v1"
+
+func (cfg ConsumerConfig) toNats(name string, deliverSubject string) *natsio.ConsumerConfig {
+	if deliverSubject == "" {
+		deliverSubject = natsio.NewInbox()
+	}
+	return &natsio.ConsumerConfig{
+		Name:         name, // To preserve behavior of the internal library,
+		Durable:      name, // the consumer-, durable- and delivery group name
+		DeliverGroup: name, // are all set to the durable name.
+
+		Description:    consumerVersionString,
+		DeliverSubject: deliverSubject,
+
+		FilterSubject: cfg.Filter,
+		AckWait:       cfg.AckWait,
+		MaxAckPending: cfg.MaxPending,
+		MaxDeliver:    cfg.MaxDeliver,
+
+		AckPolicy:     natsio.AckExplicitPolicy,
+		DeliverPolicy: natsio.DeliverAllPolicy,
+	}
+}
+
+func configFromNats(cfg natsio.ConsumerConfig) ConsumerConfig {
+	return ConsumerConfig{
+		Filter:     cfg.FilterSubject,
+		MaxPending: cfg.MaxAckPending,
+		MaxDeliver: cfg.MaxDeliver,
+		AckWait:    cfg.AckWait,
+	}
+}
+
+func (c *client) GetConsumerConfig(name string) (*ConsumerConfig, error) {
+	consumerInfo, err := c.js.ConsumerInfo(c.streamName, name)
+	if err != nil {
+		return nil, err
+	} else if consumerInfo == nil {
+		return nil, fmt.Errorf("nats: nil consumer")
+	}
+	cfg := configFromNats(consumerInfo.Config)
+	return &cfg, nil
+}
+
+func (c *client) CreateConsumer(name string, upsert bool, config ConsumerConfig) error {
+	consumerInfo, err := c.js.ConsumerInfo(c.streamName, name)
+	if errors.Is(err, natsio.ErrConsumerNotFound) {
+		_, err = c.js.AddConsumer(c.streamName, config.toNats(name, ""))
+		var apiErr *natsio.APIError
+		if err == nil {
+			return nil
+		} else if errors.As(err, &apiErr) &&
+			apiErr.ErrorCode == natsio.JSErrCodeConsumerAlreadyExists {
+			// Race: consumer was just created between ConsumerInfo and AddConsumer
+			consumerInfo, err = c.js.ConsumerInfo(c.streamName, name)
+		}
+	}
+	if err != nil {
+		return fmt.Errorf("nats: error getting consumer info: %w", err)
+	}
+	if upsert {
+		if consumerInfo.Config.DeliverSubject == "" {
+			return ErrIncompatibleConsumer
+		}
+		_, err = c.js.UpdateConsumer(
+			c.streamName,
+			config.toNats(name, consumerInfo.Config.DeliverSubject),
+		)
+		if err == nil {
+			return nil
+		}
+	}
+	return err
+}
+
 // JetStreamSubscribe subscribes to messages from the given subject with a durable subscriber
 func (c *client) JetStreamSubscribe(
 	ctx context.Context,
 	subj, durable string,
-	maxAckPending int,
-	q chan *nats.Msg,
+	q chan *natsio.Msg,
 ) (UnsubscribeFunc, error) {
 	sub, err := c.js.ChanQueueSubscribe(subj, durable, q,
-		nats.AckExplicit(),
-		nats.AckWait(AckWait),
-		nats.ManualAck(),
-		nats.MaxAckPending(maxAckPending),
-		nats.MaxDeliver(maxDeliver),
+		natsio.Bind(c.streamName, durable),
+		natsio.ManualAck(),
+		natsio.Context(ctx),
 	)
 	if err != nil {
 		return noop, err

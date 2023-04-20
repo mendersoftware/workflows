@@ -1,4 +1,4 @@
-// Copyright 2021 Northern.tech AS
+// Copyright 2023 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -16,6 +16,9 @@ package config
 
 import (
 	"github.com/mendersoftware/go-lib-micro/config"
+	"github.com/pkg/errors"
+
+	"github.com/mendersoftware/workflows/client/nats"
 )
 
 const (
@@ -43,6 +46,16 @@ const (
 	SettingNatsSubscriberDurable = "nats_subscriber_durable"
 	// SettingNatsSubscriberDurableDefault is the default value for the nats subscriber durable name
 	SettingNatsSubscriberDurableDefault = "workflows-worker"
+
+	SettingsNats = "nats"
+
+	SettingNatsConsumer                  = SettingsNats + ".consumer"
+	SettingNatsConsumerAckWait           = SettingNatsConsumer + ".ack_wait"
+	SettingNatsConsumerAckWaitDefault    = "30s"
+	SettingNatsConsumerMaxDeliver        = SettingNatsConsumer + ".max_deliver"
+	SettingNatsConsumerMaxDeliverDefault = 3
+	SettingNatsConsumerMaxPending        = SettingNatsConsumer + ".max_pending"
+	SettingNatsConsumerMaxPendingDefault = 1000
 
 	// SettingMongo is the config key for the mongo URL
 	SettingMongo = "mongo-url"
@@ -116,5 +129,20 @@ var (
 		{Key: SettingSMTPAuthMechanism, Value: SettingSMTPAuthMechanismDefault},
 		{Key: SettingConcurrency, Value: SettingConcurrencyDefault},
 		{Key: SettingDebugLog, Value: SettingDebugLogDefault},
+		{Key: SettingNatsConsumerAckWait, Value: SettingNatsConsumerAckWaitDefault},
+		{Key: SettingNatsConsumerMaxDeliver, Value: SettingNatsConsumerMaxDeliverDefault},
+		{Key: SettingNatsConsumerMaxPending, Value: SettingNatsConsumerMaxPendingDefault},
 	}
 )
+
+func GetNatsConsumerConfig(c config.Reader) (consumer nats.ConsumerConfig, err error) {
+	streamName := c.GetString(SettingNatsStreamName)
+	consumer.Filter = streamName + "." + c.GetString(SettingNatsSubscriberTopic)
+	consumer.AckWait = c.GetDuration(SettingNatsConsumerAckWait)
+	consumer.MaxDeliver = c.GetInt(SettingNatsConsumerMaxDeliver)
+	consumer.MaxPending = c.GetInt(SettingNatsConsumerMaxPending)
+	return consumer, errors.WithMessage(
+		consumer.Validate(),
+		`invalid settings "nats.consumer"`,
+	)
+}
