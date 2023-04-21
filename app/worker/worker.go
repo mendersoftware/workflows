@@ -1,4 +1,4 @@
-// Copyright 2022 Northern.tech AS
+// Copyright 2023 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -34,10 +34,6 @@ import (
 	"github.com/mendersoftware/workflows/model"
 	"github.com/mendersoftware/workflows/store"
 )
-
-// notifyPeriod is the frequency for notifying the
-// NATS server about slow workflows.
-const notifyPeriod = nats.AckWait * 8 / 10
 
 // Workflows filters workflows executed by a worker
 type Workflows struct {
@@ -76,12 +72,20 @@ func InitAndRun(
 	durableName := config.Config.GetString(dconfig.SettingNatsSubscriberDurable)
 	concurrency := conf.GetInt(dconfig.SettingConcurrency)
 
+	cfg, err := natsClient.GetConsumerConfig(durableName)
+	if err != nil {
+		return err
+	}
+	notifyPeriod := cfg.AckWait * 8 / 10
+	if notifyPeriod < time.Second {
+		notifyPeriod = time.Second
+	}
+
 	channel := make(chan *natsio.Msg, concurrency)
 	unsubscribe, err := natsClient.JetStreamSubscribe(
 		ctx,
 		subject,
 		durableName,
-		concurrency,
 		channel,
 	)
 	if err != nil {
@@ -108,7 +112,7 @@ func InitAndRun(
 			wCtx := log.WithContext(ctx, wl)
 
 			wl.Info("worker starting up")
-			workerMain(wCtx, channel, natsClient, dataStore)
+			workerMain(wCtx, channel, notifyPeriod, natsClient, dataStore)
 			wl.Info("worker shut down")
 		}()
 	}
@@ -128,7 +132,12 @@ func InitAndRun(
 	return err
 }
 
-func workerMain(ctx context.Context, msgIn <-chan *natsio.Msg, nc nats.Client, ds store.DataStore) {
+func workerMain(
+	ctx context.Context,
+	msgIn <-chan *natsio.Msg,
+	notifyPeriod time.Duration,
+	nc nats.Client,
+	ds store.DataStore) {
 	l := log.FromContext(ctx)
 	sidecarChan := make(chan *natsio.Msg, 1)
 	sidecarTimer := (*reusableTimer)(time.NewTimer(0))
@@ -136,7 +145,7 @@ func workerMain(ctx context.Context, msgIn <-chan *natsio.Msg, nc nats.Client, d
 	done := ctx.Done()
 
 	// workerSidecar is responsible for notifying the broker about slow workflows
-	go workerSidecar(ctx, sidecarChan)
+	go workerSidecar(ctx, sidecarChan, notifyPeriod)
 	var isOpen bool
 	for {
 		var msg *natsio.Msg
@@ -184,7 +193,7 @@ func workerMain(ctx context.Context, msgIn <-chan *natsio.Msg, nc nats.Client, d
 // When workerMain picks up a new task, this routine is woken up and starts
 // a timer that sends an "IN PROGRESS" package back to the broker if the worker
 // takes too long.
-func workerSidecar(ctx context.Context, msgIn <-chan *natsio.Msg) {
+func workerSidecar(ctx context.Context, msgIn <-chan *natsio.Msg, notifyPeriod time.Duration) {
 	var (
 		isOpen        bool
 		msgInProgress *natsio.Msg
