@@ -137,25 +137,32 @@ func doMain(args []string) {
 	}
 }
 
-func getNatsClient(automigrate bool) (nats.Client, error) {
+func getNatsClient() (nats.Client, error) {
 	natsURI := config.Config.GetString(dconfig.SettingNatsURI)
 	streamName := config.Config.GetString(dconfig.SettingNatsStreamName)
-	durableName := config.Config.GetString(dconfig.SettingNatsSubscriberDurable)
 	nats, err := nats.NewClientWithDefaults(natsURI, streamName)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to connect to nats")
 	}
-
-	err = nats.JetStreamCreateStream(nats.StreamName())
-	if err != nil {
-		return nil, err
-	}
-	cfg, err := dconfig.GetNatsConsumerConfig(config.Config)
-	if err != nil {
-		return nil, err
-	}
-	err = nats.CreateConsumer(durableName, automigrate, cfg)
 	return nats, err
+}
+
+func initJetstream(nc nats.Client, producer, upsert bool) (err error) {
+	durableName := config.Config.GetString(dconfig.SettingNatsSubscriberDurable)
+	if producer {
+		err = nc.JetStreamCreateStream(nc.StreamName())
+		if err != nil {
+			return err
+		}
+	} else {
+		var cfg nats.ConsumerConfig
+		cfg, err = dconfig.GetNatsConsumerConfig(config.Config)
+		if err != nil {
+			return err
+		}
+		err = nc.CreateConsumer(durableName, upsert, cfg)
+	}
+	return err
 }
 
 func cmdServer(args *cli.Context) error {
@@ -165,11 +172,15 @@ func cmdServer(args *cli.Context) error {
 	}
 	defer dataStore.Close()
 
-	nats, err := getNatsClient(args.Bool("automigrate"))
+	nats, err := getNatsClient()
 	if err != nil {
 		return err
 	}
 	defer nats.Close()
+
+	if err = initJetstream(nats, true, args.Bool("automigrate")); err != nil {
+		return errors.WithMessage(err, "failed to apply Jetstream migrations")
+	}
 
 	return server.InitAndRun(config.Config, dataStore, nats)
 }
@@ -181,11 +192,15 @@ func cmdWorker(args *cli.Context) error {
 	}
 	defer dataStore.Close()
 
-	nats, err := getNatsClient(args.Bool("automigrate"))
+	nats, err := getNatsClient()
 	if err != nil {
 		return err
 	}
 	defer nats.Close()
+
+	if err = initJetstream(nats, false, args.Bool("automigrate")); err != nil {
+		return errors.WithMessage(err, "failed to apply Jetstream consumer migrations")
+	}
 
 	var included, excluded []string
 
@@ -215,7 +230,14 @@ func cmdMigrate(args *cli.Context) error {
 		}
 	}
 	if !args.Bool("skip-nats") {
-		_, err = getNatsClient(true)
+		var nc nats.Client
+		nc, err = getNatsClient()
+		if err == nil {
+			if err = initJetstream(nc, false, true); err == nil {
+				err = initJetstream(nc, true, true)
+			}
+		}
+
 	}
 	return err
 }
