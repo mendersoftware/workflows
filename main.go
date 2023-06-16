@@ -86,12 +86,14 @@ func doMain(args []string) {
 				Action: cmdMigrate,
 				Flags: []cli.Flag{
 					cli.BoolFlag{
-						Name:  "skip-nats",
-						Usage: "Skip migrating the NATS Jetstream configuration",
+						Name:   "skip-nats",
+						Usage:  "Skip migrating the NATS Jetstream configuration",
+						EnvVar: "WORKFLOWS_MIGRATION_SKIP_NATS",
 					},
 					cli.BoolFlag{
-						Name:  "skip-database",
-						Usage: "Skip migrating the database",
+						Name:   "skip-database",
+						Usage:  "Skip migrating the database",
+						EnvVar: "WORKFLOWS_MIGRATION_SKIP_DATABASE",
 					},
 				},
 			},
