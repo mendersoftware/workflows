@@ -11,7 +11,7 @@
 *.rej
 *.exe
 .*.swp
-workflows
+/workflows
 
 coverage.txt
 coverage-acceptance.txt
