@@ -1,5 +1,7 @@
 variables:
   DOCKER_REPOSITORY: mendersoftware/workflows # server; worker image defined in required jobs
+  MULTIPLATFORM_BUILD: "true"
+  MULTIPLATFORM_PLATFORMS: "linux/amd64,linux/arm64"
 
 stages:
   - test
@@ -87,27 +89,81 @@ test:acceptance_tests:
     paths:
       - tests/coverage-acceptance.txt
 
+# excludes non multiplatform build job
+build:docker:
+  rules:
+    - when: never
+
+# excludes non multiplatform build job
+publish:image:
+  rules:
+    - when: never
+
+# excludes non multiplatform build job
+publish:image:mender:
+  rules:
+    - when: never
+ 
 # workflows (server) is built and published by the template; specify
 # jobs only for the worker
-build:docker:worker:
-  extends: build:docker
+build:docker-multiplatform:worker:
+  extends: build:docker-multiplatform
   variables:
     DOCKER_REPOSITORY: mendersoftware/workflows-worker
     DOCKERFILE: Dockerfile.worker
+  # extending just the source tag: ${CI_REGISTRY_IMAGE}:${CI_PIPELINE_ID}-worker
+  script:
+    - echo "building ${CI_PROJECT_NAME} for ${DOCKER_BUILD_SERVICE_IMAGE}"
+    - docker context create builder
+    - docker buildx create builder --use --driver-opt network=host --buildkitd-flags '--debug --allow-insecure-entitlement network.host'
+    - docker buildx build
+      --cache-to type=registry,ref=${CI_REGISTRY_IMAGE}:ci_cache,mode=max
+      --cache-from type=registry,ref=${CI_REGISTRY_IMAGE}:ci_cache
+      --tag ${CI_REGISTRY_IMAGE}:${CI_PIPELINE_ID}-worker
+      --file ${DOCKER_DIR:-.}/${DOCKERFILE:-Dockerfile}
+      --build-arg GIT_COMMIT_TAG="${DOCKER_PUBLISH_COMMIT_TAG}"
+      --platform $MULTIPLATFORM_PLATFORMS
+      --provenance false
+      --push
+      ${DOCKER_DIR:-.}
 
-publish:image:worker:
-  extends: publish:image
+publish:image-multiplatform:worker:
+  extends: publish:image-multiplatform
   dependencies:
-    - build:docker:worker
+    - build:docker-multiplatform:worker
   variables:
     DOCKER_REPOSITORY: mendersoftware/workflows-worker
+  # extending just the source tag: ${CI_REGISTRY_IMAGE}:${CI_PIPELINE_ID}-worker
+  script:
+    - regctl image copy ${CI_REGISTRY_IMAGE}:${CI_PIPELINE_ID}-worker ${DOCKER_REPOSITORY}:${DOCKER_PUBLISH_TAG}
+    - regctl image copy ${CI_REGISTRY_IMAGE}:${CI_PIPELINE_ID}-worker ${DOCKER_REPOSITORY}:${DOCKER_PUBLISH_COMMIT_TAG}
+    - echo "PUBLISH_IMAGE_DIGEST=${DOCKER_REPOSITORY}@$(regctl image digest ${CI_REGISTRY_IMAGE}:${CI_PIPELINE_ID})" >> publish.env
 
-publish:image:mender:worker:
-  extends: publish:image:mender
+publish:image-multiplatform:mender:worker:
+  extends: publish:image-multiplatform:mender
   dependencies:
-    - build:docker:worker
+    - build:docker-multiplatform:worker
   variables:
     DOCKER_REPOSITORY: mendersoftware/workflows-worker
+  # extending just the source tag: ${CI_REGISTRY_IMAGE}:${CI_PIPELINE_ID}-worker
+  script:
+    # If the repo is not recognized, ignore
+    - if ! echo $(release_tool --list git --all) | grep $CI_PROJECT_NAME; then
+    -  echo "Repository $CI_PROJECT_NAME not found in release_tool. Exiting"
+    -  exit 0
+    - fi
+    # If the repo/branch is not part of a Mender release, also ignore
+    - integration_versions=$(release_tool --integration-versions-including $CI_PROJECT_NAME --version $CI_COMMIT_REF_NAME | sed -e 's/origin\///')
+    - if test -z "$integration_versions"; then
+    -  echo "Repository $CI_PROJECT_NAME version $CI_COMMIT_REF_NAME is not part of any Mender release. Exiting"
+    -  exit 0
+    - fi
+    # Publish the image for all releases
+    - for version in $integration_versions; do
+    -   regctl image copy ${CI_REGISTRY_IMAGE}:${CI_PIPELINE_ID}-worker ${DOCKER_REPOSITORY}:mender-${version}
+    -   regctl image copy ${CI_REGISTRY_IMAGE}:${CI_PIPELINE_ID}-worker ${DOCKER_REPOSITORY}:mender-${version}_${CI_COMMIT_SHA}
+    - done
+    - echo "PUBLISH_IMAGE_DIGEST=${DOCKER_REPOSITORY}@$(regctl image digest $DOCKER_REPOSITORY:mender-${version})" >> publish.env
 
 publish:acceptance:
   stage: publish
