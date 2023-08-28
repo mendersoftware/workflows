@@ -235,8 +235,8 @@ func cmdMigrate(args *cli.Context) error {
 		var nc nats.Client
 		nc, err = getNatsClient()
 		if err == nil {
-			if err = initJetstream(nc, false, true); err == nil {
-				err = initJetstream(nc, true, true)
+			if err = initJetstream(nc, true, true); err == nil {
+				err = initJetstream(nc, false, true)
 			}
 		}
 
