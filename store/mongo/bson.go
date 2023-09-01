@@ -1,4 +1,4 @@
-// Copyright 2021 Northern.tech AS
+// Copyright 2023 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ import (
 	"reflect"
 
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/bsontype"
 )
 
 var (
@@ -29,8 +28,7 @@ var (
 
 func init() {
 	// Use JSON defaults for decoding embedded documents and arrays
-	defaultRegistry := bson.NewRegistryBuilder().
-		RegisterTypeMapEntry(bsontype.Array, tArrFace).
-		RegisterTypeMapEntry(bsontype.EmbeddedDocument, tMap)
-	bson.DefaultRegistry = defaultRegistry.Build()
+	bson.DefaultRegistry = bson.NewRegistry()
+	bson.DefaultRegistry.RegisterTypeMapEntry(bson.TypeArray, tArrFace)
+	bson.DefaultRegistry.RegisterTypeMapEntry(bson.TypeEmbeddedDocument, tMap)
 }
