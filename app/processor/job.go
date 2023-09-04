@@ -1,4 +1,4 @@
-// Copyright 2022 Northern.tech AS
+// Copyright 2023 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ package processor
 import (
 	"strings"
 
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
 	"github.com/mendersoftware/workflows/model"
@@ -70,7 +71,16 @@ func (j JobProcessor) ProcessJSON(
 		return ps.ProcessJobString(value)
 	case primitive.D:
 		result := make(map[string]interface{})
-		for key, item := range value.Map() {
+		var mapValue bson.M
+		bsonValue, err := bson.Marshal(value)
+		if err != nil {
+			return nil
+		}
+		err = bson.Unmarshal(bsonValue, &mapValue)
+		if err != nil {
+			return nil
+		}
+		for key, item := range mapValue {
 			result[key] = j.ProcessJSON(item, ps)
 		}
 		return result
