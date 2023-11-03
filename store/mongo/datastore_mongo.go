@@ -65,7 +65,7 @@ func SetupDataStore(automigrate bool) (*DataStoreMongo, error) {
 	return dataStore, nil
 }
 
-func doMigrations(ctx context.Context, client *Client,
+func doMigrations(ctx context.Context, client *mongo.Client,
 	automigrate bool) error {
 	db := config.Config.GetString(dconfig.SettingDbName)
 	err := Migrate(ctx, db, DbVersion, client, automigrate)
@@ -76,19 +76,14 @@ func doMigrations(ctx context.Context, client *Client,
 	return nil
 }
 
-func disconnectClient(parentCtx context.Context, client *Client) {
+func disconnectClient(parentCtx context.Context, client *mongo.Client) {
 	ctx, cancel := context.WithTimeout(parentCtx, 10*time.Second)
 	defer cancel()
 	_ = client.Disconnect(ctx)
 }
 
-// Client is a package specific mongo client
-type Client struct {
-	mongo.Client
-}
-
 // NewClient returns a mongo client
-func NewClient(_ context.Context, c config.Reader) (*Client, error) {
+func NewClient(_ context.Context, c config.Reader) (*mongo.Client, error) {
 
 	clientOptions := mopts.Client()
 	mongoURL := c.GetString(dconfig.SettingMongo)
@@ -130,15 +125,14 @@ func NewClient(_ context.Context, c config.Reader) (*Client, error) {
 		return nil, errors.Wrap(err, "Error reaching mongo server")
 	}
 
-	mongoClient := Client{Client: *client}
-	return &mongoClient, nil
+	return client, nil
 }
 
 // DataStoreMongo is the data storage service
 type DataStoreMongo struct {
 	// client holds the reference to the client used to communicate with the
 	// mongodb server.
-	client *Client
+	client *mongo.Client
 	// dbName contains the name of the workflow database.
 	dbName string
 	// workflows holds a local cache of workflows - a worker should NEVER
@@ -148,7 +142,7 @@ type DataStoreMongo struct {
 }
 
 // NewDataStoreWithClient initializes a DataStore object
-func NewDataStoreWithClient(client *Client, c config.Reader) *DataStoreMongo {
+func NewDataStoreWithClient(client *mongo.Client, c config.Reader) *DataStoreMongo {
 	dbName := c.GetString(dconfig.SettingDbName)
 	ctx := context.Background()
 

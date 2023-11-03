@@ -20,6 +20,7 @@ import (
 	"github.com/mendersoftware/go-lib-micro/log"
 	"github.com/mendersoftware/go-lib-micro/mongo/migrate"
 	"github.com/pkg/errors"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 const (
@@ -31,7 +32,7 @@ const (
 func Migrate(ctx context.Context,
 	db string,
 	version string,
-	client *Client,
+	client *mongo.Client,
 	automigrate bool) error {
 	l := log.FromContext(ctx)
 
@@ -43,14 +44,14 @@ func Migrate(ctx context.Context,
 	}
 
 	m := migrate.SimpleMigrator{
-		Client:      &client.Client,
+		Client:      client,
 		Db:          db,
 		Automigrate: automigrate,
 	}
 
 	migrations := []migrate.Migration{
 		&migration1_0_0{
-			client: &client.Client,
+			client: client,
 			db:     db,
 		},
 	}
