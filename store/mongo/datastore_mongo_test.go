@@ -480,6 +480,17 @@ func TestGetAllJobs(t *testing.T) {
 	assert.Equal(t, job.WorkflowName, jobs[0].WorkflowName)
 	assert.Equal(t, job.InputParameters, jobs[0].InputParameters)
 	assert.Equal(t, model.StatusPending, jobs[0].Status)
+
+	j, err := testDataStore.GetJobByID(ctx, job.ID)
+	assert.Nil(t, err)
+	assert.Equal(t, job.ID, j.ID)
+	assert.Equal(t, job.WorkflowName, j.WorkflowName)
+	assert.Equal(t, job.InputParameters, j.InputParameters)
+	assert.Equal(t, model.StatusPending, j.Status)
+
+	j, err = testDataStore.GetJobByID(ctx, "job.ID")
+	assert.Nil(t, j)
+	assert.Nil(t, err)
 }
 
 func TestPing(t *testing.T) {

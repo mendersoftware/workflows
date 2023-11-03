@@ -1,4 +1,4 @@
-// Copyright 2021 Northern.tech AS
+// Copyright 2023 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -46,4 +46,5 @@ type DataStore interface {
 	UpdateJobAddResult(ctx context.Context, job *model.Job, result *model.TaskResult) error
 	UpdateJobStatus(ctx context.Context, job *model.Job, status int32) error
 	GetJobByNameAndID(ctx context.Context, name string, ID string) (*model.Job, error)
+	GetJobByID(ctx context.Context, ID string) (*model.Job, error)
 }
