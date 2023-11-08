@@ -200,6 +200,26 @@ paths:
         409:
           $ref: "#/responses/ConflictError"
 
+  /api/v1/jobs/{id}:
+    get:
+      operationId: Job Structure
+      summary: Gets the job for the given id.
+      description: |
+        Gets the job object for the given job id.
+      parameters:
+        - name: id
+          in: path
+          description: Job identifier
+          required: true
+          type: string
+      responses:
+        200:
+          description: Successful query
+          schema:
+            $ref: "#/definitions/JobObject"
+        404:
+          $ref: "#/responses/NotFoundError"
+
 definitions:
   Error:
     description: Error descriptor.
@@ -374,3 +394,26 @@ definitions:
         type: array
         items:
           $ref: "#/definitions/TaskResult"
+
+  JobObject:
+    type: object
+    properties:
+      id:
+        type: string
+      workflowName:
+        type: string
+      inputParameters:
+        type: array
+        items:
+          $ref: "#/definitions/InputParameter"
+      status:
+        type: string
+      results:
+        type: array
+        items:
+          $ref: "#/definitions/TaskResult"
+      insert_time:
+        type: string
+        format: date-time
+      version:
+        type: string

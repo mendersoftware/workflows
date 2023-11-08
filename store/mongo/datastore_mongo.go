@@ -1,4 +1,4 @@
-// Copyright 2022 Northern.tech AS
+// Copyright 2023 Northern.tech AS
 //
 //    Licensed under the Apache License, Version 2.0 (the "License");
 //    you may not use this file except in compliance with the License.
@@ -379,6 +379,25 @@ func (db *DataStoreMongo) GetJobByNameAndID(
 	cur := collection.FindOne(ctx, bson.M{
 		"_id":           ID,
 		"workflow_name": name,
+	})
+	var job model.Job
+	err := cur.Decode(&job)
+	if err == mongo.ErrNoDocuments {
+		return nil, nil
+	} else if err != nil {
+		return nil, err
+	}
+
+	return &job, nil
+}
+
+// GetJobByID get the task execution status for a job by ID
+func (db *DataStoreMongo) GetJobByID(
+	ctx context.Context, ID string) (*model.Job, error) {
+	collection := db.client.Database(db.dbName).
+		Collection(JobsCollectionName)
+	cur := collection.FindOne(ctx, bson.M{
+		"_id": ID,
 	})
 	var job model.Job
 	err := cur.Decode(&job)
