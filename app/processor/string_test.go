@@ -26,13 +26,13 @@ func TestProcessOptionString(t *testing.T) {
 	var expectedEncoding Encoding
 	var o Options
 
-	setEncoding = urlEncodingFlag
+	setEncoding = encodingURL
 	expectedEncoding = EncodingURL
 	data = "encoding=" + setEncoding + ";"
 	o = processOptionString(data)
 	assert.Equal(t, Options{Encoding: expectedEncoding}, o)
 
-	setEncoding = urlEncodingFlag
+	setEncoding = encodingURL
 	expectedEncoding = EncodingURL
 	data = "rightFlag=right;encoding=" + setEncoding + ";leftFlag=left;"
 	o = processOptionString(data)
@@ -51,6 +51,15 @@ func TestProcessOptionString(t *testing.T) {
 	assert.Equal(t, Options{Encoding: expectedEncoding}, o)
 }
 
+func TestHTMLEncoding(t *testing.T) {
+	const (
+		expected = `It escapes only five such characters: &lt;, &gt;, &amp;, &#39; and &#34;`
+		input    = `It escapes only five such characters: <, >, &, ' and "`
+	)
+	actual := EncodingHTML.Apply(input)
+	assert.Equal(t, expected, actual)
+}
+
 func TestVariableParse(t *testing.T) {
 	var data string
 	var setEncoding string
@@ -58,7 +67,7 @@ func TestVariableParse(t *testing.T) {
 	var expectedEncoding Encoding
 
 	expectedEncoding = EncodingURL
-	setEncoding = urlEncodingFlag
+	setEncoding = encodingURL
 	expectedVariableIdentifier = "newVariable0"
 	data = "${encoding=" + setEncoding + ";" + workflowInputVariable + expectedVariableIdentifier + "}"
 	matches := reExpression.FindAllStringSubmatch(data, -1)

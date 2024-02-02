@@ -16,6 +16,7 @@ package processor
 
 import (
 	"bytes"
+	"html"
 	"net/url"
 	"os"
 	"regexp"
@@ -34,8 +35,10 @@ const (
 	regexVariable         = `\$\{(?P<options>(?:(?:[a-zA-Z]+)=(?:[a-zA-Z0-9]+);)*)` +
 		`(?P<name>[^;\}\|]+)(?:\|(?P<default>[^\}]+))?}`
 	regexOutputVariable = `(.*)\.json\.(.*)`
-	encodingFlag        = "encoding"
-	urlEncodingFlag     = "url"
+
+	encodingFlag = "encoding"
+	encodingURL  = "url"
+	encodingHTML = "html"
 )
 
 var (
@@ -52,7 +55,31 @@ type Encoding int64
 const (
 	EncodingPlain Encoding = iota
 	EncodingURL
+	EncodingHTML
 )
+
+func ParseString(s string) Encoding {
+	var enc Encoding
+	switch s {
+	case encodingURL:
+		enc = EncodingURL
+	case encodingHTML:
+		enc = EncodingHTML
+	default:
+		enc = EncodingPlain
+	}
+	return enc
+}
+
+func (enc Encoding) Apply(s string) string {
+	switch enc {
+	case EncodingURL:
+		return url.QueryEscape(s)
+	case EncodingHTML:
+		return html.EscapeString(s)
+	}
+	return s
+}
 
 type JobStringProcessor struct {
 	workflow *model.Workflow
@@ -80,14 +107,16 @@ func processOptionString(expression string) (opts Options) {
 		rValueIndex    = 1
 	)
 	for _, flagToken := range strings.Split(expression, ";") {
-		flagValueTokens := strings.Split(flagToken, "=")
+		flagValueTokens := strings.SplitN(flagToken, "=", 2)
 		if len(flagValueTokens) < flagTokenCount {
 			continue
 		}
 		if flagValueTokens[lValueIndex] == encodingFlag {
 			switch flagValueTokens[rValueIndex] {
-			case urlEncodingFlag:
+			case encodingURL:
 				opts.Encoding = EncodingURL
+			case encodingHTML:
+				opts.Encoding = EncodingHTML
 			}
 		}
 	}
@@ -155,9 +184,7 @@ SubMatchLoop:
 				}
 			}
 		}
-		if options.Encoding == EncodingURL {
-			value = url.QueryEscape(value)
-		}
+		value = options.Encoding.Apply(value)
 		data = strings.ReplaceAll(data, submatch[0], value)
 	}
 
