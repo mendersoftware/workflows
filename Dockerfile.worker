@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM golang:1.21.5-alpine3.19 as builder
+FROM --platform=$BUILDPLATFORM golang:1.21.6-alpine3.19 as builder
 ARG TARGETARCH
 WORKDIR /go/src/github.com/mendersoftware/workflows
 RUN mkdir -p /etc_extra
@@ -7,6 +7,7 @@ RUN echo "nobody:!::0:::::" > /etc_extra/shadow
 RUN echo "nobody:x:65534:65534:Nobody:/:" > /etc_extra/passwd
 RUN chown -R nobody:nobody /etc_extra
 RUN apk add --no-cache \
+    git \
     xz-dev \
     musl-dev \
     ca-certificates \
