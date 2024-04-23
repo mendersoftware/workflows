@@ -203,18 +203,25 @@ func (w *workerGroup) workerSidecar(
 	var (
 		isOpen        bool
 		msgInProgress *natsio.Msg
+		ctxDone       = ctx.Done()
 	)
 	defer close(done)
 	t := (*reusableTimer)(time.NewTimer(0))
 	for {
-		msgInProgress, isOpen = <-msgIn
-		if !isOpen {
+		select {
+		case msgInProgress, isOpen = <-msgIn:
+			if !isOpen {
+				return
+			}
+		case <-ctxDone:
 			return
 		}
 		for msgInProgress != nil {
 			select {
 			case <-t.After(w.notifyPeriod):
-				err := msgInProgress.InProgress()
+				ctx, cancel := context.WithTimeout(ctx, w.notifyPeriod)
+				err := msgInProgress.InProgress(natsio.Context(ctx))
+				cancel()
 				if err != nil {
 					msgInProgress = nil
 					continue
@@ -223,6 +230,8 @@ func (w *workerGroup) workerSidecar(
 				if !isOpen {
 					return
 				}
+			case <-ctxDone:
+				return
 			}
 		}
 	}
