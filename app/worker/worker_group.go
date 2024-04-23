@@ -170,12 +170,14 @@ func (w *workerGroup) workerMain(
 			continue
 		}
 		// process the job
-		l.Infof("Worker: processing job %s workflow %s", job.ID, job.WorkflowName)
+		l.Infof("processing job %s workflow %s", job.ID, job.WorkflowName)
 		err = processJob(ctx, job, w.store, w.client)
 		if err != nil {
-			l.Errorf("error: %v", err)
+			l.Errorf("error processing job: %s", err.Error())
+		} else {
+			l.Infof("finished job %s workflow %s", job.ID, job.WorkflowName)
 		}
-		// Release message
+		// stop the in progress ticker and ack the message
 		select {
 		case sidecarChan <- nil:
 
@@ -184,7 +186,7 @@ func (w *workerGroup) workerMain(
 		case <-sidecarDone:
 			return
 		}
-		// stop the in progress ticker and ack the message
+		// Release message
 		if err := msg.AckSync(); err != nil {
 			l.Error(errors.Wrap(err, "failed to ack the message"))
 		}
@@ -204,6 +206,7 @@ func (w *workerGroup) workerSidecar(
 		isOpen        bool
 		msgInProgress *natsio.Msg
 		ctxDone       = ctx.Done()
+		l             = log.FromContext(ctx)
 	)
 	defer close(done)
 	t := (*reusableTimer)(time.NewTimer(0))
@@ -223,6 +226,7 @@ func (w *workerGroup) workerSidecar(
 				err := msgInProgress.InProgress(natsio.Context(ctx))
 				cancel()
 				if err != nil {
+					l.Errorf("error notifying broker about message in progress: %s", err)
 					msgInProgress = nil
 					continue
 				}
