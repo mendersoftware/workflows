@@ -88,9 +88,6 @@ func InitAndRun(
 	if err != nil {
 		return errors.Wrap(err, "failed to subscribe to the nats JetStream")
 	}
-	defer func() {
-		_ = unsubscribe()
-	}()
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, unix.SIGINT, unix.SIGTERM)
@@ -111,7 +108,10 @@ func InitAndRun(
 	case <-ctx.Done():
 		err = ctx.Err()
 	}
-	_ = unsubscribe()
+	errSub := unsubscribe()
+	if errSub != nil {
+		l.Errorf("error unsubscribing from Jetstream: %s", errSub.Error())
+	}
 	// Notify workers that we're done
 	close(jobChan)
 	if err == nil {
