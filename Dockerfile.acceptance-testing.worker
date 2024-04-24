@@ -12,8 +12,8 @@ RUN apk add --no-cache \
     ca-certificates \
     gcc
 COPY ./ .
-RUN env CGO_ENABLED=0 go test -c \
-    -tags main -o workflows \
+RUN env CGO_ENABLED=0 go build \
+    -tags acceptance -o workflows \
     -cover -covermode atomic \
     -coverpkg $(go list -deps | \
     grep '^github.com/mendersoftware/workflows' | \
@@ -24,6 +24,7 @@ EXPOSE 8080
 COPY --from=builder /etc_extra/ /etc/
 USER 65534
 COPY --from=builder --chown=nobody /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=builder --chown=nobody /tmp /tmp
 WORKDIR /etc/workflows/definitions
 
 COPY --chown=nobody ./worker/decommission_device.json .

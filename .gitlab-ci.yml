@@ -57,9 +57,9 @@ test:acceptance_tests:
   stage: test
   tags:
     - docker
-  image: tiangolo/docker-with-compose
+  image: docker:26-cli
   services:
-    - docker:dind
+    - docker:26-dind
   variables:
     DOCKER_HOST: "tcp://docker:2376"
     DOCKER_CERT_PATH: "/certs/client"
@@ -68,26 +68,20 @@ test:acceptance_tests:
   dependencies:
     - test:prepare_acceptance
   before_script:
+    - apk add --no-cache make
     - docker load -i prtest_image.tar
     - docker load -i prtest_worker_image.tar
   script:
     - make acceptance-testing-up
-    - sh -c "sleep 30"
+    - sh -c "sleep 10"
     - make acceptance-testing-run
   after_script:
     - make acceptance-testing-logs
     - make acceptance-testing-down
-    # Aggregate the coverage files
-    - set -- tests/coverage-acceptance@*.txt
-    - head -n 1 $1 > tests/coverage-acceptance.txt
-    - |
-      for cover in $@; do
-        tail -n +2 $cover >> tests/coverage-acceptance.txt;
-      done
   artifacts:
     expire_in: 2w
     paths:
-      - tests/coverage-acceptance.txt
+      - tests/coverage
 
 # excludes non multiplatform build job
 build:docker:
@@ -108,7 +102,7 @@ publish:image:saas:
 publish:image:mender:
   rules:
     - when: never
- 
+
 # workflows (server) is built and published by the template; specify
 # jobs only for the worker
 build:docker-multiplatform:worker:
@@ -138,10 +132,11 @@ publish:acceptance:
   stage: publish
   rules:
     - if: $CI_COMMIT_BRANCH !~ /^saas-[a-zA-Z0-9.]+$/
-  image: registry.gitlab.com/northern.tech/mender/mender-test-containers:goveralls-master
+  image: golang:1.22.2-alpine3.19
   dependencies:
     - test:acceptance_tests
   before_script:
+    - apk add --no-cache git
     # Coveralls env variables:
     #  According to https://docs.coveralls.io/supported-ci-services
     #  we should set CI_NAME, CI_BUILD_NUMBER, etc. But according
@@ -151,12 +146,16 @@ publish:acceptance:
     #  See also https://docs.coveralls.io/api-reference
     - export CI_BRANCH=${CI_COMMIT_BRANCH}
     - export CI_PR_NUMBER=${CI_COMMIT_BRANCH#pr_}
+    - go install github.com/mattn/goveralls@latest
+    # Convert coverage directory to text format
+    - go tool covdata textfmt -i tests/coverage -o coverage.txt
   script:
-    - goveralls
-      -repotoken ${COVERALLS_TOKEN}
-      -service gitlab-ci
-      -jobid $CI_PIPELINE_ID
-      -covermode set
-      -flagname acceptance
-      -parallel
-      -coverprofile ./tests/coverage-acceptance.txt
+    - |-
+      goveralls \
+      -repotoken ${COVERALLS_TOKEN} \
+      -service gitlab-ci \
+      -jobid $CI_PIPELINE_ID \
+      -covermode set \
+      -flagname acceptance \
+      -parallel \
+      -coverprofile coverage.txt
