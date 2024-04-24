@@ -1,4 +1,3 @@
-version: '2.1'
 services:
 
   mongodb:
@@ -29,6 +28,8 @@ services:
       - ".:/testing"
       - "../worker/:/etc/workflows/definitions"
     working_dir: /testing
+    environment:
+      GOCOVERDIR: /testing/coverage
     networks:
       acceptance-tests:
         aliases:
@@ -44,6 +45,8 @@ services:
       dockerfile: Dockerfile.acceptance-testing
     ports:
       - "8080:8080"
+    environment:
+      GOCOVERDIR: /testing/coverage
     volumes:
       - ".:/testing"
     working_dir: /testing
