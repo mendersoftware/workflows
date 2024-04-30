@@ -129,7 +129,7 @@ func (w *workerGroup) workerMain(
 ) {
 	l := log.FromContext(ctx)
 	ctxDone := ctx.Done()
-	sidecarTimer := (*reusableTimer)(time.NewTimer(0))
+	timeoutTimer := newStoppedTimer()
 	for {
 		var (
 			msg    *natsio.Msg
@@ -151,7 +151,7 @@ func (w *workerGroup) workerMain(
 		select {
 		case sidecarChan <- msg:
 
-		case <-sidecarTimer.After(w.notifyPeriod / 8):
+		case <-timeoutTimer.After(w.notifyPeriod / 8):
 			l.Warn("timeout notifying sidecar routine about message")
 
 		case <-sidecarDone:
@@ -181,6 +181,9 @@ func (w *workerGroup) workerMain(
 		select {
 		case sidecarChan <- nil:
 
+		case <-timeoutTimer.After(w.notifyPeriod):
+			l.Errorf("timeout notifying sidecar about job completion")
+
 		case <-ctxDone:
 			return
 		case <-sidecarDone:
@@ -209,34 +212,31 @@ func (w *workerGroup) workerSidecar(
 		l             = log.FromContext(ctx)
 	)
 	defer close(done)
-	t := (*reusableTimer)(time.NewTimer(0))
+
+	t := newStoppedTimer()
 	for {
 		select {
+		case <-t.C:
+			ctx, cancel := context.WithTimeout(ctx, w.notifyPeriod)
+			err := msgInProgress.InProgress(natsio.Context(ctx))
+			cancel()
+			if err != nil {
+				l.Errorf("error notifying broker about message in progress: %s", err)
+				// If the +WPI message fails, let's not try again, but
+				// wait for the next message.
+			} else {
+				t.Reset(w.notifyPeriod)
+			}
 		case msgInProgress, isOpen = <-msgIn:
 			if !isOpen {
 				return
+			} else if msgInProgress == nil {
+				t.Stop()
+			} else {
+				t.Reset(w.notifyPeriod)
 			}
 		case <-ctxDone:
 			return
-		}
-		for msgInProgress != nil {
-			select {
-			case <-t.After(w.notifyPeriod):
-				ctx, cancel := context.WithTimeout(ctx, w.notifyPeriod)
-				err := msgInProgress.InProgress(natsio.Context(ctx))
-				cancel()
-				if err != nil {
-					l.Errorf("error notifying broker about message in progress: %s", err)
-					msgInProgress = nil
-					continue
-				}
-			case msgInProgress, isOpen = <-msgIn:
-				if !isOpen {
-					return
-				}
-			case <-ctxDone:
-				return
-			}
 		}
 	}
 }
