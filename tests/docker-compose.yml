@@ -26,7 +26,7 @@ services:
       dockerfile: Dockerfile.acceptance-testing.worker
     volumes:
       - ".:/testing"
-      - "../worker/:/etc/workflows/definitions"
+      - "../worker/workflows:/etc/workflows/definitions"
     working_dir: /testing
     environment:
       GOCOVERDIR: /testing/coverage
