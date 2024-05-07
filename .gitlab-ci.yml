@@ -56,7 +56,7 @@ test:unit:
 test:acceptance_tests:
   stage: test
   tags:
-    - docker
+    - hetzner-amd-beefy
   image: docker:26-cli
   services:
     - docker:26-dind
