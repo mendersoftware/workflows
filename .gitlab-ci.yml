@@ -54,8 +54,8 @@ test:unit:
 test:acceptance_tests:
   stage: test
   tags:
-    - docker
-  image: tiangolo/docker-with-compose
+    - hetzner-amd-beefy
+  image: docker:26-cli
   services:
     - docker:dind
   variables:
