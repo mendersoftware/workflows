@@ -25,20 +25,10 @@ COPY --from=builder /etc_extra/ /etc/
 USER 65534
 COPY --from=builder --chown=nobody /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder --chown=nobody /tmp /tmp
-WORKDIR /etc/workflows/definitions
 
-COPY --chown=nobody ./worker/decommission_device.json .
-COPY --chown=nobody ./worker/deploy_device_configuration.json .
-COPY --chown=nobody ./worker/provision_external_device.json .
-COPY --chown=nobody ./worker/provision_device.json .
-COPY --chown=nobody ./worker/update_device_status.json .
-COPY --chown=nobody ./worker/update_device_inventory.json .
-COPY --chown=nobody ./worker/reindex_reporting.json .
-COPY --chown=nobody ./worker/reindex_reporting_deployment.json .
-COPY --chown=nobody ./worker/reindex_inventory.json .
-WORKDIR /
+COPY --chown=nobody ./worker/config.yaml /etc/workflows/config.yaml
+COPY --chown=nobody ./worker/workflows /etc/workflows/definitions
 
-COPY --chown=nobody ./worker/config.yaml /etc/workflows/
 COPY --from=builder --chown=nobody /go/src/github.com/mendersoftware/workflows/workflows /usr/bin/
 ENTRYPOINT [ \
     "/usr/bin/workflows", \
