@@ -56,8 +56,8 @@ test:unit:
 test:acceptance_tests:
   stage: test
   tags:
-    - docker
-  image: tiangolo/docker-with-compose
+    - hetzner-amd-beefy
+  image: docker:26-cli
   services:
     - docker:dind
   variables:
@@ -68,6 +68,7 @@ test:acceptance_tests:
   dependencies:
     - test:prepare_acceptance
   before_script:
+    - apk add make
     - docker load -i prtest_image.tar
     - docker load -i prtest_worker_image.tar
   script:
@@ -108,7 +109,7 @@ publish:image:saas:
 publish:image:mender:
   rules:
     - when: never
- 
+
 # workflows (server) is built and published by the template; specify
 # jobs only for the worker
 build:docker-multiplatform:worker:
