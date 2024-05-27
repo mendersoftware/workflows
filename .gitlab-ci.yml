@@ -68,6 +68,7 @@ test:acceptance_tests:
   dependencies:
     - test:prepare_acceptance
   before_script:
+    - apk add make
     - docker load -i prtest_image.tar
     - docker load -i prtest_worker_image.tar
   script:
