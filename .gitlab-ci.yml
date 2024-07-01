@@ -24,11 +24,15 @@ include:
   - project: 'Northern.tech/Mender/mendertesting'
     file: '.gitlab-ci-github-status-updates.yml'
 
+.dind-login: &dind-login
+  - mkdir -p $HOME/.docker && echo $DOCKER_AUTH_CONFIG > $HOME/.docker/config.json
+
 test:prepare_acceptance:
   stage: .pre
   image: docker
   services:
-    - docker:dind
+    - name: ${CI_DEPENDENCY_PROXY_DIRECT_GROUP_IMAGE_PREFIX}/docker:dind
+      alias: docker
   variables:
     DOCKER_HOST: "tcp://docker:2376"
     DOCKER_CERT_PATH: "/certs/client"
@@ -36,6 +40,7 @@ test:prepare_acceptance:
     DOCKER_TLS_CERTDIR: "/certs"
   before_script:
     - export WORKER_DOCKER_REPOSITORY="mendersoftware/workflows-worker"
+    - *dind-login
   script:
     - docker build -f Dockerfile.acceptance-testing -t $DOCKER_REPOSITORY:prtest .
     - docker build -f Dockerfile.acceptance-testing.worker -t $WORKER_DOCKER_REPOSITORY:prtest .
@@ -49,7 +54,8 @@ test:prepare_acceptance:
 
 test:unit:
   services:
-    - mongo:4.4
+    - name: ${CI_DEPENDENCY_PROXY_DIRECT_GROUP_IMAGE_PREFIX}/mongo:4.4
+      alias: mongo
   variables:
     WORKFLOWS_MONGO_URL: "mongodb://mongo"
 
@@ -57,9 +63,10 @@ test:acceptance_tests:
   stage: test
   tags:
     - hetzner-amd-beefy
-  image: docker:26-cli
+  image: ${CI_DEPENDENCY_PROXY_DIRECT_GROUP_IMAGE_PREFIX}/docker:26-cli
   services:
-    - docker:26-dind
+    - name: ${CI_DEPENDENCY_PROXY_DIRECT_GROUP_IMAGE_PREFIX}/docker:26-dind
+      alias: docker
   variables:
     DOCKER_HOST: "tcp://docker:2376"
     DOCKER_CERT_PATH: "/certs/client"
@@ -71,6 +78,7 @@ test:acceptance_tests:
     - apk add --no-cache make
     - docker load -i prtest_image.tar
     - docker load -i prtest_worker_image.tar
+    - *dind-login
   script:
     - make acceptance-testing-up
     - sh -c "sleep 10"
