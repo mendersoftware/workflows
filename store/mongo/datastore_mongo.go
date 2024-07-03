@@ -91,7 +91,8 @@ func NewClient(_ context.Context, c config.Reader) (*mongo.Client, error) {
 		return nil, errors.Errorf("Invalid mongoURL %q: missing schema.",
 			mongoURL)
 	}
-	clientOptions.ApplyURI(mongoURL)
+	clientOptions.ApplyURI(mongoURL).
+		SetRegistry(newRegistry())
 
 	username := c.GetString(dconfig.SettingDbUsername)
 	if username != "" {

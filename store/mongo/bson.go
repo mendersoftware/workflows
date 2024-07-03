@@ -18,6 +18,7 @@ import (
 	"reflect"
 
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/bsoncodec"
 )
 
 var (
@@ -26,9 +27,10 @@ var (
 	tMap     = reflect.TypeOf(map[string]interface{}{})
 )
 
-func init() {
+func newRegistry() *bsoncodec.Registry {
 	// Use JSON defaults for decoding embedded documents and arrays
-	bson.DefaultRegistry = bson.NewRegistry()
-	bson.DefaultRegistry.RegisterTypeMapEntry(bson.TypeArray, tArrFace)
-	bson.DefaultRegistry.RegisterTypeMapEntry(bson.TypeEmbeddedDocument, tMap)
+	reg := bson.NewRegistry()
+	reg.RegisterTypeMapEntry(bson.TypeArray, tArrFace)
+	reg.RegisterTypeMapEntry(bson.TypeEmbeddedDocument, tMap)
+	return reg
 }
