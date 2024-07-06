@@ -20,8 +20,9 @@ EXPOSE 8080
 COPY --from=builder /etc_extra/ /etc/
 USER 65534
 WORKDIR /etc/workflows
-COPY ./config.yaml .
+
 COPY --from=builder --chown=nobody /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=builder --chown=nobody /tmp /tmp
 COPY --chown=nobody ./config.yaml .
 COPY --from=builder --chown=nobody /go/src/github.com/mendersoftware/workflows/workflows /usr/bin/
 
